@@ -1,0 +1,23 @@
+{
+  "streamInfo.title": "Информация о трансляции",
+  "streamInfo.clicks": "Всего кликов",
+  "streamInfo.viewersNow": "Зрителей сейчас",
+  "streamInfo.streamStatus": "Статус стрима",
+  "streamInfo.ytSubs": "Подписчики YouTube",
+  "streamInfo.streamDonations": "Донаты за стрим",
+  "streamInfo.peakOnline": "Пиковый онлайн",
+  "streamInfo.updated": "Обновлено",
+  "streamInfo.refresh": "Обновить",
+  "streamInfo.sources": "Источники",
+  "streamInfo.admin": "Админка",
+  "streamInfo.secAgo": "сек назад",
+  "streamInfo.today": "Сегодня",
+  "streamInfo.yesterday": "Вчера",
+  "streamInfo.d7": "Последние 7 дней",
+  "streamInfo.d30": "За месяц",
+  "streamInfo.all": "За все время",
+  "streamInfo.welcomeTitle": "Добро пожаловать в StreamFly!",
+  "streamInfo.welcomeSubtitle": "Подключите свои аккаунты Twitch и YouTube, чтобы начать отслеживать статистику и получать уведомления.",
+  "streamInfo.welcomeButton": "Подключить аккаунты",
+  "streamInfo.more": "Еще"
+}

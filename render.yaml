@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: streamfly-bot
+    runtime: python
+    plan: free
+    region: frankfurt
+    healthCheckPath: /healthz
+    buildCommand: |
+      npm install && npm run build
+      pip install -r requirements.txt
+    startCommand: python bot.py
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: APP_URL
+        sync: false
+      - key: WEBHOOK_ENABLED
+        value: "true"
+      - key: REQUIRE_INIT_DATA
+        value: "true"

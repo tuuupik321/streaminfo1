@@ -1,0 +1,7 @@
+aiogram
+aiohttp
+sqlalchemy
+asyncpg
+greenlet
+uvicorn[standard]
+pydantic

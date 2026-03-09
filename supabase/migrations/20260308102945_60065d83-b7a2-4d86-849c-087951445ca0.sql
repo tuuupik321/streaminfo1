@@ -1,0 +1,1 @@
+ALTER TABLE public.telegram_channels ADD CONSTRAINT telegram_channels_chat_id_key UNIQUE (chat_id);

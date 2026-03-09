@@ -1,0 +1,10 @@
+project_id = "osucdelkugpmeqnkqsne"
+
+[functions.telegram-webhook]
+verify_jwt = false
+
+[functions.check-stream-status]
+verify_jwt = false
+
+[functions.monitor-streams]
+verify_jwt = false

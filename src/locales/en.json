@@ -1,0 +1,23 @@
+{
+  "streamInfo.title": "Stream overview",
+  "streamInfo.clicks": "Total clicks",
+  "streamInfo.viewersNow": "Viewers now",
+  "streamInfo.streamStatus": "Stream status",
+  "streamInfo.ytSubs": "YouTube subscribers",
+  "streamInfo.streamDonations": "Stream donations",
+  "streamInfo.peakOnline": "Peak online",
+  "streamInfo.updated": "Updated",
+  "streamInfo.refresh": "Refresh",
+  "streamInfo.sources": "Sources",
+  "streamInfo.admin": "Admin",
+  "streamInfo.secAgo": "sec ago",
+  "streamInfo.today": "Today",
+  "streamInfo.yesterday": "Yesterday",
+  "streamInfo.d7": "Last 7 days",
+  "streamInfo.d30": "Last month",
+  "streamInfo.all": "All time",
+  "streamInfo.welcomeTitle": "Welcome to StreamFly!",
+  "streamInfo.welcomeSubtitle": "Connect your Twitch and YouTube accounts to start tracking stats and receiving notifications.",
+  "streamInfo.welcomeButton": "Connect Accounts",
+  "streamInfo.more": "More"
+}
