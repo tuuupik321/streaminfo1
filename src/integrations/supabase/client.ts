@@ -2,21 +2,16 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const DEFAULT_SUPABASE_URL = "https://osucdelkugpmeqnkqsne.supabase.co";
+const DEFAULT_SUPABASE_PUBLISHABLE_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zdWNkZWxrdWdwbWVxbmtxc25lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5NTY1NjYsImV4cCI6MjA4ODUzMjU2Nn0.RGq7jwUoSXwyM-Gy5gl6yT0KPnmkjVAIap9HNFKCeoM";
 
-// Add logging to debug Supabase URL issue
-console.log("Supabase URL from env:", SUPABASE_URL);
-console.log("Supabase Publishable Key from env:", SUPABASE_PUBLISHABLE_KEY);
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL;
+const SUPABASE_PUBLISHABLE_KEY =
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || DEFAULT_SUPABASE_PUBLISHABLE_KEY;
 
-if (!SUPABASE_URL) {
-  console.error("VITE_SUPABASE_URL is not defined!");
-  // Throw an error to stop the app if URL is missing, making it clear in logs
-  throw new Error("supabaseUrl is required.");
-}
-if (!SUPABASE_PUBLISHABLE_KEY) {
-  console.error("VITE_SUPABASE_PUBLISHABLE_KEY is not defined!");
-  throw new Error("supabasePublishableKey is required.");
+if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY) {
+  console.warn("Supabase env is missing, fallback config is used.");
 }
 
 

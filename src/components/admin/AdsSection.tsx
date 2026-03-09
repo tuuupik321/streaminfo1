@@ -16,7 +16,7 @@ interface AdsSectionProps {
   settings: Record<string, string>;
 }
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://osucdelkugpmeqnkqsne.supabase.co";
 
 function getPublicUrl(path: string) {
   return `${SUPABASE_URL}/storage/v1/object/public/ad-images/${path}`;
