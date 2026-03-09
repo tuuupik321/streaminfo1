@@ -115,6 +115,42 @@ def get_public_app_url() -> str:
     if SPACE_HOST: return f"https://{SPACE_HOST}".rstrip("/")
     return ""
 
+def parse_and_verify_init_data(init_data: Optional[str]) -> Optional[dict[str, Any]]:
+    if not init_data or not TOKEN:
+        return None
+    try:
+        pairs = dict(parse_qsl(init_data, keep_blank_values=True))
+        received_hash = pairs.pop("hash", None)
+        if not received_hash:
+            return None
+
+        data_check_string = "\n".join(f"{k}={v}" for k, v in sorted(pairs.items()))
+        secret_key = hmac.new(b"WebAppData", TOKEN.encode("utf-8"), hashlib.sha256).digest()
+        calculated_hash = hmac.new(secret_key, data_check_string.encode("utf-8"), hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(calculated_hash, received_hash):
+            return None
+
+        auth_date_raw = pairs.get("auth_date")
+        if auth_date_raw:
+            auth_date = int(auth_date_raw)
+            if int(time.time()) - auth_date > 86400:
+                return None
+
+        user_raw = pairs.get("user")
+        if not user_raw:
+            return None
+        user = json.loads(user_raw)
+        user_id = user.get("id")
+        if not user_id:
+            return None
+        return {"user_id": int(user_id), "user": user}
+    except Exception as error:
+        log_event("init_data_parse_failed", error=str(error))
+        return None
+
+async def api_ping(request: web.Request):
+    return web.json_response({"ok": True})
+
 # ... (security and other functions remain the same)
 async def _require_verified_user(request: web.Request):
     init_data = request.query.get("init_data")
@@ -230,6 +266,7 @@ def build_app():
     app.router.add_get("/health", health_check)
 
     # API routes
+    app.router.add_post("/api/ping", api_ping)
     app.router.add_get("/api/stats", get_all_stats)
     app.router.add_get("/api/settings", get_settings)
     app.router.add_get("/api/analytics", get_analytics)
