@@ -6,6 +6,21 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+type TelegramChannelRow = {
+  chat_id: string;
+  bot_token: string | null;
+  is_verified: boolean;
+};
+
+type MonitorCheckResult = {
+  platform: string;
+  username: string;
+  wasLive?: boolean;
+  nowLive?: boolean;
+  notified?: boolean;
+  error?: string;
+};
+
 // ── Twitch helpers ──────────────────────────────────────────────
 let twitchToken: string | null = null;
 let twitchTokenExpiry = 0;
@@ -160,8 +175,9 @@ Deno.serve(async (req) => {
       .select("chat_id, bot_token, is_verified")
       .eq("is_verified", true);
 
-    const chatIds = channels?.map((c: any) => c.chat_id) ?? [];
-    const botTokens = channels?.map((c: any) => c.bot_token) ?? [];
+    const channelRows = (channels ?? []) as TelegramChannelRow[];
+    const chatIds = channelRows.map((c) => c.chat_id);
+    const botTokens = channelRows.map((c) => c.bot_token ?? "");
 
     if (chatIds.length === 0) {
       // Update checked timestamps but skip notifications
@@ -174,7 +190,7 @@ Deno.serve(async (req) => {
     }
 
     // 3. Check each monitor
-    const results: any[] = [];
+    const results: MonitorCheckResult[] = [];
 
     for (const monitor of monitors) {
       try {

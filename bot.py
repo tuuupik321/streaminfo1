@@ -349,7 +349,7 @@ async def get_settings(request: web.Request):
     async with async_session() as session:
         user = await session.get(User, int(uid))
         if not user: return web.json_response({"is_linked": False, "twitch_name": None, "yt_channel_id": None})
-        return web.json_json_response({"is_linked": bool(user.twitch_name or user.yt_channel_id), "twitch_name": user.twitch_name, "yt_channel_id": user.yt_channel_id})
+        return web.json_response({"is_linked": bool(user.twitch_name or user.yt_channel_id), "twitch_name": user.twitch_name, "yt_channel_id": user.yt_channel_id})
 
 async def get_analytics(request: web.Request):
     auth_error = await _require_verified_user(request)

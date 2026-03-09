@@ -21,6 +21,7 @@ export function normalizeUiLanguage(value: string | null | undefined): UiLanguag
 
 export function detectTelegramUiLanguage(): UiLanguage {
   if (typeof window === "undefined") return "ru";
-  const code = (window as TelegramWindow).Telegram?.WebApp?.initDataUnsafe?.user?.language_code;
-  return normalizeUiLanguage(code) || "ru";
+  const telegramCode = (window as TelegramWindow).Telegram?.WebApp?.initDataUnsafe?.user?.language_code;
+  const browserCode = typeof navigator !== "undefined" ? navigator.language : null;
+  return normalizeUiLanguage(telegramCode) || normalizeUiLanguage(browserCode) || "ru";
 }

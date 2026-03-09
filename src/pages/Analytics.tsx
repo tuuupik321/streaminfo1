@@ -12,7 +12,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAnalyticsData } from "@/hooks/useAnalyticsData";
 import { EmptyState } from "@/shared/ui/EmptyState";
 
-function mapTimeline(timeline: any[] | undefined): DataPoint[] {
+type TimelineItem = {
+  time: string;
+  viewers: number;
+  event?: string | null;
+};
+
+function mapTimeline(timeline: TimelineItem[] | undefined): DataPoint[] {
   if (!timeline) return [];
   let clickTotal = 0;
   let donationTotal = 0;

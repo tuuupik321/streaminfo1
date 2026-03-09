@@ -10,7 +10,7 @@ interface StreamEvent {
   event_type: string;
   message: string;
   created_at: string;
-  metadata: Record<string, any> | null;
+  metadata: Record<string, unknown> | null;
 }
 
 const eventEmoji: Record<string, string> = {

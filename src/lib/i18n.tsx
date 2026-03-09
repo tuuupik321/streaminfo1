@@ -1,9 +1,10 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { useSettingsStore } from "@/store/useSettingsStore";
-import { UiLanguage } from "./language";
+import { normalizeUiLanguage, UiLanguage } from "./language";
 
 type Translations = Record<string, string>;
 type I18nContextType = {
+  language: UiLanguage;
   t: (key: string, fallback?: string) => string;
 };
 
@@ -21,7 +22,8 @@ async function loadTranslations(lang: UiLanguage): Promise<Translations> {
 }
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const language = useSettingsStore((state) => state.language);
+  const rawLanguage = useSettingsStore((state) => state.language);
+  const language = normalizeUiLanguage(rawLanguage) || "ru";
   const [translations, setTranslations] = useState<Translations>({});
 
   useEffect(() => {
@@ -33,7 +35,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <I18nContext.Provider value={{ t }}>
+    <I18nContext.Provider value={{ language, t }}>
       {children}
     </I18nContext.Provider>
   );
