@@ -1080,6 +1080,7 @@ async def get_all_stats(request: web.Request):
                 twitch_data["followers"] = profile.get("followers")
             if profile.get("views") is not None:
                 twitch_data["views"] = profile.get("views")
+            twitch_data["url"] = f"https://twitch.tv/{user.twitch_name}"
         youtube_data = await fetch_youtube(user.yt_channel_id)
         await update_stream_history(session, int(uid), bool(twitch_data.get("online")), int(twitch_data.get("viewers", 0)))
         await session.commit()
