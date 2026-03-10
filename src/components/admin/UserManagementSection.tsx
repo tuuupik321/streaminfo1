@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Users, Search, Ban, CheckCircle2, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface UserResult {
   id: string;
@@ -21,38 +22,85 @@ export function UserManagementSection() {
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<UserResult[]>([]);
   const [searched, setSearched] = useState(false);
+  const [blockedIds, setBlockedIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const loadBlocked = async () => {
+      const { data } = await supabase
+        .from("settings")
+        .select("value")
+        .eq("key", "blocked_telegram_ids")
+        .maybeSingle();
+      const ids = (data?.value || "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      setBlockedIds(new Set(ids));
+    };
+    void loadBlocked();
+  }, []);
 
   const handleSearch = async () => {
     if (!query.trim()) return;
     setSearching(true);
     setSearched(true);
 
-    // Mock search — in production this would query telegram_channels or a users table
-    await new Promise((r) => setTimeout(r, 800));
+    const q = query.trim();
+    const { data, error } = await supabase
+      .from("telegram_channels")
+      .select("id, chat_id, channel_name, created_at, updated_at")
+      .or(`chat_id.ilike.%${q}%,channel_name.ilike.%${q}%`)
+      .limit(12);
 
-    if (query === "524053673") {
-      setResults([{
-        id: "1",
-        telegram_id: "524053673",
-        username: "admin",
-        status: "active",
-        streams: 12,
-        last_seen: new Date().toISOString(),
-      }]);
-    } else {
-      setResults([]);
+    if (error) {
+      toast.error("Ошибка поиска");
+      setSearching(false);
+      return;
     }
+
+    const mapped: UserResult[] = (data || []).map((row) => ({
+      id: row.id,
+      telegram_id: row.chat_id,
+      username: row.channel_name || row.chat_id,
+      status: blockedIds.has(row.chat_id) ? "blocked" : "active",
+      streams: 0,
+      last_seen: row.updated_at || row.created_at,
+    }));
+
+    setResults(mapped);
     setSearching(false);
   };
 
-  const toggleBlock = (userId: string) => {
+  const toggleBlock = async (userId: string) => {
+    const target = results.find((u) => u.id === userId);
+    if (!target) return;
+
+    const next = new Set(blockedIds);
+    if (next.has(target.telegram_id)) {
+      next.delete(target.telegram_id);
+    } else {
+      next.add(target.telegram_id);
+    }
+
+    setBlockedIds(next);
     setResults((prev) =>
       prev.map((u) =>
         u.id === userId
-          ? { ...u, status: u.status === "active" ? "blocked" : "active" }
+          ? { ...u, status: next.has(u.telegram_id) ? "blocked" : "active" }
           : u
       )
     );
+
+    const value = Array.from(next).join(",");
+    const { error } = await supabase
+      .from("settings")
+      .upsert({ key: "blocked_telegram_ids", value }, { onConflict: "key" });
+
+    if (error) {
+      toast.error("Не удалось обновить статус");
+      return;
+    }
+
     toast.success("Статус пользователя обновлён");
   };
 
@@ -103,7 +151,7 @@ export function UserManagementSection() {
                 <Button
                   variant={user.status === "active" ? "outline" : "default"}
                   size="sm"
-                  onClick={() => toggleBlock(user.id)}
+                  onClick={() => void toggleBlock(user.id)}
                   className="gap-1.5 text-xs"
                 >
                   {user.status === "active" ? <><Ban size={12} /> Заблокировать</> : <><CheckCircle2 size={12} /> Разблокировать</>}

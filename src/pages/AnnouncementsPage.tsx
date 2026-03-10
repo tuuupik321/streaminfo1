@@ -1,16 +1,14 @@
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { Megaphone, Bot, Trash2, PlusCircle, Send, Sparkles } from "lucide-react";
+import { useState, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Megaphone, Trash2, Plus, Send, Sparkles, Link as LinkIcon } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import Confetti from "react-confetti";
+import { useWindowSize } from "react-use";
 
 type AnnouncementButton = {
   id: number;
@@ -18,52 +16,42 @@ type AnnouncementButton = {
   url: string;
 };
 
-function DiscordPreview({ title, game, description, buttons }: { title: string; game: string; description: string; buttons: AnnouncementButton[] }) {
-  return (
-    <div className="rounded-lg bg-[#313338] p-4 text-white">
-      <div className="flex items-start gap-3">
-        <div className="h-10 w-10 flex-shrink-0 rounded-full bg-gradient-to-br from-primary to-green-400" />
-        <div className="min-w-0">
-          <div className="flex items-baseline gap-2">
-            <span className="font-semibold text-white">Stream-Bot</span>
-            <span className="text-xs text-gray-400">Сегодня в {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-          </div>
-          <div className="mt-1 rounded-l-lg border-l-4 border-primary bg-[#2B2D31] p-4">
-            <p className="text-sm text-gray-300">🎮 Игра: <span className="font-semibold text-white">{game || "Не указана"}</span></p>
-            <h2 className="mt-1 text-lg font-bold text-white">{title || "Название стрима"}</h2>
-            <p className="mt-1 text-sm text-gray-300">{description || "Скоро начнем! Присоединяйтесь."}</p>
-          </div>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {buttons.map(btn => (
-              <a key={btn.id} href={btn.url} target="_blank" rel="noreferrer" className="rounded-md bg-[#5865F2] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#4752C4]">
-                {btn.text}
-              </a>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+function parseTelegramMessage(text: string) {
+  const boldRegex = /\*\*(.*?)\*\*/g;
+  const italicRegex = /\*(.*?)\*/g;
+
+  const parts = text.split(boldRegex).map((part, index) => {
+    if (index % 2 === 1) return <strong key={index}>{part}</strong>;
+    return part.split(italicRegex).map((subPart, subIndex) => {
+      if (subIndex % 2 === 1) return <em key={subIndex}>{subPart}</em>;
+      return subPart;
+    });
+  });
+
+  return <p>{parts}</p>;
 }
 
-function TelegramPreview({ title, game, description, buttons }: { title: string; game: string; description: string; buttons: AnnouncementButton[] }) {
+function TelegramPreview({ message, buttons }: { message: string; buttons: AnnouncementButton[] }) {
+  const parsedMessage = useMemo(() => parseTelegramMessage(message), [message]);
+
   return (
-    <div className="rounded-lg bg-white dark:bg-gray-800 p-3">
+    <div className="rounded-xl bg-white dark:bg-[#18222d] p-3 w-full max-w-sm mx-auto shadow-lg">
       <div className="flex items-start gap-3">
         <div className="h-10 w-10 flex-shrink-0 rounded-full bg-gradient-to-br from-primary to-green-400" />
         <div className="min-w-0 flex-1">
-          <span className="font-semibold text-gray-900 dark:text-white">Stream-Bot</span>
-          <div className="mt-1 text-sm text-gray-800 dark:text-gray-200">
-            <p>🎮 <span className="font-bold">Игра:</span> {game || "Не указана"}</p>
-            <p className="mt-1"><span className="font-bold">{title || "Название стрима"}</span></p>
-            <p>{description || "Скоро начнем! Присоединяйтесь."}</p>
+          <div className="flex justify-between items-baseline">
+            <span className="font-bold text-primary">Stream-Bot</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+          <div className="mt-1 text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
+            {message ? parsedMessage : <span className="text-gray-400 dark:text-gray-500">Ваш анонс появится здесь...</span>}
           </div>
         </div>
       </div>
-      <div className="mt-3 flex flex-col gap-1">
+      <div className="mt-3 flex flex-col gap-1.5">
         {buttons.map(btn => (
-          <a key={btn.id} href={btn.url} target="_blank" rel="noreferrer" className="w-full rounded-lg bg-gray-200 dark:bg-gray-700 py-2 text-center text-sm font-medium text-gray-900 dark:text-white">
-            {btn.text}
+          <a key={btn.id} href={btn.url} target="_blank" rel="noreferrer" className="w-full rounded-lg bg-gray-200 dark:bg-[#2a3643] py-2 text-center text-sm font-medium text-gray-900 dark:text-white transition-transform active:scale-[0.98]">
+            {btn.text || "Нажми меня"}
           </a>
         ))}
       </div>
@@ -73,15 +61,18 @@ function TelegramPreview({ title, game, description, buttons }: { title: string;
 
 export default function AnnouncementsPage() {
   const { t } = useI18n();
-  const [title, setTitle] = useState("");
-  const [game, setGame] = useState("");
-  const [description, setDescription] = useState("");
+  const [message, setMessage] = useState("");
   const [buttons, setButtons] = useState<AnnouncementButton[]>([]);
   const [sending, setSending] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const { width, height } = useWindowSize();
 
   const addButtonClicked = () => {
-    setButtons([...buttons, { id: Date.now(), text: "Новая кнопка", url: "" }]);
+    if (buttons.length >= 3) {
+      toast.info("Можно добавить не более 3 кнопок.");
+      return;
+    }
+    setButtons([...buttons, { id: Date.now(), text: "", url: "" }]);
   };
 
   const removeButton = (id: number) => {
@@ -93,124 +84,111 @@ export default function AnnouncementsPage() {
   };
 
   const handleSend = () => {
-    if (!title) {
-      toast.error("Название стрима не может быть пустым!");
+    if (!message) {
+      toast.error("Сообщение не может быть пустым!");
       return;
     }
     setSending(true);
-    // Simulate API call
     setTimeout(() => {
       setSending(false);
       toast.success("Анонс успешно отправлен!");
       setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 5000);
     }, 1500);
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-3 py-4 sm:p-4 md:p-8">
-      {showConfetti && <Confetti recycle={false} numberOfPieces={400} />}
+    <div className="mx-auto max-w-4xl px-3 py-4 sm:p-4 md:p-8">
+      {showConfetti && <Confetti width={width} height={height} recycle={false} onConfettiComplete={() => setShowConfetti(false)} />}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="mb-8"
+        className="mb-8 text-center"
       >
-        <h1 className="text-gradient-primary flex items-center gap-3">
-          <Megaphone size={32} />
+        <h1 className="text-gradient-primary inline-flex items-center gap-3 text-4xl md:text-5xl">
+          <Megaphone />
           {t("announcements.title", "Центр Анонсов")}
         </h1>
-        <p className="mt-2 text-muted-foreground">
-          {t("announcements.description", "Создавайте и отправляйте анонсы ваших стримов в Telegram и Discord.")}
+        <p className="mt-2 text-muted-foreground max-w-xl mx-auto">
+          {t("announcements.description", "Создайте идеальный анонс для вашего стрима и отправьте его в один клик.")}
         </p>
       </motion.div>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-        {/* Editor */}
+      <div className="grid grid-cols-1 gap-12">
         <motion.div 
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.5 }}
-          className="space-y-6"
+          className="space-y-8"
         >
-          <div className="space-y-2">
-            <Label htmlFor="title">{t("announcements.streamTitle", "Название стрима")}</Label>
-            <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Например, 'Идем за топ-1 в Warzone!'" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="game">{t("announcements.game", "Игра")}</Label>
-            <Input id="game" value={game} onChange={(e) => setGame(e.target.value)} placeholder="Например, 'Call of Duty: Warzone'" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="description">{t("announcements.descriptionField", "Описание")}</Label>
-            <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Например, 'Сегодня играем с подписчиками, залетайте!'" />
+          {/* Editor */}
+          <div className="space-y-3">
+            <Label htmlFor="message" className="text-lg font-medium">{t("announcements.message", "Ваше сообщение")}</Label>
+            <Textarea id="message" value={message} onChange={(e) => setMessage(e.target.value)} placeholder={t("announcements.placeholder", "Что нового, стример?")} rows={5} className="text-base"/>
+            <p className="text-xs text-muted-foreground">{t("announcements.markdownHint", "Поддерживается Markdown: **жирный** и *курсив*.")}</p>
           </div>
 
-          <Separator />
-
+          {/* Buttons */}
           <div>
-            <h3 className="text-lg font-semibold mb-3">{t("announcements.buttons", "Кликбейтные кнопки")}</h3>
+            <h3 className="text-lg font-medium mb-4">{t("announcements.buttons", "Призыв к действию")}</h3>
             <div className="space-y-4">
-              {buttons.map((btn, index) => (
-                <motion.div 
-                  key={btn.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="rounded-lg border p-4 space-y-3"
-                >
-                  <div className="flex justify-between items-center">
-                    <Label className="font-mono">Кнопка #{index + 1}</Label>
-                    <Button variant="ghost" size="icon" onClick={() => removeButton(btn.id)}>
-                      <Trash2 size={16} className="text-destructive" />
+              <AnimatePresence>
+                {buttons.map((btn, index) => (
+                  <motion.div 
+                    key={btn.id}
+                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                    transition={{ duration: 0.2 }}
+                    className="relative rounded-xl border bg-card/50 p-4"
+                  >
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                       <div className="space-y-2">
+                         <Label htmlFor={`btn-text-${btn.id}`} className="text-xs font-mono">{t("announcements.buttonText", "Текст кнопки")}</Label>
+                         <Input id={`btn-text-${btn.id}`} value={btn.text} onChange={(e) => updateButton(btn.id, 'text', e.target.value)} placeholder="🚀 Залетай!" />
+                       </div>
+                       <div className="space-y-2">
+                         <Label htmlFor={`btn-url-${btn.id}`} className="text-xs font-mono">{t("announcements.buttonUrl", "URL")}</Label>
+                         <div className="relative">
+                           <LinkIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                           <Input id={`btn-url-${btn.id}`} value={btn.url} onChange={(e) => updateButton(btn.id, 'url', e.target.value)} placeholder="https://twitch.tv/..." className="pl-8"/>
+                         </div>
+                       </div>
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={() => removeButton(btn.id)} className="absolute -top-3 -right-3 h-7 w-7 rounded-full bg-secondary text-muted-foreground hover:bg-destructive hover:text-destructive-foreground">
+                      <Trash2 size={14} />
                     </Button>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor={`btn-text-${btn.id}`}>{t("announcements.buttonText", "Текст кнопки")}</Label>
-                    <Input id={`btn-text-${btn.id}`} value={btn.text} onChange={(e) => updateButton(btn.id, 'text', e.target.value)} placeholder="🚀 Залетай!" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor={`btn-url-${btn.id}`}>{t("announcements.buttonUrl", "URL кнопки")}</Label>
-                    <Input id={`btn-url-${btn.id}`} value={btn.url} onChange={(e) => updateButton(btn.id, 'url', e.target.value)} placeholder="https://twitch.tv/yourchannel" />
-                  </div>
-                </motion.div>
-              ))}
-              <Button variant="outline" onClick={addButtonClicked} className="w-full gap-2">
-                <PlusCircle size={16} /> {t("announcements.addButton", "Добавить кнопку")}
-              </Button>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+              {buttons.length < 3 && (
+                <Button variant="outline" onClick={addButtonClicked} className="w-full border-dashed gap-2">
+                  <Plus size={16} /> {t("announcements.addButton", "Добавить кнопку")}
+                </Button>
+              )}
             </div>
           </div>
-        </motion.div>
 
-        {/* Preview */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-        >
-          <Tabs defaultValue="discord">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="discord" className="gap-2"><Bot size={16} /> Discord</TabsTrigger>
-              <TabsTrigger value="telegram" className="gap-2"><Send size={16} /> Telegram</TabsTrigger>
-            </TabsList>
-            <TabsContent value="discord" className="mt-4">
-              <DiscordPreview title={title} game={game} description={description} buttons={buttons} />
-            </TabsContent>
-            <TabsContent value="telegram" className="mt-4">
-              <TelegramPreview title={title} game={game} description={description} buttons={buttons} />
-            </TabsContent>
-          </Tabs>
+          {/* Preview */}
+          <div className="space-y-3">
+             <h3 className="text-lg font-medium text-center">{t("announcements.preview", "Живое превью")}</h3>
+             <TelegramPreview message={message} buttons={buttons} />
+          </div>
 
-          <div className="mt-8">
-            <Button onClick={handleSend} disabled={sending} className="w-full gap-2 text-lg p-6 glow-primary">
-              {sending ? (
-                <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}>
-                  <Sparkles size={20} />
-                </motion.div>
-              ) : (
-                <Send size={20} />
-              )}
-              {sending ? t("announcements.sending", "Отправка...") : t("announcements.send", "Отправить анонс")}
+          {/* Send Button */}
+          <div className="pt-4">
+            <Button onClick={handleSend} disabled={sending} size="lg" className="w-full group relative overflow-hidden gap-2 text-base font-bold">
+               <span className="absolute inset-[-100%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#E2CBFF_0%,#393BB2_50%,#E2CBFF_100%)] dark:bg-[conic-gradient(from_90deg_at_50%_50%,#14C57B_0%,#00A36C_50%,#14C57B_100%)]" />
+               <div className="relative z-10 flex items-center gap-2">
+                {sending ? (
+                  <motion.div animate={{ rotate: [0, 360] }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}>
+                    <Sparkles size={20} />
+                  </motion.div>
+                ) : (
+                  <Send size={20} />
+                )}
+                {sending ? t("announcements.sending", "Отправка...") : t("announcements.send", "Отправить в Каналы")}
+               </div>
             </Button>
           </div>
         </motion.div>

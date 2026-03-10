@@ -12,6 +12,7 @@ import { AppSidebar } from "./components/AppSidebar";
 import { CommandPalette } from "./components/CommandPalette";
 import { AppShellSkeleton } from "./components/AppShellSkeleton";
 import { PageTransition } from "./components/PageTransition";
+import { GlobalStatusBar } from "./components/GlobalStatusBar";
 import { cn } from "./lib/utils";
 
 const StreamInfoPage = lazy(() => import("./pages/StreamInfoPage"));
@@ -112,6 +113,7 @@ const App = () => (
                       <span className="text-sm font-bold font-heading text-gradient-primary">StreamInfo</span>
                     </div>
                   </header>
+                  <GlobalStatusBar />
                   <main className="flex-1 pb-20 md:pb-6">
                     <Suspense fallback={<AppShellSkeleton />}>
                       <AnimatedRoutes />

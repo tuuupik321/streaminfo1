@@ -51,5 +51,15 @@
   "bottomNav.admin": "Админ-центр",
 
   "announcements.title": "Центр Анонсов",
-  "announcements.description": "Создавайте и отправляйте анонсы ваших стримов в Telegram и Discord."
+  "announcements.description": "Создайте идеальный анонс для вашего стрима и отправьте его в один клик.",
+  "announcements.message": "Ваше сообщение",
+  "announcements.placeholder": "Что нового, стример?",
+  "announcements.markdownHint": "Поддерживается Markdown: **жирный** и *курсив*.",
+  "announcements.buttons": "Призыв к действию",
+  "announcements.buttonText": "Текст кнопки",
+  "announcements.buttonUrl": "URL",
+  "announcements.addButton": "Добавить кнопку",
+  "announcements.preview": "Живое превью",
+  "announcements.sending": "Отправка...",
+  "announcements.send": "Отправить в Каналы"
 }

@@ -1,5 +1,5 @@
 ﻿import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { CalendarDays, DollarSign, Eye, Link2, MousePointerClick, RefreshCw, ShieldCheck, TrendingUp, UserCheck, Users, MoreHorizontal, Radio, PlusCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { StatsCard } from "@/shared/ui/StatsCard";
 import { DataPoint, ViewerChart } from "@/components/dashboard/ViewerChart";
-import { LiveIndicator } from "@/components/dashboard/LiveIndicator";
 import { AchievementsBlock } from "@/components/dashboard/AchievementsBlock";
 import { PredictionCard } from "@/components/dashboard/PredictionCard";
 import { StreamSeriesRail } from "@/components/dashboard/StreamSeriesRail";
@@ -66,6 +65,9 @@ export default function StreamInfoPage() {
   const showOnboarding = data?.is_linked === false && !isLoading;
   const isLive = data?.twitch?.online ?? false;
 
+  const HeroWidget = isLive ? LiveStreamFeed : ViewerChart;
+  const heroWidgetName = isLive ? "liveStreamFeed" : "viewerChart";
+
   if (showOnboarding) {
     return <LockedOverlay />;
   }
@@ -82,17 +84,13 @@ export default function StreamInfoPage() {
             </button>
           </div>
         </motion.div>
-        <LiveIndicator isLive={isLive} />
-      </div>
-
-      {isLive && (
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-5">
-          <Button onClick={() => navigate("/live")} className="w-full animate-glow-pulse" size="lg">
-            <Radio size={16} className="mr-2" />
-            {t("streamInfo.goToLive", "Перейти в режим Live")}
+        {isLive && (
+          <Button onClick={() => navigate("/live")} className="animate-glow-pulse gap-2" size="sm">
+            <Radio size={14} />
+            <span className="hidden sm:inline">{t("streamInfo.goToLive", "Live Dashboard")}</span>
           </Button>
-        </motion.div>
-      )}
+        )}
+      </div>
 
       <div className="mb-5 flex gap-2.5 sm:mb-6 sm:gap-3">
         <Select value={period} onValueChange={setPeriod}>
@@ -129,8 +127,17 @@ export default function StreamInfoPage() {
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:gap-8">
         <div className="lg:col-span-2 space-y-8">
-          {widgets.includes("liveStreamFeed") && <LiveStreamFeed />}
-          {widgets.includes("viewerChart") && <ViewerChart loading={isLoading} data={timeline} />}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={heroWidgetName}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              {widgets.includes(heroWidgetName as any) && <HeroWidget loading={isLoading} data={timeline} />}
+            </motion.div>
+          </AnimatePresence>
         </div>
         <div className="space-y-4">
           {widgets.includes("stats") && (

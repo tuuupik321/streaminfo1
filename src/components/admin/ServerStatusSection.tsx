@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Server, Cpu, HardDrive, Wifi, RefreshCw } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ServerMetrics {
   cpu: number;
@@ -15,29 +16,60 @@ interface ServerMetrics {
   region: string;
 }
 
+const defaultMetrics: ServerMetrics = {
+  cpu: 0,
+  memory: 0,
+  disk: 0,
+  ping: 0,
+  uptime: "—",
+  region: "—",
+};
+
+function parseNumber(value: string | null | undefined, fallback = 0) {
+  if (!value) return fallback;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : fallback;
+}
+
 export function ServerStatusSection() {
-  const [metrics, setMetrics] = useState<ServerMetrics>({
-    cpu: 12,
-    memory: 43,
-    disk: 28,
-    ping: 24,
-    uptime: "14д 7ч 32м",
-    region: "Frankfurt, DE",
-  });
+  const [metrics, setMetrics] = useState<ServerMetrics>(defaultMetrics);
   const [refreshing, setRefreshing] = useState(false);
+
+  const load = async () => {
+    const { data } = await supabase
+      .from("settings")
+      .select("key, value")
+      .in("key", [
+        "server_cpu",
+        "server_memory",
+        "server_disk",
+        "server_ping",
+        "server_uptime",
+        "server_region",
+      ]);
+
+    const map: Record<string, string> = {};
+    data?.forEach((row) => {
+      map[row.key] = row.value;
+    });
+
+    setMetrics({
+      cpu: parseNumber(map.server_cpu, 0),
+      memory: parseNumber(map.server_memory, 0),
+      disk: parseNumber(map.server_disk, 0),
+      ping: parseNumber(map.server_ping, 0),
+      uptime: map.server_uptime || "—",
+      region: map.server_region || "—",
+    });
+  };
+
+  useEffect(() => {
+    void load();
+  }, []);
 
   const refresh = async () => {
     setRefreshing(true);
-    await new Promise((r) => setTimeout(r, 1000));
-    // Mock updated metrics
-    setMetrics({
-      cpu: Math.floor(Math.random() * 30) + 5,
-      memory: Math.floor(Math.random() * 40) + 30,
-      disk: Math.floor(Math.random() * 20) + 20,
-      ping: Math.floor(Math.random() * 30) + 15,
-      uptime: "14д 7ч 33м",
-      region: "Frankfurt, DE",
-    });
+    await load();
     setRefreshing(false);
   };
 
@@ -67,7 +99,6 @@ export function ServerStatusSection() {
             </Badge>
           </div>
 
-          {/* CPU */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-mono text-muted-foreground flex items-center gap-1.5"><Cpu size={12} /> CPU</span>
@@ -76,7 +107,6 @@ export function ServerStatusSection() {
             <Progress value={metrics.cpu} className={`h-2 ${getProgressColor(metrics.cpu)}`} />
           </div>
 
-          {/* Memory */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-mono text-muted-foreground flex items-center gap-1.5"><Server size={12} /> Память</span>
@@ -85,7 +115,6 @@ export function ServerStatusSection() {
             <Progress value={metrics.memory} className={`h-2 ${getProgressColor(metrics.memory)}`} />
           </div>
 
-          {/* Disk */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-mono text-muted-foreground flex items-center gap-1.5"><HardDrive size={12} /> Диск</span>
@@ -94,7 +123,6 @@ export function ServerStatusSection() {
             <Progress value={metrics.disk} className={`h-2 ${getProgressColor(metrics.disk)}`} />
           </div>
 
-          {/* Ping */}
           <div className="flex items-center justify-between p-2 rounded-lg bg-background/50 border border-border/30">
             <span className="text-xs font-mono text-muted-foreground">Пинг до сервера</span>
             <span className={`text-sm font-mono font-bold ${getColor(metrics.ping > 100 ? 80 : metrics.ping > 50 ? 60 : 20)}`}>
