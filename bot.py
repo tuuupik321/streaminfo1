@@ -102,6 +102,25 @@ class User(Base):
     twitch_name = Column(String, nullable=True)
     yt_channel_id = Column(String, nullable=True)
 
+class Question(Base):
+    __tablename__ = "questions"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(BigInteger, nullable=False, index=True)
+    chat_id = Column(BigInteger, nullable=False, index=True)
+    message_id = Column(BigInteger, nullable=False, unique=True)
+    text = Column(String, nullable=False)
+    author = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    answered = Column(Boolean, default=False)
+
+class LiveBanner(Base):
+    __tablename__ = "live_banner"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(BigInteger, nullable=False, index=True)
+    image_url = Column(String, nullable=False)
+    link_url = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+
 # ... (rest of the SQLAlchemy models and setup remain the same)
 class StreamSession(Base):
     __tablename__ = "stream_sessions"
@@ -161,7 +180,7 @@ def validate_runtime_config() -> None:
         log_event("config_warning", key="TWITCH_CLIENT_ID", reason="missing_while_twitch_secret_is_set")
     if YT_HANDOFF_WEBHOOK_URL and not YT_HANDOFF_WEBHOOK_URL.startswith(("http://", "https://")):
         log_event("config_warning", key="YT_HANDOFF_WEBHOOK_URL", reason="must_be_http_url")
-    if DONATALERTS_ACCESS_TOKEN and not DONATALERTS_API_BASE.startswith(("http://", "https://")):
+    if DONATALERTS_ACCESS_TOKEN and not DONATALERTS_API_BASE.startswith(("http://", "https-:-//")):
         log_event("config_warning", key="DONATALERTS_API_BASE", reason="must_be_http_url")
 
     log_event(
@@ -230,7 +249,7 @@ async def _require_verified_user(request: web.Request):
     init_data = request.query.get("init_data")
     log_event("auth_attempt", method=request.method, path=request.path, has_init_data=bool(init_data))
     
-    if request.method in {"POST", "PUT", "PATCH"}:
+    if request.method in {"POST", "PUT, "PATCH"}:
         try:
             payload = await request.json()
             init_data = payload.get("init_data", init_data)
@@ -272,6 +291,120 @@ async def keep_database_warm():
 
 async def health_check(request: web.Request):
     return web.Response(text="I'm alive!", status=200)
+
+@dp.message(F.text.contains("?"))
+async def handle_questions(message: types.Message):
+    if not async_session:
+        return
+
+    async with async_session() as session:
+        question = Question(
+            user_id=message.from_user.id,
+            chat_id=message.chat.id,
+            message_id=message.message_id,
+            text=message.text,
+            author=message.from_user.full_name,
+        )
+        session.add(question)
+        await session.commit()
+
+async def get_questions(request: web.Request):
+    auth_error = await _require_verified_user(request)
+    if auth_error:
+        return auth_error
+
+    if not async_session:
+        return web.json_response({"error": "db_not_configured"}, status=500)
+
+    async with async_session() as session:
+        query = select(Question).where(Question.answered == False).order_by(desc(Question.created_at))
+        result = await session.execute(query)
+        questions = result.scalars().all()
+        return web.json_response([
+            {
+                "id": q.id,
+                "text": q.text,
+                "author": q.author,
+                "created_at": q.created_at.isoformat(),
+            }
+            for q in questions
+        ])
+
+async def answer_question(request: web.Request):
+    auth_error = await _require_verified_user(request)
+    if auth_error:
+        return auth_error
+
+    if not async_session:
+        return web.json_response({"error": "db_not_configured"}, status=500)
+
+    try:
+        payload = await request.json()
+        question_id = payload["question_id"]
+    except (KeyError, json.JSONDecodeError):
+        return web.json_response({"error": "bad_request"}, status=400)
+
+    async with async_session() as session:
+        question = await session.get(Question, question_id)
+        if not question:
+            return web.json_response({"error": "not_found"}, status=404)
+        
+        question.answered = True
+        await session.commit()
+
+        # Notify the admin panel that the question is answered
+        # This can be done via websockets or long polling in a real application
+        # For now, we just confirm the action
+        return web.json_response({"status": "ok"})
+
+async def set_live_banner(request: web.Request):
+    auth_error = await _require_verified_user(request)
+    if auth_error:
+        return auth_error
+
+    if not async_session:
+        return web.json_response({"error": "db_not_configured"}, status=500)
+
+    try:
+        payload = await request.json()
+        user_id = int(request["verified_user_id"])
+        image_url = payload["image_url"]
+        link_url = payload.get("link_url")
+    except (KeyError, json.JSONDecodeError, ValueError):
+        return web.json_response({"error": "bad_request"}, status=400)
+
+    async with async_session() as session:
+        # Remove previous banner for the user
+        await session.execute(LiveBanner.__table__.delete().where(LiveBanner.user_id == user_id))
+        
+        banner = LiveBanner(
+            user_id=user_id,
+            image_url=image_url,
+            link_url=link_url,
+        )
+        session.add(banner)
+        await session.commit()
+        return web.json_response({"status": "ok"})
+
+async def get_live_banner(request: web.Request):
+    user_id = request.query.get("user_id")
+    if not user_id:
+        return web.json_response({"error": "no_uid"}, status=400)
+
+    if not async_session:
+        return web.json_response({"error": "db_not_configured"}, status=500)
+
+    async with async_session() as session:
+        query = select(LiveBanner).where(LiveBanner.user_id == int(user_id)).order_by(desc(LiveBanner.created_at))
+        result = await session.execute(query)
+        banner = result.scalar_one_or_none()
+        if not banner:
+            return web.json_response({}, status=404)
+        return web.json_response({
+            "image_url": banner.image_url,
+            "link_url": banner.link_url,
+        })
+
 
 async def save_settings(request: web.Request):
     auth_error = await _require_verified_user(request)
@@ -344,6 +477,10 @@ def build_app():
     app.router.add_get("/api/stats", get_all_stats)
     app.router.add_get("/api/settings", get_settings)
     app.router.add_get("/api/analytics", get_analytics)
+    app.router.add_get("/api/questions", get_questions)
+    app.router.add_post("/api/questions/answer", answer_question)
+    app.router.add_post("/api/live_banner", set_live_banner)
+    app.router.add_get("/api/live_banner", get_live_banner)
     # ... (add other api routes here)
 
     if bot and WEBHOOK_ENABLED:
@@ -351,12 +488,12 @@ def build_app():
         setup_application(app, dp, bot=bot)
 
     # Static files serving (must be last)
-    dist_path = os.path.join(os.path.dirname(__file__), "dist")
-    if os.path.exists(dist_path):
-        app.router.add_static("/assets", os.path.join(dist_path, "assets"))
+    public_path = os.path.join(os.path.dirname(__file__), "public")
+    if os.path.exists(public_path):
+        app.router.add_static("/assets", os.path.join(public_path, "assets"))
         # For any other route, serve index.html to support client-side routing
         async def serve_index(request):
-            return web.FileResponse(os.path.join(dist_path, "index.html"))
+            return web.FileResponse(os.path.join(public_path, "index.html"))
         app.router.add_route("GET", "/{tail:.*}", serve_index)
 
     return app

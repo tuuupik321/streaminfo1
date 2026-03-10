@@ -1,29 +1,245 @@
-<!doctype html>
-<html lang="ru" class="dark">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="theme-color" content="#0a0a0f" />
-    <meta name="format-detection" content="telephone=no" />
-    <title>StreamInfo</title>
-    <meta name="description" content="StreamInfo — управление стримами и уведомлениями">
-    <meta name="author" content="StreamInfo" />
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="StreamInfo">
-    <meta property="og:description" content="StreamInfo — управление стримами и уведомлениями">
-    <meta property="og:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/358bd726-d794-4475-b7b6-d957133b3bd6/id-preview-5abcea58--afdc4e56-dfe7-48cf-97ab-87db2c62d354.lovable.app-1772959869701.png">
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="StreamInfo">
-    <meta name="twitter:description" content="StreamInfo — управление стримами и уведомлениями">
-    <meta name="twitter:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/358bd726-d794-4475-b7b6-d957133b3bd6/id-preview-5abcea58--afdc4e56-dfe7-48cf-97ab-87db2c62d354.lovable.app-1772959869701.png">
-    <!-- Telegram WebApp SDK -->
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PULSE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="live-indicator">
+            <span class="live-dot"></span>LIVE
+        </div>
+        <div id="stream-timer">00:00:00</div>
+        <div class="header-controls">
+            <div class="lang-switcher">
+                <button class="lang-button active" data-lang="ru">RU</button>
+                <button class="lang-button" data-lang="en">EN</button>
+            </div>
+            <div class="viewers">
+                <span id="viewer-count">0</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="dashboard">
+        <div id="chat-column" class="card">
+            <div class="card-header">
+                <h3 data-i18n-key="chatTitle">ЧАТ</h3>
+                <div class="tabs">
+                    <button class="tab-button active" data-filter="all" data-i18n-key="chatAll">ВСЕ</button>
+                    <button class="tab-button" data-filter="questions" data-i18n-key="chatQuestions">ВОПРОСЫ</button>
+                </div>
+            </div>
+            <div class="chat-messages" id="chat-messages">
+                <!-- Messages will be dynamically inserted here -->
+            </div>
+        </div>
+        <div id="control-column" class="card-large">
+            <div class="live-banner-control">
+                <div class="drop-zone-wrapper">
+                    <div id="drop-zone" class="drop-zone">
+                        <p data-i18n-key="dropZone">DRAG & DROP GIF/JPG/PNG</p>
+                    </div>
+                    <input type="text" id="banner-link-url" class="banner-link-input" placeholder="https://...">
+                </div>
+                <div class="banner-preview">
+                    <p data-i18n-key="preview">PREVIEW</p>
+                </div>
+            </div>
+            <div class="telegram-controls">
+                <button class="tg-button" data-i18n-key="tgAnnounce">🔥 АНОНС</button>
+                <button class="tg-button" data-i18n-key="tgVideo">📹 КРУЖОК</button>
+                <button class="tg-button" data-i18n-key="tgScreenshot">🖼️ СКРИН</button>
+            </div>
+        </div>
+        <div id="events-column" class="card">
+            <div class="card-header">
+                <h3 data-i18n-key="feedTitle">ЛЕНТА</h3>
+            </div>
+            <div class="events-list" id="events-list">
+                <!-- Events will be dynamically inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const translations = {
+            ru: {
+                chatTitle: "ЧАТ",
+                chatAll: "ВСЕ",
+                chatQuestions: "ВОПРОСЫ",
+                dropZone: "DRAG & DROP GIF/JPG/PNG",
+                preview: "PREVIEW",
+                tgAnnounce: "🔥 АНОНС",
+                tgVideo: "📹 КРУЖОК",
+                tgScreenshot: "🖼️ СКРИН",
+                feedTitle: "ЛЕНТА",
+                donation: "задонатил",
+                subscription: "подписался",
+                follow: "теперь фолловер"
+            },
+            en: {
+                chatTitle: "CHAT",
+                chatAll: "ALL",
+                chatQuestions: "QUESTIONS",
+                dropZone: "DRAG & DROP GIF/JPG/PNG",
+                preview: "PREVIEW",
+                tgAnnounce: "🔥 ANNOUNCE",
+                tgVideo: "📹 VIDEO",
+                tgScreenshot: "🖼️ SCREEN",
+                feedTitle: "FEED",
+                donation: "donated",
+                subscription: "subscribed",
+                follow: "is now a follower"
+            }
+        };
+
+        let currentLang = 'ru';
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            document.documentElement.lang = lang;
+            document.querySelectorAll('[data-i18n-key]').forEach(el => {
+                const key = el.getAttribute('data-i18n-key');
+                el.textContent = translations[lang][key];
+            });
+            renderEvents(); // Re-render events with new language
+        }
+
+        document.querySelectorAll('.lang-button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.lang-button').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                setLanguage(btn.dataset.lang);
+            });
+        });
+
+        // All other JS logic remains the same for now
+        const fakeMessages = [
+            { platform: 'twitch', author: 'User1', text: 'Всем привет!', isQuestion: false },
+            { platform: 'youtube', author: 'Viewer2', text: 'Когда следующий стрим?', isQuestion: true },
+        ];
+
+        const chatContainer = document.getElementById('chat-messages');
+        const tabs = document.querySelectorAll('.tab-button');
+        let currentFilter = 'all';
+
+        function getPlatformIcon(platform) {
+            if (platform === 'twitch') {
+                return '<svg class="icon" style="color: var(--twitch-color)" fill="currentColor" viewBox="0 0 20 20"><path d="M11.248 5.734l-1.71 3.423-3.423 1.71-3.423-1.71-1.71-3.423 1.71-3.423 3.423-1.711 3.423 1.71 1.71 3.423zm-3.423 1.711l1.71-3.423-1.71-3.423-3.423 1.71-1.71 3.423 1.71 3.423 3.423-1.71zm6.846 0l1.71-3.423-1.71-3.423-3.423 1.71-1.71 3.423 1.71 3.423 3.423-1.71zM18.094 0l-3.423 1.71-1.71 3.423 1.71 3.423 3.423-1.71 1.71-3.423-1.71-3.423-3.423-1.71z"/></svg>';
+            } else if (platform === 'youtube') {
+                return '<svg class="icon" style="color: var(--youtube-color)" fill="currentColor" viewBox="0 0 20 20"><path d="M10 4.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM8.5 12V8l4 2-4 2z"/></svg>';
+            }
+            return '';
+        }
+
+        function renderMessages() {
+            chatContainer.innerHTML = '';
+            const filteredMessages = fakeMessages.filter(msg => {
+                if (currentFilter === 'questions') {
+                    return msg.isQuestion;
+                }
+                return true;
+            });
+
+            for (const msg of filteredMessages) {
+                const messageEl = document.createElement('div');
+                messageEl.className = 'message';
+                messageEl.innerHTML = `
+                    ${getPlatformIcon(msg.platform)}
+                    <div class="content">
+                        <span class="author" style="color: var(--${msg.platform}-color);">${msg.author}</span>
+                        <span class="text">${msg.text}</span>
+                    </div>
+                `;
+                chatContainer.appendChild(messageEl);
+            }
+        }
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                currentFilter = tab.dataset.filter;
+                renderMessages();
+            });
+        });
+
+        const dropZone = document.getElementById('drop-zone');
+        const bannerPreview = document.querySelector('.banner-preview');
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    dropZone.innerHTML = `<img src="${event.target.result}" style="max-width: 100%; max-height: 100%; border-radius: 8px;">`;
+                    bannerPreview.innerHTML = `<img src="${event.target.result}" style="max-width: 100%; max-height: 100%; border-radius: 8px;">`;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        const fakeEvents = [
+            { type: 'donation', user: 'Donator1', amount: '$10' },
+            { type: 'subscription', user: 'NewSub', tier: 'Tier 1' },
+            { type: 'follow', user: 'NewFollower' },
+        ];
+
+        const eventsContainer = document.getElementById('events-list');
+
+        function getEventIcon(type) {
+            if (type === 'donation') {
+                return '<svg class="icon" style="color: var(--donation-color)" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm-1-9H7v2h2v2h2v-2h2V9h-2V7h-2v2z"/></svg>';
+            } else if (type === 'subscription') {
+                return '<svg class="icon" style="color: var(--twitch-color)" fill="currentColor" viewBox="0 0 20 20"><path d="M10 1l2.928 5.956L19 7.05l-4.5 4.385L15.456 18 10 14.885 4.544 18 5.5 11.435 1 7.05l6.072-.094L10 1z"/></svg>';
+            } else if (type === 'follow') {
+                return '<svg class="icon" style="color: var(--action-color)" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg>';
+            }
+            return '';
+        }
+
+        function renderEvents() {
+            eventsContainer.innerHTML = '';
+            for (const event of fakeEvents) {
+                const eventEl = document.createElement('div');
+                eventEl.className = 'event';
+                let details = '';
+                if (event.type === 'donation') {
+                    details = `<b>${event.user}</b> ${translations[currentLang].donation} <b>${event.amount}</b>`;
+                } else if (event.type === 'subscription') {
+                    details = `<b>${event.user}</b> ${translations[currentLang].subscription} (${event.tier})`;
+                } else if (event.type === 'follow') {
+                    details = `<b>${event.user}</b> ${translations[currentLang].follow}`;
+                }
+                eventEl.innerHTML = `
+                    ${getEventIcon(event.type)}
+                    <div class="details">${details}</div>
+                `;
+                eventsContainer.appendChild(eventEl);
+            }
+        }
+
+        // Initial render
+        renderMessages();
+        setLanguage(currentLang);
+    </script>
+</body>
 </html>

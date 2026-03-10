@@ -25,13 +25,14 @@ import { cn } from "@/lib/utils";
 function AddWidgetCard({ onClick }: { onClick: () => void }) {
   const { t } = useI18n();
   return (
-    <div
+    <motion.div
       onClick={onClick}
-      className="flex h-full min-h-[120px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border/50 bg-background/30 text-muted-foreground transition-colors hover:border-primary/50 hover:bg-primary/5 hover:text-primary"
+      whileHover={{ scale: 1.03, backgroundColor: 'hsla(var(--primary) / 0.05)', borderColor: 'hsla(var(--primary) / 0.3)' }}
+      className="flex h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border border-border/30 bg-secondary/30 text-center text-muted-foreground transition-colors"
     >
       <PlusCircle size={24} className="mb-2" />
       <span className="text-xs font-medium">{t("streamInfo.addWidget", "Добавить виджет")}</span>
-    </div>
+    </motion.div>
   );
 }
 
@@ -55,11 +56,11 @@ export default function StreamInfoPage() {
   });
 
   const stats = [
-    { icon: MousePointerClick, label: t("streamInfo.clicks"), value: data?.clicks ?? 0 },
-    { icon: Eye, label: t("streamInfo.viewersNow"), value: data?.twitch?.viewers ?? 0 },
+    { icon: MousePointerClick, label: t("streamInfo.clicks"), value: data?.clicks },
+    { icon: Eye, label: t("streamInfo.viewersNow"), value: data?.twitch?.viewers },
     { icon: TrendingUp, label: t("streamInfo.streamStatus"), value: data?.twitch?.online ? 1 : 0 },
-    { icon: Users, label: t("streamInfo.ytSubs"), value: data?.youtube?.subscribers ?? 0 },
-    { icon: DollarSign, label: t("streamInfo.streamDonations"), value: 0, suffix: "₽" },
+    { icon: Users, label: t("streamInfo.ytSubs"), value: data?.youtube?.subscribers },
+    { icon: DollarSign, label: t("streamInfo.streamDonations"), value: null, suffix: "₽" },
     { icon: UserCheck, label: t("streamInfo.peakOnline"), value: Math.max(...timeline.map((i) => i.viewers), 0) },
   ];
 
@@ -68,13 +69,6 @@ export default function StreamInfoPage() {
 
   const HeroWidget = isLive ? LiveStreamFeed : ViewerChart;
   const heroWidgetName = isLive ? "liveStreamFeed" : "viewerChart";
-
-  const clearLiveEvents = async () => {
-    if (!canSeeAdmin) return;
-    const ok = window.confirm(t("streamInfo.clearEventsConfirm", "Очистить события?"));
-    if (!ok) return;
-    await supabase.from("event_logs").delete().neq("id", "");
-  };
 
   if (showOnboarding) {
     return <LockedOverlay />;
@@ -133,36 +127,6 @@ export default function StreamInfoPage() {
         </DropdownMenu>
       </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-3 md:hidden">
-        <div className="bento-card col-span-2 p-4">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-mono text-muted-foreground">{t("streamInfo.liveStatus", "Статус")}</span>
-            <span className={cn("text-xs font-mono", isLive ? "text-success" : "text-muted-foreground")}>
-              {isLive ? t("streamInfo.liveOn", "LIVE") : t("streamInfo.liveOff", "OFFLINE")}
-            </span>
-          </div>
-          <div className="mt-2 flex items-center gap-2">
-            <Radio size={14} className={cn(isLive && "animate-pulse")} />
-            <span className="text-base font-bold font-heading">{t("streamInfo.streamPulse", "Статус стрима")}</span>
-          </div>
-        </div>
-        <div className="bento-card p-4">
-          <div className="text-xs font-mono text-muted-foreground">{t("streamInfo.viewers", "Зрители")}</div>
-          <div className="mt-2 text-2xl font-bold font-heading">{data?.twitch?.viewers ?? 0}</div>
-        </div>
-        {canSeeAdmin ? (
-          <button onClick={clearLiveEvents} className="bento-card p-4 text-left">
-            <div className="text-xs font-mono text-muted-foreground">{t("streamInfo.clearEvents", "Очистить логи")}</div>
-            <div className="mt-2 text-base font-bold font-heading">{t("streamInfo.quickAction", "Быстрое действие")}</div>
-          </button>
-        ) : (
-          <button onClick={() => navigate("/integrations")} className="bento-card p-4 text-left">
-            <div className="text-xs font-mono text-muted-foreground">{t("streamInfo.linkSource", "Подключить источник")}</div>
-            <div className="mt-2 text-base font-bold font-heading">{t("streamInfo.quickAction", "Быстрое действие")}</div>
-          </button>
-        )}
-      </div>
-
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:gap-8">
         <div className="lg:col-span-2 space-y-8">
           <AnimatePresence mode="wait">
@@ -179,7 +143,7 @@ export default function StreamInfoPage() {
         </div>
         <div className="space-y-4">
           {widgets.includes("stats") && (
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-2 lg:gap-4">
+            <div className="grid grid-cols-2 gap-4">
               {stats.map((s, i) => (
                 <StatsCard key={s.label} icon={s.icon} label={s.label} value={s.value} delay={i * 0.07} loading={isLoading} suffix={s.suffix} />
               ))}

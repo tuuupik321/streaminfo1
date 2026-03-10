@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Eye, Bell, Radio } from "lucide-react";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useStreamInfo } from "@/hooks/useStreamInfo";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,9 +30,7 @@ export function GlobalStatusBar() {
 
     const channel = supabase
       .channel("global_status_events")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "event_logs" }, (payload) => {
-        const createdAt = (payload.new as { created_at?: string }).created_at ?? null;
-        if (createdAt) setHasNewEvent(true);
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "event_logs" }, () => {
         setHasNewEvent(true);
       })
       .subscribe();
@@ -43,28 +42,32 @@ export function GlobalStatusBar() {
   }, [isLive]);
 
   return (
-    <div className="sticky top-12 z-30 flex h-10 items-center justify-center gap-6 border-b bg-background/80 px-4 backdrop-blur-xl">
-      <div
+    <div className="sticky top-12 z-30 flex h-11 items-center justify-center gap-8 border-b bg-background/80 px-4 backdrop-blur-xl">
+      <motion.div
+        animate={{ scale: isLive ? [1, 1.05, 1] : 1 }}
+        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
         className={cn(
-          "flex items-center gap-2 text-xs font-mono font-semibold",
-          isLive ? "text-success-foreground" : "text-muted-foreground"
+          "flex items-center gap-2 text-sm font-mono font-bold",
+          isLive ? "text-green-400" : "text-muted-foreground"
         )}
       >
-        <Radio size={14} className={cn(isLive && "animate-pulse fill-current")} />
+        <Radio size={15} className={cn(isLive && "fill-current")} />
         <span>{isLive ? 'LIVE' : 'OFFLINE'}</span>
+      </motion.div>
+
+      <div className="flex items-center gap-2 text-sm font-mono text-foreground">
+        <Eye size={15} className="text-muted-foreground" />
+        <span className="font-bold">{viewers}</span>
       </div>
 
-      <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
-        <Eye size={14} />
-        <span>{viewers}</span>
-      </div>
-
-      <button
+      <motion.button
         onClick={() => setHasNewEvent(false)}
+        animate={{ scale: hasNewEvent ? [1, 1.1, 1, 1.1, 1] : 1 }}
+        transition={{ duration: 0.8, repeat: Infinity }}
         className="flex items-center gap-2 text-xs font-mono text-muted-foreground"
       >
-        <Bell size={14} className={cn(hasNewEvent && "fill-yellow-400 text-yellow-400")} />
-      </button>
+        <Bell size={15} className={cn(hasNewEvent && "fill-yellow-400 text-yellow-400")} />
+      </motion.button>
     </div>
   );
 }
