@@ -170,27 +170,7 @@ body::after {
     gap: 16px;
     height: 70%;
 }
-.drop-zone-wrapper { display: flex; flex-direction: column; gap: 16px; }
-
-.drop-zone {
-    flex-grow: 1;
-    border: 2px dashed var(--border-color);
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    color: var(--text-color-secondary);
-    transition: all 0.2s ease-in-out;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-}
-
-.drop-zone.dragover {
-    border-color: var(--action-color);
-    color: var(--action-color);
-    background-color: rgba(35, 134, 54, 0.15);
-}
+.banner-inputs { display: flex; flex-direction: column; gap: 16px; }
 
 .banner-preview {
     border: 1px solid var(--border-color);

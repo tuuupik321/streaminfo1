@@ -35,19 +35,16 @@
                     <button class="tab-button" data-filter="questions" data-i18n-key="chatQuestions">ВОПРОСЫ</button>
                 </div>
             </div>
-            <div class="chat-messages" id="chat-messages">
-                <!-- Messages will be dynamically inserted here -->
-            </div>
+            <div class="chat-messages" id="chat-messages"></div>
         </div>
         <div id="control-column" class="card-large">
             <div class="live-banner-control">
-                <div class="drop-zone-wrapper">
-                    <div id="drop-zone" class="drop-zone">
-                        <p data-i18n-key="dropZone">DRAG & DROP GIF/JPG/PNG</p>
-                    </div>
-                    <input type="text" id="banner-link-url" class="banner-link-input" placeholder="https://...">
+                <div class="banner-inputs">
+                    <input type="text" id="banner-image-url" class="banner-link-input" placeholder="URL картинки для баннера...">
+                    <input type="text" id="banner-link-url" class="banner-link-input" placeholder="URL ссылки для клика...">
+                    <button id="update-banner-btn" class="tg-button" data-i18n-key="updateBanner">ОБНОВИТЬ БАННЕР</button>
                 </div>
-                <div class="banner-preview">
+                <div id="banner-preview" class="banner-preview">
                     <p data-i18n-key="preview">PREVIEW</p>
                 </div>
             </div>
@@ -61,9 +58,7 @@
             <div class="card-header">
                 <h3 data-i18n-key="feedTitle">ЛЕНТА</h3>
             </div>
-            <div class="events-list" id="events-list">
-                <!-- Events will be dynamically inserted here -->
-            </div>
+            <div class="events-list" id="events-list"></div>
         </div>
     </div>
 
@@ -73,8 +68,8 @@
                 chatTitle: "ЧАТ",
                 chatAll: "ВСЕ",
                 chatQuestions: "ВОПРОСЫ",
-                dropZone: "DRAG & DROP GIF/JPG/PNG",
                 preview: "PREVIEW",
+                updateBanner: "ОБНОВИТЬ БАННЕР",
                 tgAnnounce: "🔥 АНОНС",
                 tgVideo: "📹 КРУЖОК",
                 tgScreenshot: "🖼️ СКРИН",
@@ -87,8 +82,8 @@
                 chatTitle: "CHAT",
                 chatAll: "ALL",
                 chatQuestions: "QUESTIONS",
-                dropZone: "DRAG & DROP GIF/JPG/PNG",
                 preview: "PREVIEW",
+                updateBanner: "UPDATE BANNER",
                 tgAnnounce: "🔥 ANNOUNCE",
                 tgVideo: "📹 VIDEO",
                 tgScreenshot: "🖼️ SCREEN",
@@ -106,9 +101,11 @@
             document.documentElement.lang = lang;
             document.querySelectorAll('[data-i18n-key]').forEach(el => {
                 const key = el.getAttribute('data-i18n-key');
-                el.textContent = translations[lang][key];
+                if (translations[lang][key]) {
+                    el.textContent = translations[lang][key];
+                }
             });
-            renderEvents(); // Re-render events with new language
+            renderEvents();
         }
 
         document.querySelectorAll('.lang-button').forEach(btn => {
@@ -119,44 +116,40 @@
             });
         });
 
-        // All other JS logic remains the same for now
+        // Banner Logic
+        const bannerImageUrlInput = document.getElementById('banner-image-url');
+        const bannerPreview = document.getElementById('banner-preview');
+        const updateBannerBtn = document.getElementById('update-banner-btn');
+
+        updateBannerBtn.addEventListener('click', () => {
+            const imageUrl = bannerImageUrlInput.value;
+            if (imageUrl) {
+                bannerPreview.innerHTML = `<img src="${imageUrl}" style="width: 100%; height: 100%; object-fit: contain;">`;
+            }
+        });
+
+        // --- Mock Data and Rendering Functions ---
         const fakeMessages = [
             { platform: 'twitch', author: 'User1', text: 'Всем привет!', isQuestion: false },
             { platform: 'youtube', author: 'Viewer2', text: 'Когда следующий стрим?', isQuestion: true },
         ];
-
         const chatContainer = document.getElementById('chat-messages');
         const tabs = document.querySelectorAll('.tab-button');
         let currentFilter = 'all';
 
         function getPlatformIcon(platform) {
-            if (platform === 'twitch') {
-                return '<svg class="icon" style="color: var(--twitch-color)" fill="currentColor" viewBox="0 0 20 20"><path d="M11.248 5.734l-1.71 3.423-3.423 1.71-3.423-1.71-1.71-3.423 1.71-3.423 3.423-1.711 3.423 1.71 1.71 3.423zm-3.423 1.711l1.71-3.423-1.71-3.423-3.423 1.71-1.71 3.423 1.71 3.423 3.423-1.71zm6.846 0l1.71-3.423-1.71-3.423-3.423 1.71-1.71 3.423 1.71 3.423 3.423-1.71zM18.094 0l-3.423 1.71-1.71 3.423 1.71 3.423 3.423-1.71 1.71-3.423-1.71-3.423-3.423-1.71z"/></svg>';
-            } else if (platform === 'youtube') {
-                return '<svg class="icon" style="color: var(--youtube-color)" fill="currentColor" viewBox="0 0 20 20"><path d="M10 4.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM8.5 12V8l4 2-4 2z"/></svg>';
-            }
+            if (platform === 'twitch') { return '<svg class="icon" style="color: var(--twitch-color)" fill="currentColor" viewBox="0 0 20 20"><path d="M11.248 5.734l-1.71 3.423-3.423 1.71-3.423-1.71-1.71-3.423 1.71-3.423 3.423-1.711 3.423 1.71 1.71 3.423zm-3.423 1.711l1.71-3.423-1.71-3.423-3.423 1.71-1.71 3.423 1.71 3.423 3.423-1.71zm6.846 0l1.71-3.423-1.71-3.423-3.423 1.71-1.71 3.423 1.71 3.423 3.423-1.71zM18.094 0l-3.423 1.71-1.71 3.423 1.71 3.423 3.423-1.71 1.71-3.423-1.71-3.423-3.423-1.71z"/></svg>'; }
+            if (platform === 'youtube') { return '<svg class="icon" style="color: var(--youtube-color)" fill="currentColor" viewBox="0 0 20 20"><path d="M10 4.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM8.5 12V8l4 2-4 2z"/></svg>'; }
             return '';
         }
 
         function renderMessages() {
             chatContainer.innerHTML = '';
-            const filteredMessages = fakeMessages.filter(msg => {
-                if (currentFilter === 'questions') {
-                    return msg.isQuestion;
-                }
-                return true;
-            });
-
+            const filteredMessages = fakeMessages.filter(msg => currentFilter === 'all' || msg.isQuestion);
             for (const msg of filteredMessages) {
                 const messageEl = document.createElement('div');
                 messageEl.className = 'message';
-                messageEl.innerHTML = `
-                    ${getPlatformIcon(msg.platform)}
-                    <div class="content">
-                        <span class="author" style="color: var(--${msg.platform}-color);">${msg.author}</span>
-                        <span class="text">${msg.text}</span>
-                    </div>
-                `;
+                messageEl.innerHTML = `${getPlatformIcon(msg.platform)}<div class="content"><span class="author" style="color: var(--${msg.platform}-color);">${msg.author}</span><span class="text">${msg.text}</span></div>`;
                 chatContainer.appendChild(messageEl);
             }
         }
@@ -170,49 +163,17 @@
             });
         });
 
-        const dropZone = document.getElementById('drop-zone');
-        const bannerPreview = document.querySelector('.banner-preview');
-
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('dragover');
-        });
-
-        dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('dragover');
-        });
-
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('dragover');
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                const file = files[0];
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    dropZone.innerHTML = `<img src="${event.target.result}" style="max-width: 100%; max-height: 100%; border-radius: 8px;">`;
-                    bannerPreview.innerHTML = `<img src="${event.target.result}" style="max-width: 100%; max-height: 100%; border-radius: 8px;">`;
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-
         const fakeEvents = [
             { type: 'donation', user: 'Donator1', amount: '$10' },
             { type: 'subscription', user: 'NewSub', tier: 'Tier 1' },
             { type: 'follow', user: 'NewFollower' },
         ];
-
         const eventsContainer = document.getElementById('events-list');
 
         function getEventIcon(type) {
-            if (type === 'donation') {
-                return '<svg class="icon" style="color: var(--donation-color)" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm-1-9H7v2h2v2h2v-2h2V9h-2V7h-2v2z"/></svg>';
-            } else if (type === 'subscription') {
-                return '<svg class="icon" style="color: var(--twitch-color)" fill="currentColor" viewBox="0 0 20 20"><path d="M10 1l2.928 5.956L19 7.05l-4.5 4.385L15.456 18 10 14.885 4.544 18 5.5 11.435 1 7.05l6.072-.094L10 1z"/></svg>';
-            } else if (type === 'follow') {
-                return '<svg class="icon" style="color: var(--action-color)" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg>';
-            }
+            if (type === 'donation') { return '<svg class="icon" style="color: var(--donation-color)" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm-1-9H7v2h2v2h2v-2h2V9h-2V7h-2v2z"/></svg>'; }
+            if (type === 'subscription') { return '<svg class="icon" style="color: var(--twitch-color)" fill="currentColor" viewBox="0 0 20 20"><path d="M10 1l2.928 5.956L19 7.05l-4.5 4.385L15.456 18 10 14.885 4.544 18 5.5 11.435 1 7.05l6.072-.094L10 1z"/></svg>'; }
+            if (type === 'follow') { return '<svg class="icon" style="color: var(--action-color)" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg>'; }
             return '';
         }
 
@@ -222,17 +183,10 @@
                 const eventEl = document.createElement('div');
                 eventEl.className = 'event';
                 let details = '';
-                if (event.type === 'donation') {
-                    details = `<b>${event.user}</b> ${translations[currentLang].donation} <b>${event.amount}</b>`;
-                } else if (event.type === 'subscription') {
-                    details = `<b>${event.user}</b> ${translations[currentLang].subscription} (${event.tier})`;
-                } else if (event.type === 'follow') {
-                    details = `<b>${event.user}</b> ${translations[currentLang].follow}`;
-                }
-                eventEl.innerHTML = `
-                    ${getEventIcon(event.type)}
-                    <div class="details">${details}</div>
-                `;
+                if (event.type === 'donation') { details = `<b>${event.user}</b> ${translations[currentLang].donation} <b>${event.amount}</b>`; }
+                else if (event.type === 'subscription') { details = `<b>${event.user}</b> ${translations[currentLang].subscription} (${event.tier})`; }
+                else if (event.type === 'follow') { details = `<b>${event.user}</b> ${translations[currentLang].follow}`; }
+                eventEl.innerHTML = `${getEventIcon(event.type)}<div class="details">${details}</div>`;
                 eventsContainer.appendChild(eventEl);
             }
         }
