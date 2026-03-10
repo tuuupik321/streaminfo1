@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Twitch, Youtube, Send, Heart, Sparkles } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
@@ -206,6 +206,7 @@ export default function IntegrationsPage() {
     donatealerts: null,
   });
   const [botUsername, setBotUsername] = useState<string | null>(null);
+  const [loadingSaved, setLoadingSaved] = useState(false);
   const platformLabels = useMemo(() => {
     return platforms.reduce<Record<Platform, string>>((acc, p) => {
       acc[p.key] = p.label;
@@ -248,6 +249,92 @@ export default function IntegrationsPage() {
     setResult(null);
     setErrorMessage(null);
   };
+
+  const hydrateConnection = useCallback(async (platform: Platform, channel: string) => {
+    if (!userId || !initData) {
+      return {
+        name: channel,
+        url: "",
+        platform,
+      } as VerifyResult;
+    }
+    try {
+      const response = await fetch("/api/verify_channel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: userId,
+          platform,
+          channel,
+          init_data: initData,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && !data?.error) {
+        return {
+          name: data.name || channel,
+          url: data.url || "",
+          platform,
+          avatar: data.avatar || null,
+          followers: data.followers ?? null,
+          subscribers: data.subscribers ?? null,
+          videos: data.videos ?? null,
+          views: data.views ?? null,
+          channel: data.channel || null,
+        } as VerifyResult;
+      }
+    } catch {
+      // ignore
+    }
+    return {
+      name: channel,
+      url: "",
+      platform,
+    } as VerifyResult;
+  }, [userId, initData]);
+
+  useEffect(() => {
+    const loadSaved = async () => {
+      if (!userId || !initData) return;
+      setLoadingSaved(true);
+      try {
+        const res = await fetch(`/api/settings?user_id=${userId}&init_data=${encodeURIComponent(initData)}`);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) return;
+        const next: Partial<Record<Platform, VerifyResult>> = {};
+        const tasks: Promise<void>[] = [];
+        if (data?.twitch_name) {
+          tasks.push(
+            hydrateConnection("twitch", data.twitch_name).then((payload) => {
+              next.twitch = payload;
+            }),
+          );
+        }
+        if (data?.yt_channel_id) {
+          tasks.push(
+            hydrateConnection("youtube", data.yt_channel_id).then((payload) => {
+              next.youtube = payload;
+            }),
+          );
+        }
+        if (data?.donationalerts_name) {
+          tasks.push(
+            hydrateConnection("donatealerts", data.donationalerts_name).then((payload) => {
+              next.donatealerts = payload;
+            }),
+          );
+        }
+        await Promise.all(tasks);
+        if (Object.keys(next).length) {
+          setConnected((prev) => ({ ...prev, ...next }));
+        }
+      } finally {
+        setLoadingSaved(false);
+      }
+    };
+
+    loadSaved();
+  }, [userId, initData, hydrateConnection]);
 
   const verify = async () => {
     if (!inputValue.trim()) {
@@ -383,6 +470,9 @@ export default function IntegrationsPage() {
           "Connect channels in one tap. Premium cards with liquid glow and floating motion.",
         )}
       </p>
+      {loadingSaved && (
+        <p className="mt-2 text-xs text-white/50">{t("integrations.loadingSaved", "Loading saved connections...")}</p>
+      )}
 
       {Object.values(connected).some(Boolean) && (
         <div className="mt-10 grid w-full max-w-4xl grid-cols-1 gap-4 md:grid-cols-2">
@@ -405,6 +495,23 @@ export default function IntegrationsPage() {
                 {buildChannelStats(value.platform, value, t).map((stat) => (
                   <p key={stat.label} className="mt-2 text-xs text-white/60">{stat.label}: {stat.value ?? "--"}</p>
                 ))}
+                <div className="mt-3 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const config = platforms.find((p) => p.key === value.platform);
+                      if (!config) return;
+                      setActivePlatform(config);
+                      setInputValue(value.url || value.channel || value.name);
+                      setStatus("idle");
+                      setResult(null);
+                      setErrorMessage(null);
+                    }}
+                    className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/70 transition hover:border-white/30 hover:bg-white/10"
+                  >
+                    {t("integrations.reconnect", "Reconnect")}
+                  </button>
+                </div>
               </div>
             ) : null,
           )}

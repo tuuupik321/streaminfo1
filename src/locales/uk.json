@@ -4,6 +4,9 @@
   "hero.ctaPrimary": "Запустити бота",
   "hero.ctaSecondary": "Інтеграції",
 
+  "streamInfo.errorTitle": "Не вдалося завантажити дашборд",
+  "streamInfo.errorDescription": "Перевірте підключення та спробуйте ще раз.",
+
   "settings.title": "Налаштування",
   "settings.subtitle": "Центр керування StreamInfo",
   "settings.language": "Мова",
@@ -44,6 +47,8 @@
   "integrations.videos": "Відео",
   "integrations.views": "Перегляди",
   "integrations.connected": "Підключено",
+  "integrations.reconnect": "Перепідключити",
+  "integrations.loadingSaved": "Завантажуємо збережені підключення...",
   "integrations.telegramSteps": "Підключення Telegram",
   "integrations.telegramStep1": "Додайте бота в канал",
   "integrations.telegramStep2": "Введіть username каналу",
@@ -99,6 +104,8 @@
   "analytics.sessions": "Сесії",
   "analytics.emptyTitle": "Поки що немає даних",
   "analytics.emptyDescription": "Аналітика з'явиться після підключення каналів.",
+  "analytics.errorTitle": "Не вдалося завантажити аналітику",
+  "analytics.errorDescription": "Перевірте підключення та спробуйте ще раз.",
 
   "sidebar.menu": "Меню",
   "sidebar.system": "Система",

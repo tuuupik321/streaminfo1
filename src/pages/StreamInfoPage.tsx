@@ -21,6 +21,7 @@ import { useStreamInfo } from "@/hooks/useStreamInfo";
 import { useDashboardStore, type Widget } from "@/store/useDashboardStore";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/shared/ui/EmptyState";
 
 function AddWidgetCard({ onClick }: { onClick: () => void }) {
   const { t } = useI18n();
@@ -43,7 +44,7 @@ export default function StreamInfoPage() {
   const [isWidgetManagerOpen, setWidgetManagerOpen] = useState(false);
   const { widgets } = useDashboardStore();
 
-  const { data, isLoading, isRefetching, refetch } = useStreamInfo(period);
+  const { data, isLoading, isRefetching, refetch, error } = useStreamInfo(period);
 
   const currentTelegramId = getCurrentTelegramId();
   const canSeeAdmin = isOwnerTelegramId(currentTelegramId) || hasAdminSession(currentTelegramId);
@@ -72,6 +73,10 @@ export default function StreamInfoPage() {
 
   if (showOnboarding) {
     return <LockedOverlay />;
+  }
+
+  if (error) {
+    return <EmptyState icon={ShieldCheck} title={t("streamInfo.errorTitle", "Failed to load dashboard")} description={t("streamInfo.errorDescription", "Check your connection and try again.")} />;
   }
 
   const title = t("hero.title", "StreamInfo");

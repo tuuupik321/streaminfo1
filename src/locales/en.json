@@ -36,6 +36,8 @@
   "streamInfo.linkSource": "Connect source",
   "streamInfo.quickAction": "Quick action",
   "streamInfo.goToLive": "Live Dashboard",
+  "streamInfo.errorTitle": "Failed to load dashboard",
+  "streamInfo.errorDescription": "Check your connection and try again.",
 
   "chart.noDataTitle": "No data yet",
   "chart.noDataSubtitle": "Start streaming to see your analytics.",
@@ -109,6 +111,8 @@
   "integrations.videos": "Videos",
   "integrations.views": "Views",
   "integrations.connected": "Connected",
+  "integrations.reconnect": "Reconnect",
+  "integrations.loadingSaved": "Loading saved connections...",
   "integrations.telegramSteps": "Connect Telegram",
   "integrations.telegramStep1": "Add bot to channel",
   "integrations.telegramStep2": "Enter channel username",
@@ -164,6 +168,8 @@
   "analytics.sessions": "Sessions",
   "analytics.emptyTitle": "No data yet",
   "analytics.emptyDescription": "Stream analytics will appear here after you connect channels.",
+  "analytics.errorTitle": "Failed to load analytics",
+  "analytics.errorDescription": "Check your connection and try again.",
 
   "sidebar.menu": "Menu",
   "sidebar.system": "System",

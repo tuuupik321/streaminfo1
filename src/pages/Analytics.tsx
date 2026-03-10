@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAnalyticsData } from "@/hooks/useAnalyticsData";
 import { EmptyState } from "@/shared/ui/EmptyState";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type TimelineItem = {
   time: string;
@@ -43,7 +44,7 @@ export default function Analytics() {
   const [period, setPeriod] = useState("today");
   const [combinedChart, setCombinedChart] = useState(false);
 
-  const { data, isLoading } = useAnalyticsData(period);
+  const { data, isLoading, error } = useAnalyticsData(period);
 
   const timeline = useMemo(() => mapTimeline(data?.timeline), [data?.timeline]);
   const peak = useMemo(() => Math.max(...timeline.map((p) => p.viewers), 0), [timeline]);
@@ -91,6 +92,10 @@ export default function Analytics() {
 
   const hasData = !isLoading && timeline.length > 0;
 
+  if (error) {
+    return <EmptyState icon={PieChart} title={t("analytics.errorTitle", "Failed to load analytics")} description={t("analytics.errorDescription", "Check your connection and try again.")} />;
+  }
+
   return (
     <div className="mx-auto max-w-5xl p-4 md:p-8">
       <motion.h1 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 text-2xl font-black font-heading md:text-3xl">
@@ -100,29 +105,55 @@ export default function Analytics() {
       <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-[24px] border border-white/10 bg-white/5 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
           <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.streamForecast", "Stream Forecast")}</p>
-          <p className="mt-3 text-sm text-white/70">{t("analytics.expectedViewers", "Expected viewers today")}: <span className="text-white font-semibold">{expectedViewers}</span></p>
-          <p className="text-sm text-white/70">{t("analytics.peakTime", "Peak time")}: <span className="text-white font-semibold">{peakTime}</span></p>
+          {isLoading ? (
+            <div className="mt-3 space-y-2">
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-4 w-32" />
+            </div>
+          ) : (
+            <>
+              <p className="mt-3 text-sm text-white/70">{t("analytics.expectedViewers", "Expected viewers today")}: <span className="text-white font-semibold">{expectedViewers}</span></p>
+              <p className="text-sm text-white/70">{t("analytics.peakTime", "Peak time")}: <span className="text-white font-semibold">{peakTime}</span></p>
+            </>
+          )}
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="rounded-[24px] border border-white/10 bg-white/5 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
           <div className="flex items-center gap-2 text-white">
             <Flame size={18} className="animate-[streakFlame_1.6s_ease-in-out_infinite]" />
             <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.streamStreak", "Stream Streak")}</p>
           </div>
-          <p className="mt-3 text-sm text-white/70">{t("analytics.currentStreak", "Current streak")}: <span className="text-white font-semibold">5 days</span></p>
-          <p className="text-sm text-white/70">{t("analytics.longestStreak", "Longest streak")}: <span className="text-white font-semibold">14 days</span></p>
+          {isLoading ? (
+            <div className="mt-3 space-y-2">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-28" />
+            </div>
+          ) : (
+            <>
+              <p className="mt-3 text-sm text-white/70">{t("analytics.currentStreak", "Current streak")}: <span className="text-white font-semibold">5 days</span></p>
+              <p className="text-sm text-white/70">{t("analytics.longestStreak", "Longest streak")}: <span className="text-white font-semibold">14 days</span></p>
+            </>
+          )}
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-[24px] border border-white/10 bg-white/5 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
           <div className="flex items-center gap-2 text-white">
             <Award size={16} />
             <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.achievements", "Achievements")}</p>
           </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {achievements.map((badge) => (
-              <span key={badge} className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-[11px] text-white/80 shadow-[0_0_20px_rgba(145,70,255,0.35)]">
-                {badge}
-              </span>
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Skeleton className="h-6 w-24 rounded-full" />
+              <Skeleton className="h-6 w-20 rounded-full" />
+              <Skeleton className="h-6 w-28 rounded-full" />
+            </div>
+          ) : (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {achievements.map((badge) => (
+                <span key={badge} className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-[11px] text-white/80 shadow-[0_0_20px_rgba(145,70,255,0.35)]">
+                  {badge}
+                </span>
+              ))}
+            </div>
+          )}
         </motion.div>
       </div>
 

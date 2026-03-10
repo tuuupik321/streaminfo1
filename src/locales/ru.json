@@ -36,6 +36,8 @@
   "streamInfo.linkSource": "Подключить источник",
   "streamInfo.quickAction": "Быстрое действие",
   "streamInfo.goToLive": "Live Dashboard",
+  "streamInfo.errorTitle": "Не удалось загрузить дашборд",
+  "streamInfo.errorDescription": "Проверьте подключение и попробуйте снова.",
 
   "chart.noDataTitle": "Пока нет данных",
   "chart.noDataSubtitle": "Начните стрим, чтобы увидеть аналитику.",
@@ -109,6 +111,8 @@
   "integrations.videos": "Видео",
   "integrations.views": "Просмотры",
   "integrations.connected": "Подключено",
+  "integrations.reconnect": "Переподключить",
+  "integrations.loadingSaved": "Загружаем сохранённые подключения...",
   "integrations.telegramSteps": "Подключение Telegram",
   "integrations.telegramStep1": "Добавьте бота в канал",
   "integrations.telegramStep2": "Введите username канала",
@@ -164,6 +168,8 @@
   "analytics.sessions": "Сессии",
   "analytics.emptyTitle": "Пока нет данных",
   "analytics.emptyDescription": "Аналитика появится после подключения каналов.",
+  "analytics.errorTitle": "Не удалось загрузить аналитику",
+  "analytics.errorDescription": "Проверьте подключение и попробуйте снова.",
 
   "sidebar.menu": "Меню",
   "sidebar.system": "Система",

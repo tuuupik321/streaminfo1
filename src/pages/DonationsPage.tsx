@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { useI18n } from "@/lib/i18n";
 import { EmptyState } from "@/shared/ui/EmptyState";
-import { DollarSign, Gift } from "lucide-react";
+import { DollarSign, Gift, UserCheck } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 type Donation = {
@@ -44,9 +44,9 @@ function ActivityRow({ item, index }: { item: ActivityItem; index: number }) {
       transition={{ delay: index * 0.08 }}
       className="group flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80 hover-lift"
     >
-      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3">
         <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center shadow-[0_0_20px_rgba(145,70,255,0.45)]">
-          {item.kind === "donation" ? "??" : item.kind === "gift" ? "??" : "?"}
+          {item.kind === "donation" ? <DollarSign size={16} /> : item.kind === "gift" ? <Gift size={16} /> : <UserCheck size={16} />}
         </div>
         <p className="font-semibold">{item.text}</p>
       </div>
@@ -118,7 +118,9 @@ export default function DonationsPage() {
             <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("donations.recent", "Recent Activity")}</p>
             <h2 className="mt-2 text-lg font-semibold">{t("donations.feedTitle", "Donations Feed")}</h2>
           </div>
-          <div className="h-10 w-10 rounded-2xl bg-white/10 flex items-center justify-center liquid-glow">??</div>
+          <div className="h-10 w-10 rounded-2xl bg-white/10 flex items-center justify-center liquid-glow">
+            <DollarSign size={16} />
+          </div>
         </div>
 
         <div className="mt-6 space-y-3">

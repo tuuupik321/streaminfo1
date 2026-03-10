@@ -262,6 +262,9 @@ def parse_and_verify_init_data(init_data: Optional[str]) -> Optional[dict[str, A
 
 _twitch_token: Optional[str] = None
 _twitch_token_expiry: float = 0.0
+_twitch_stats_cache: dict[str, tuple[float, dict[str, Any]]] = {}
+_youtube_stats_cache: dict[str, tuple[float, dict[str, Any]]] = {}
+STATS_CACHE_TTL_SECONDS = _env_int("STATS_CACHE_TTL_SECONDS", 30, min_value=5, max_value=600)
 
 async def _get_twitch_app_token() -> Optional[str]:
     global _twitch_token, _twitch_token_expiry
@@ -431,6 +434,63 @@ async def fetch_youtube_channel_details(channel_id: str) -> Optional[dict[str, A
     except Exception as error:
         log_event("youtube_channel_error", error=str(error))
         return None
+
+async def fetch_twitch(login: Optional[str]) -> dict[str, Any]:
+    if not login:
+        return {"online": False, "viewers": 0}
+    cached = _twitch_stats_cache.get(login)
+    if cached and time.time() - cached[0] < STATS_CACHE_TTL_SECONDS:
+        return cached[1]
+    token = await _get_twitch_app_token()
+    if not token or not TWITCH_ID:
+        return {"online": False, "viewers": 0}
+    online = False
+    viewers = 0
+    try:
+        headers = {"Client-ID": TWITCH_ID, "Authorization": f"Bearer {token}"}
+        url = f"https://api.twitch.tv/helix/streams?user_login={quote_plus(login)}"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers, timeout=12) as resp:
+                data = await resp.json()
+                if resp.status == 200:
+                    streams = data.get("data") or []
+                    if streams:
+                        online = True
+                        viewers = int(streams[0].get("viewer_count", 0))
+    except Exception as error:
+        log_event("twitch_stream_error", error=str(error))
+    payload = {"online": online, "viewers": viewers}
+    _twitch_stats_cache[login] = (time.time(), payload)
+    return payload
+
+async def fetch_youtube(channel_id: Optional[str]) -> dict[str, Any]:
+    if not channel_id:
+        return {"subscribers": 0}
+    cached = _youtube_stats_cache.get(channel_id)
+    if cached and time.time() - cached[0] < STATS_CACHE_TTL_SECONDS:
+        return cached[1]
+    details = await fetch_youtube_channel_details(channel_id)
+    payload = {"subscribers": int(details.get("subscribers", 0)) if details else 0}
+    _youtube_stats_cache[channel_id] = (time.time(), payload)
+    return payload
+
+async def update_stream_history(session: AsyncSession, user_id: int, is_live: bool, viewers: int) -> None:
+    query = select(StreamSession).where(
+        StreamSession.user_id == user_id,
+        StreamSession.ended_at == None,  # noqa: E711
+    ).order_by(desc(StreamSession.started_at))
+    open_session = (await session.execute(query)).scalars().first()
+    now = datetime.now(timezone.utc)
+
+    if is_live:
+        if open_session is None:
+            session.add(StreamSession(user_id=user_id, started_at=now, peak_viewers=max(viewers, 0)))
+        else:
+            if viewers > open_session.peak_viewers:
+                open_session.peak_viewers = viewers
+    else:
+        if open_session is not None:
+            open_session.ended_at = now
 
 async def api_ping(request: web.Request):
     return web.json_response({"ok": True})
