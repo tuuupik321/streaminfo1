@@ -1,139 +1,120 @@
-﻿import { useEffect, useState } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Twitch, Youtube } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import { Loader2, Twitch, Youtube } from "lucide-react";
 
-type SettingsData = {
-  is_linked: boolean;
-  twitch_name: string | null;
-  yt_channel_id: string | null;
-};
+type Ripple = { id: number; x: number; y: number };
 
-type TelegramWindow = Window & {
-  Telegram?: {
-    WebApp?: {
-      initData?: string;
-      initDataUnsafe?: { user?: { id?: number } };
-    };
-  };
-};
+function IntegrationCard({
+  label,
+  color,
+  icon: Icon,
+}: {
+  label: string;
+  color: string;
+  icon: typeof Twitch;
+}) {
+  const [ripples, setRipples] = useState<Ripple[]>([]);
 
-const fetchSettings = async (userId: number, initData: string): Promise<SettingsData> => {
-  const response = await fetch(`/api/settings?user_id=${userId}&init_data=${encodeURIComponent(initData)}`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch settings");
-  }
-  return response.json();
-};
-
-const saveSettings = async (data: { userId: number; initData: string; twitchName: string; ytChannelId: string }) => {
-  const response = await fetch("/api/save_settings", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      user_id: data.userId,
-      init_data: data.initData,
-      twitch_name: data.twitchName,
-      yt_channel_id: data.ytChannelId,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error || "Failed to save settings");
-  }
-
-  return response.json();
-};
-
-export default function IntegrationsPage() {
-  const { t } = useI18n();
-  const queryClient = useQueryClient();
-  const [twitchName, setTwitchName] = useState("");
-  const [ytChannelId, setYtChannelId] = useState("");
-
-  const tg = (window as TelegramWindow).Telegram?.WebApp;
-  const userId = tg?.initDataUnsafe?.user?.id;
-  const initData = tg?.initData || "";
-
-  const { data: currentSettings, isLoading } = useQuery({
-    queryKey: ["settings", userId],
-    queryFn: () => fetchSettings(userId!, initData),
-    enabled: !!userId,
-    onSuccess: (data) => {
-      if (data) {
-        setTwitchName(data.twitch_name || "");
-        setYtChannelId(data.yt_channel_id || "");
-      }
-    },
-  });
-
-  const mutation = useMutation({
-    mutationFn: saveSettings,
-    onSuccess: () => {
-      toast.success(t("integrations.saveSuccess"));
-      queryClient.invalidateQueries({ queryKey: ["settings", userId] });
-      queryClient.invalidateQueries({ queryKey: ["streamInfo"] });
-    },
-    onError: (error: Error) => {
-      const errorMessage = t(`errors.${error.message}`, t("errors.unknown"));
-      toast.error(errorMessage);
-    },
-  });
-
-  const handleSave = () => {
-    if (!userId) return;
-    mutation.mutate({ userId, initData, twitchName, ytChannelId });
+  const onClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const id = Date.now();
+    setRipples((prev) => [...prev, { id, x, y }]);
+    setTimeout(() => {
+      setRipples((prev) => prev.filter((r) => r.id !== id));
+    }, 650);
   };
 
   return (
-    <div className="mx-auto max-w-3xl p-4 md:p-8">
-      <motion.h1 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 text-2xl font-black font-heading md:text-3xl">
-        {t("integrations.title")}
+    <motion.button
+      type="button"
+      onClick={onClick}
+      whileHover={{ y: -4, scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+      className="group relative flex h-56 w-full items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-[#0b0b0f] shadow-[0_18px_50px_rgba(0,0,0,0.35)]"
+    >
+      <motion.div
+        className="absolute -inset-8 opacity-70 blur-3xl"
+        style={{
+          background: `radial-gradient(60% 60% at 50% 50%, ${color}55 0%, transparent 70%)`,
+        }}
+        animate={{ opacity: [0.45, 0.8, 0.45], scale: [0.95, 1.05, 0.95] }}
+        transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="absolute -inset-16 opacity-40 blur-2xl"
+        style={{
+          background: `conic-gradient(from 180deg at 50% 50%, ${color}66, transparent, ${color}66)`,
+        }}
+        animate={{ rotate: [0, 180, 360] }}
+        transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+      />
+
+      <motion.div
+        className="relative z-10 flex h-20 w-20 items-center justify-center rounded-2xl"
+        animate={{ x: [0, 1.5, 0, -1.5, 0], y: [0, -1.5, 0, 1.5, 0] }}
+        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+      >
+        <Icon size={54} color="#ffffff" />
+      </motion.div>
+
+      <div className="pointer-events-none absolute inset-0">
+        {ripples.map((ripple) => (
+          <motion.span
+            key={ripple.id}
+            className="absolute h-10 w-10 rounded-full"
+            style={{
+              left: ripple.x,
+              top: ripple.y,
+              background: `${color}33`,
+              border: `1px solid ${color}88`,
+            }}
+            initial={{ scale: 0, opacity: 0.9, x: "-50%", y: "-50%" }}
+            animate={{ scale: 10, opacity: 0 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+          />
+        ))}
+      </div>
+
+      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 rounded-full border border-white/10 bg-white/5 px-4 py-1 text-xs font-mono uppercase tracking-[0.3em] text-white/70">
+        {label}
+      </div>
+
+      <div
+        className="absolute inset-0 rounded-3xl opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+        style={{ boxShadow: `0 0 60px ${color}55` }}
+      />
+    </motion.button>
+  );
+}
+
+export default function IntegrationsPage() {
+  const { t } = useI18n();
+
+  return (
+    <div className="relative mx-auto flex min-h-[70dvh] max-w-5xl flex-col items-center justify-center px-4 py-10 md:py-16">
+      <motion.h1
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-10 text-center text-2xl font-black font-heading md:text-4xl"
+      >
+        {t("integrations.title", "Интеграции")}
       </motion.h1>
 
-      <Card className="card-glass">
-        <CardHeader>
-          <CardTitle>{t("integrations.subtitle")}</CardTitle>
-          <CardDescription>{t("integrations.description")}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="twitch" className="flex items-center gap-2 font-mono text-sm">
-              <Twitch size={16} /> {t("integrations.twitchLabel")}
-            </Label>
-            <Input
-              id="twitch"
-              value={twitchName}
-              onChange={(e) => setTwitchName(e.target.value)}
-              placeholder={t("integrations.twitchPlaceholder")}
-              disabled={isLoading || mutation.isPending}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="youtube" className="flex items-center gap-2 font-mono text-sm">
-              <Youtube size={16} /> {t("integrations.youtubeLabel")}
-            </Label>
-            <Input
-              id="youtube"
-              value={ytChannelId}
-              onChange={(e) => setYtChannelId(e.target.value)}
-              placeholder={t("integrations.youtubePlaceholder")}
-              disabled={isLoading || mutation.isPending}
-            />
-          </div>
-          <Button onClick={handleSave} disabled={isLoading || mutation.isPending} className="w-full">
-            {mutation.isPending ? <Loader2 className="mr-2 animate-spin" size={16} /> : null}
-            {t("integrations.saveButton")}
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="grid w-full max-w-3xl grid-cols-1 gap-6 md:grid-cols-2">
+        <IntegrationCard label="Twitch" color="#9146FF" icon={Twitch} />
+        <IntegrationCard label="YouTube" color="#FF0000" icon={Youtube} />
+      </div>
+
+      <p className="mt-8 max-w-xl text-center text-sm text-muted-foreground">
+        {t(
+          "integrations.description",
+          "Подключайте каналы одним касанием. Премиальные карточки с живым свечением и мягкими анимациями.",
+        )}
+      </p>
     </div>
   );
 }
