@@ -61,5 +61,17 @@
   "announcements.addButton": "Добавить кнопку",
   "announcements.preview": "Живое превью",
   "announcements.sending": "Отправка...",
-  "announcements.send": "Отправить в Каналы"
+  "announcements.send": "Отправить в Каналы",
+  "quickDock.live": "Эфир",
+  "quickDock.events": "События",
+  "quickDock.action": "Действие",
+  "streamInfo.liveStatus": "Статус",
+  "streamInfo.liveOn": "LIVE",
+  "streamInfo.liveOff": "OFFLINE",
+  "streamInfo.streamPulse": "Статус стрима",
+  "streamInfo.viewers": "Зрители",
+  "streamInfo.clearEvents": "Очистить логи",
+  "streamInfo.clearEventsConfirm": "Очистить события?",
+  "streamInfo.linkSource": "Подключить источник",
+  "streamInfo.quickAction": "Быстрое действие"
 }

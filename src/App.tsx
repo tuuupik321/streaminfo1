@@ -7,12 +7,12 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { I18nProvider } from "@/lib/i18n.tsx";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import { BottomNav } from "./components/BottomNav";
 import { AppSidebar } from "./components/AppSidebar";
 import { CommandPalette } from "./components/CommandPalette";
 import { AppShellSkeleton } from "./components/AppShellSkeleton";
 import { PageTransition } from "./components/PageTransition";
 import { GlobalStatusBar } from "./components/GlobalStatusBar";
+import { MobileQuickDock } from "./components/MobileQuickDock";
 import { cn } from "./lib/utils";
 
 const StreamInfoPage = lazy(() => import("./pages/StreamInfoPage"));
@@ -103,7 +103,7 @@ const App = () => (
           <BrowserRouter>
             <CommandPalette />
             <SidebarProvider>
-              <div className="flex min-h-[100dvh] w-full">
+              <div className="flex min-h-[100dvh] w-full app-shell grain-bg">
                 <aside className={cn("hidden md:block", "glass-strong")}>
                   <AppSidebar />
                 </aside>
@@ -120,7 +120,7 @@ const App = () => (
                     </Suspense>
                   </main>
                   <div className="md:hidden">
-                    <BottomNav />
+                    <MobileQuickDock />
                   </div>
                 </div>
               </div>

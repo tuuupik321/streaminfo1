@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { type TouchEvent, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Users, Search, Ban, CheckCircle2, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +23,9 @@ export function UserManagementSection() {
   const [results, setResults] = useState<UserResult[]>([]);
   const [searched, setSearched] = useState(false);
   const [blockedIds, setBlockedIds] = useState<Set<string>>(new Set());
+  const [swipeOffset, setSwipeOffset] = useState<Record<string, number>>({});
+  const swipeStartX = useRef(0);
+  const swipeId = useRef<string | null>(null);
 
   useEffect(() => {
     const loadBlocked = async () => {
@@ -104,6 +107,25 @@ export function UserManagementSection() {
     toast.success("Статус пользователя обновлён");
   };
 
+  const onTouchStart = (id: string) => (event: TouchEvent<HTMLDivElement>) => {
+    swipeStartX.current = event.touches[0].clientX;
+    swipeId.current = id;
+  };
+
+  const onTouchMove = (id: string) => (event: TouchEvent<HTMLDivElement>) => {
+    if (swipeId.current !== id) return;
+    const delta = event.touches[0].clientX - swipeStartX.current;
+    const clamped = Math.max(-88, Math.min(0, delta));
+    setSwipeOffset((prev) => ({ ...prev, [id]: clamped }));
+  };
+
+  const onTouchEnd = (id: string) => () => {
+    const current = swipeOffset[id] || 0;
+    const snap = current < -44 ? -88 : 0;
+    setSwipeOffset((prev) => ({ ...prev, [id]: snap }));
+    swipeId.current = null;
+  };
+
   const formatDate = (iso: string) => {
     const d = new Date(iso);
     return d.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "2-digit" }) + " " +
@@ -140,27 +162,44 @@ export function UserManagementSection() {
           )}
 
           {results.map((user) => (
-            <div key={user.id} className="p-3 rounded-lg bg-background/50 border border-border/30 space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-mono font-bold text-foreground">@{user.username}</span>
-                  <Badge variant={user.status === "active" ? "default" : "destructive"} className="text-[10px] font-mono">
-                    {user.status === "active" ? "Активен" : "Заблокирован"}
-                  </Badge>
-                </div>
-                <Button
-                  variant={user.status === "active" ? "outline" : "default"}
-                  size="sm"
+            <div key={user.id} className="relative overflow-hidden rounded-lg border border-border/30 bg-background/50">
+              <div className="absolute inset-y-0 right-0 flex w-[88px] items-center justify-center bg-destructive/20">
+                <button
+                  className="flex items-center gap-1 text-xs font-mono text-destructive"
                   onClick={() => void toggleBlock(user.id)}
-                  className="gap-1.5 text-xs"
                 >
-                  {user.status === "active" ? <><Ban size={12} /> Заблокировать</> : <><CheckCircle2 size={12} /> Разблокировать</>}
-                </Button>
+                  {user.status === "active" ? <Ban size={12} /> : <CheckCircle2 size={12} />}
+                  {user.status === "active" ? "Блок" : "Разблок"}
+                </button>
               </div>
-              <div className="flex gap-4 text-[10px] font-mono text-muted-foreground">
-                <span>ID: {user.telegram_id}</span>
-                <span>Стримов: {user.streams}</span>
-                <span>Последний вход: {formatDate(user.last_seen)}</span>
+              <div
+                className="p-3 space-y-2 touch-pan-y"
+                style={{ transform: `translateX(${swipeOffset[user.id] || 0}px)` }}
+                onTouchStart={onTouchStart(user.id)}
+                onTouchMove={onTouchMove(user.id)}
+                onTouchEnd={onTouchEnd(user.id)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-mono font-bold text-foreground">@{user.username}</span>
+                    <Badge variant={user.status === "active" ? "default" : "destructive"} className="text-[10px] font-mono">
+                      {user.status === "active" ? "Активен" : "Заблокирован"}
+                    </Badge>
+                  </div>
+                  <Button
+                    variant={user.status === "active" ? "outline" : "default"}
+                    size="sm"
+                    onClick={() => void toggleBlock(user.id)}
+                    className="gap-1.5 text-xs hidden sm:flex"
+                  >
+                    {user.status === "active" ? <><Ban size={12} /> Заблокировать</> : <><CheckCircle2 size={12} /> Разблокировать</>}
+                  </Button>
+                </div>
+                <div className="flex gap-4 text-[10px] font-mono text-muted-foreground">
+                  <span>ID: {user.telegram_id}</span>
+                  <span>Стримов: {user.streams}</span>
+                  <span>Последний вход: {formatDate(user.last_seen)}</span>
+                </div>
               </div>
             </div>
           ))}

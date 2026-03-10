@@ -19,6 +19,7 @@ import { useI18n } from "@/lib/i18n";
 import { getCurrentTelegramId, hasAdminSession, isOwnerTelegramId } from "@/lib/adminAccess";
 import { useStreamInfo } from "@/hooks/useStreamInfo";
 import { useDashboardStore } from "@/store/useDashboardStore";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
 function AddWidgetCard({ onClick }: { onClick: () => void }) {
@@ -67,6 +68,13 @@ export default function StreamInfoPage() {
 
   const HeroWidget = isLive ? LiveStreamFeed : ViewerChart;
   const heroWidgetName = isLive ? "liveStreamFeed" : "viewerChart";
+
+  const clearLiveEvents = async () => {
+    if (!canSeeAdmin) return;
+    const ok = window.confirm(t("streamInfo.clearEventsConfirm", "Очистить события?"));
+    if (!ok) return;
+    await supabase.from("event_logs").delete().neq("id", "");
+  };
 
   if (showOnboarding) {
     return <LockedOverlay />;
@@ -123,6 +131,36 @@ export default function StreamInfoPage() {
             )}
           </DropdownMenuContent>
         </DropdownMenu>
+      </div>
+
+      <div className="mb-6 grid grid-cols-2 gap-3 md:hidden">
+        <div className="bento-card col-span-2 p-4">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-mono text-muted-foreground">{t("streamInfo.liveStatus", "Статус")}</span>
+            <span className={cn("text-xs font-mono", isLive ? "text-success" : "text-muted-foreground")}>
+              {isLive ? t("streamInfo.liveOn", "LIVE") : t("streamInfo.liveOff", "OFFLINE")}
+            </span>
+          </div>
+          <div className="mt-2 flex items-center gap-2">
+            <Radio size={14} className={cn(isLive && "animate-pulse")} />
+            <span className="text-base font-bold font-heading">{t("streamInfo.streamPulse", "Статус стрима")}</span>
+          </div>
+        </div>
+        <div className="bento-card p-4">
+          <div className="text-xs font-mono text-muted-foreground">{t("streamInfo.viewers", "Зрители")}</div>
+          <div className="mt-2 text-2xl font-bold font-heading">{data?.twitch?.viewers ?? 0}</div>
+        </div>
+        {canSeeAdmin ? (
+          <button onClick={clearLiveEvents} className="bento-card p-4 text-left">
+            <div className="text-xs font-mono text-muted-foreground">{t("streamInfo.clearEvents", "Очистить логи")}</div>
+            <div className="mt-2 text-base font-bold font-heading">{t("streamInfo.quickAction", "Быстрое действие")}</div>
+          </button>
+        ) : (
+          <button onClick={() => navigate("/integrations")} className="bento-card p-4 text-left">
+            <div className="text-xs font-mono text-muted-foreground">{t("streamInfo.linkSource", "Подключить источник")}</div>
+            <div className="mt-2 text-base font-bold font-heading">{t("streamInfo.quickAction", "Быстрое действие")}</div>
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:gap-8">
