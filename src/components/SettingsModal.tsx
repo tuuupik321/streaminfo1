@@ -7,6 +7,7 @@ import { Slider } from "@/components/ui/slider";
 import { useI18n } from "@/lib/i18n";
 import { useSettingsStore } from "@/store/useSettingsStore";
 import { useTheme } from "@/components/ThemeProvider";
+import { Link } from "react-router-dom";
 
 type SettingsModalProps = {
   open: boolean;
@@ -33,7 +34,6 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
   const { theme, setTheme } = useTheme();
   const { glowIntensity, setGlowIntensity, setLanguage } = useSettingsStore();
   const [ripples, setRipples] = useState<Ripple[]>([]);
-  const SUPPORT_URL = "https://t.me/streaminfo_support";
 
   const handleRipple = (event: React.MouseEvent<HTMLButtonElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -141,13 +141,8 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                   <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm">
                     <p className="text-white">{t("support.needHelp", "Need help?")}</p>
                     <p className="text-white/60">{t("support.contactSupport", "Contact support")}</p>
-                    <Button
-                      asChild
-                      className="mt-4 w-full gap-2 rounded-[22px] bg-white/10 text-white hover:bg-white/20 hover:shadow-[0_0_30px_rgba(0,178,255,0.55)] hover-lift"
-                    >
-                      <a href={SUPPORT_URL} target="_blank" rel="noreferrer">
-                        {t("support.openSupport", "Open Support")}
-                      </a>
+                    <Button asChild className="mt-4 w-full gap-2 rounded-[22px] bg-white/10 text-white hover:bg-white/20 hover:shadow-[0_0_30px_rgba(0,178,255,0.55)] hover-lift">
+                      <Link to="/support">{t("support.openSupport", "Open Support")}</Link>
                     </Button>
                   </div>
                 </TabsContent>

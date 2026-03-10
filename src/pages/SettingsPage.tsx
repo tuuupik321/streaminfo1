@@ -7,6 +7,7 @@ import { useI18n } from "@/lib/i18n";
 import { useSettingsStore } from "@/store/useSettingsStore";
 import { UiLanguage } from "@/lib/language";
 import { useTheme } from "@/components/ThemeProvider";
+import { Link } from "react-router-dom";
 
 function Section({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
   return (
@@ -87,7 +88,6 @@ function ThemeSettings() {
 
 export default function SettingsPage() {
   const { t } = useI18n();
-  const SUPPORT_URL = "https://t.me/streaminfo_support";
 
   return (
     <div className="mx-auto max-w-3xl px-3 py-4 pb-24 sm:p-4 md:p-8">
@@ -122,9 +122,7 @@ export default function SettingsPage() {
               <p className="text-sm font-semibold">{t("support.needHelp", "Need help?")}</p>
               <p className="text-xs text-muted-foreground">{t("support.contactSupport", "Contact support")}</p>
               <Button asChild className="mt-4 w-full hover-lift">
-                <a href={SUPPORT_URL} target="_blank" rel="noreferrer">
-                  {t("support.openSupport", "Open Support")}
-                </a>
+                <Link to="/support">{t("support.openSupport", "Open Support")}</Link>
               </Button>
             </div>
           </Section>

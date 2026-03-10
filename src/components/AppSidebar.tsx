@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+Ôªøimport { useEffect, useState } from "react";
 import { Activity, BarChart3, Info, LifeBuoy, Puzzle, Settings, ShieldCheck, Star, Languages, Moon, Sun, Megaphone } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
@@ -68,7 +68,7 @@ function SettingsMenu({ canSeeAdmin, collapsed }: { canSeeAdmin: boolean; collap
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent>
         <DropdownMenuRadioGroup value={language} onValueChange={handleLanguageChange}>
-          <DropdownMenuRadioItem value="ru">–ÛÒÒÍËÈ</DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="ru">–†—É—Å—Å–∫–∏–π</DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="en">English</DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
       </DropdownMenuSubContent>
@@ -238,5 +238,3 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
-
-

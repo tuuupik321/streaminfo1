@@ -283,7 +283,7 @@ export default function IntegrationsPage() {
                     )}
                   </div>
                   <div>
-                    <p className="text-sm font-semibold">{t("integrations.connected", "Connected")} · {platformLabels[value.platform]}</p>
+                    <p className="text-sm font-semibold">{t("integrations.connected", "Connected")} | {platformLabels[value.platform]}</p>
                     <p className="text-xs text-white/60">{value.channel || value.name}</p>
                   </div>
                 </div>
@@ -464,15 +464,15 @@ function IntegrationModal({
                   <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-white/60">
                     <div className="rounded-xl border border-white/10 bg-white/5 p-2 text-center">
                       <p className="text-[10px] uppercase">{t("integrations.followers", "Followers")}</p>
-                      <p className="text-sm text-white">{result.followers ?? "—"}</p>
+                      <p className="text-sm text-white">{result.followers ?? "--"}</p>
                     </div>
                     <div className="rounded-xl border border-white/10 bg-white/5 p-2 text-center">
                       <p className="text-[10px] uppercase">{t("integrations.subscribers", "Subscribers")}</p>
-                      <p className="text-sm text-white">{result.subscribers ?? "—"}</p>
+                      <p className="text-sm text-white">{result.subscribers ?? "--"}</p>
                     </div>
                     <div className="rounded-xl border border-white/10 bg-white/5 p-2 text-center">
                       <p className="text-[10px] uppercase">{t("integrations.videos", "Videos")}</p>
-                      <p className="text-sm text-white">{result.videos ?? "—"}</p>
+                      <p className="text-sm text-white">{result.videos ?? "--"}</p>
                     </div>
                   </div>
                   {key === "telegram" && result.channel && (
