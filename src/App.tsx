@@ -1,4 +1,5 @@
-import { Suspense, lazy, useEffect } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
@@ -14,6 +15,9 @@ import { PageTransition } from "./components/PageTransition";
 import { GlobalStatusBar } from "./components/GlobalStatusBar";
 import { BottomNav } from "./components/BottomNav";
 import { cn } from "./lib/utils";
+import { SplashScreen } from "./components/SplashScreen";
+import { SettingsModal } from "./components/SettingsModal";
+import { Cog } from "lucide-react";
 
 const StreamInfoPage = lazy(() => import("./pages/StreamInfoPage"));
 const IntegrationsPage = lazy(() => import("./pages/IntegrationsPage"));
@@ -103,7 +107,45 @@ const App = () => (
           <BrowserRouter>
             <CommandPalette />
             <SidebarProvider>
-              <div className="flex min-h-[100dvh] w-full app-shell grain-bg">
+              <AppShellWithOverlays />
+            </SidebarProvider>
+          </BrowserRouter>
+        </I18nProvider>
+      </TooltipProvider>
+    </ThemeProvider>
+  </QueryClientProvider>
+);
+
+function AppShellWithOverlays() {
+  const [showSplash, setShowSplash] = useState(true);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [showVpnWarning, setShowVpnWarning] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setShowSplash(false), 1500);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    const fetchVpn = async () => {
+      try {
+        const response = await fetch("https://ipinfo.io/json");
+        const data = await response.json();
+        const privacy = data?.privacy || {};
+        if (privacy.vpn || privacy.proxy || privacy.tor) {
+          setShowVpnWarning(true);
+          window.setTimeout(() => setShowVpnWarning(false), 5000);
+        }
+      } catch {
+        // ignore
+      }
+    };
+    void fetchVpn();
+  }, []);
+
+  return (
+    <>
+      <div className="flex min-h-[100dvh] w-full app-shell grain-bg">
                 <aside className={cn("hidden md:block", "glass-strong")}>
                   <AppSidebar />
                 </aside>
@@ -111,6 +153,14 @@ const App = () => (
                   <header className={cn("sticky top-0 z-40 h-12 border-b", "glass")}>
                     <div className="mx-auto flex h-full w-full max-w-6xl items-center px-3 sm:px-4">
                       <span className="text-sm font-bold font-heading text-gradient-primary">StreamInfo</span>
+                      <button
+                        type="button"
+                        className="group ml-auto flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/70 transition-all duration-300 hover:-translate-y-0.5 hover:text-white hover:shadow-[0_0_30px_rgba(145,70,255,0.4)]"
+                        onClick={() => setSettingsOpen(true)}
+                        aria-label="Open settings"
+                      >
+                        <Cog size={16} className="transition-transform duration-300 group-active:rotate-12" />
+                      </button>
                     </div>
                   </header>
                   <GlobalStatusBar />
@@ -122,12 +172,21 @@ const App = () => (
                   <BottomNav />
                 </div>
               </div>
-            </SidebarProvider>
-          </BrowserRouter>
-        </I18nProvider>
-      </TooltipProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
-);
+      {showVpnWarning && (
+        <motion.div
+          initial={{ opacity: 0, y: -12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          className="fixed right-4 top-16 z-[80] rounded-2xl border border-yellow-400/30 bg-yellow-500/10 px-4 py-3 text-xs text-yellow-100 shadow-[0_0_30px_rgba(245,158,11,0.45)]"
+        >
+          ⚠️ We detected that you are using a VPN. Streaming data may load slower.
+          <button className="ml-3 text-yellow-100/70" onClick={() => setShowVpnWarning(false)}>Close</button>
+        </motion.div>
+      )}
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <SplashScreen show={showSplash} />
+    </>
+  );
+}
 
 export default App;

@@ -34,6 +34,8 @@
     --font-sans: 'Inter', sans-serif;
     --font-heading: 'Space Grotesk', sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
+    --gradient-primary: linear-gradient(135deg, #0f0f1a, #1a0033, #2b0066);
+    --glow-intensity: 0.6;
   }
 
   .light {

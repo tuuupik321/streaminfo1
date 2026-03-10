@@ -11,11 +11,14 @@ type ThemeProviderState = {
 const ThemeProviderContext = createContext<ThemeProviderState | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const { theme, setTheme } = useSettingsStore();
+  const { theme, setTheme, glowIntensity, cardStyle } = useSettingsStore();
 
   useEffect(() => {
     const root = window.document.documentElement;
     root.classList.remove("light", "dark");
+
+    root.style.setProperty("--glow-intensity", String(glowIntensity));
+    root.style.setProperty("--card-style", cardStyle);
 
     if (theme === "system") {
       const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
