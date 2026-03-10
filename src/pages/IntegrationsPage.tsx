@@ -435,11 +435,11 @@ export default function IntegrationsPage() {
   };
 
   return (
-    <div className="relative mx-auto flex min-h-[70dvh] max-w-5xl flex-col items-center justify-center px-4 py-10 md:py-16">
+    <div className="relative mx-auto flex min-h-[70dvh] max-w-5xl flex-col items-center justify-center px-3 py-6 md:py-10">
       <motion.h1
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-10 text-center text-2xl font-black font-heading md:text-4xl"
+        className="mb-8 text-center text-xl font-black font-heading md:text-2xl"
       >
         {t("integrations.title", "Integrations")}
       </motion.h1>

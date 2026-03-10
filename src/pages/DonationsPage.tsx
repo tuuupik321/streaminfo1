@@ -82,7 +82,7 @@ export default function DonationsPage() {
   if (isLoading) {
     return (
       <div className="mx-auto max-w-3xl p-4 md:p-8">
-        <motion.h1 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 text-2xl font-black font-heading md:text-3xl">
+        <motion.h1 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-5 text-xl font-black font-heading md:text-2xl">
           {t("donations.title")}
         </motion.h1>
         <div className="space-y-4">
@@ -103,8 +103,8 @@ export default function DonationsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl p-4 md:p-8">
-      <motion.h1 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 text-2xl font-black font-heading md:text-3xl">
+    <div className="mx-auto max-w-3xl px-3 py-3 md:p-6">
+      <motion.h1 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-5 text-xl font-black font-heading md:text-2xl">
         {t("donations.title")}
       </motion.h1>
 

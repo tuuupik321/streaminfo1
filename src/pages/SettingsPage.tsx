@@ -91,7 +91,7 @@ export default function SettingsPage() {
   const { t } = useI18n();
 
   return (
-    <div className="mx-auto max-w-3xl px-3 py-4 pb-24 sm:p-4 md:p-8">
+    <div className="mx-auto max-w-3xl px-3 py-3 pb-24 md:p-6">
       <motion.h1 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-5 text-gradient-primary sm:mb-8">
         {t("settings.title", "Settings")}
       </motion.h1>
