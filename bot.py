@@ -246,6 +246,107 @@ def parse_and_verify_init_data(init_data: Optional[str]) -> Optional[dict[str, A
         log_event("init_data_parse_failed", error=str(error))
         return None
 
+_twitch_token: Optional[str] = None
+_twitch_token_expiry: float = 0.0
+
+async def _get_twitch_app_token() -> Optional[str]:
+    global _twitch_token, _twitch_token_expiry
+    if _twitch_token and time.time() < _twitch_token_expiry - 30:
+        return _twitch_token
+    if not TWITCH_ID or not TWITCH_SECRET:
+        return None
+    try:
+        token_url = (
+            "https://id.twitch.tv/oauth2/token"
+            f"?client_id={quote_plus(TWITCH_ID)}"
+            f"&client_secret={quote_plus(TWITCH_SECRET)}"
+            "&grant_type=client_credentials"
+        )
+        async with aiohttp.ClientSession() as session:
+            async with session.post(token_url, timeout=12) as resp:
+                data = await resp.json()
+                if resp.status != 200:
+                    log_event("twitch_token_failed", status=resp.status, body=str(data)[:200])
+                    return None
+                _twitch_token = data.get("access_token")
+                expires_in = int(data.get("expires_in", 0))
+                _twitch_token_expiry = time.time() + max(expires_in, 0)
+                return _twitch_token
+    except Exception as error:
+        log_event("twitch_token_error", error=str(error))
+        return None
+
+async def resolve_twitch_login(username: str) -> Optional[str]:
+    login = (username or "").strip().lower()
+    if not login:
+        return None
+    token = await _get_twitch_app_token()
+    if not token:
+        return None
+    try:
+        url = f"https://api.twitch.tv/helix/users?login={quote_plus(login)}"
+        headers = {"Client-ID": TWITCH_ID, "Authorization": f"Bearer {token}"}
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers, timeout=12) as resp:
+                data = await resp.json()
+                if resp.status != 200:
+                    log_event("twitch_lookup_failed", status=resp.status, body=str(data)[:200])
+                    return None
+                users = data.get("data") or []
+                if not users:
+                    return None
+                return users[0].get("login")
+    except Exception as error:
+        log_event("twitch_lookup_error", error=str(error))
+        return None
+
+async def resolve_youtube_channel_id(value: str) -> Optional[str]:
+    if not value or not YT_KEY:
+        return None
+    raw = value.strip()
+    if raw.startswith("UC") and len(raw) > 10:
+        return raw
+    handle = raw.lstrip("@")
+    try:
+        async with aiohttp.ClientSession() as session:
+            # Try handle lookup
+            url = (
+                "https://www.googleapis.com/youtube/v3/channels"
+                f"?part=id&forHandle={quote_plus(handle)}&key={quote_plus(YT_KEY)}"
+            )
+            async with session.get(url, timeout=12) as resp:
+                data = await resp.json()
+                items = data.get("items") or []
+                if items:
+                    return items[0].get("id")
+
+            # Try legacy username
+            url = (
+                "https://www.googleapis.com/youtube/v3/channels"
+                f"?part=id&forUsername={quote_plus(handle)}&key={quote_plus(YT_KEY)}"
+            )
+            async with session.get(url, timeout=12) as resp:
+                data = await resp.json()
+                items = data.get("items") or []
+                if items:
+                    return items[0].get("id")
+
+            # Fallback search
+            url = (
+                "https://www.googleapis.com/youtube/v3/search"
+                f"?part=snippet&type=channel&maxResults=1&q={quote_plus(handle)}&key={quote_plus(YT_KEY)}"
+            )
+            async with session.get(url, timeout=12) as resp:
+                data = await resp.json()
+                items = data.get("items") or []
+                if not items:
+                    return None
+                channel_id = (items[0].get("id") or {}).get("channelId")
+                return channel_id
+    except Exception as error:
+        log_event("youtube_lookup_error", error=str(error))
+        return None
+
 async def api_ping(request: web.Request):
     return web.json_response({"ok": True})
 
