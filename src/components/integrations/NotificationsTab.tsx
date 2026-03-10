@@ -64,7 +64,7 @@ export default function NotificationsTab({ channels, setChannels, loadingChannel
   // Auto-select all channels when they load/change
   useEffect(() => {
     setSelectedChannelIds(new Set(channels.map((c) => c.id)));
-  }, [channels.map((c) => c.id).join(",")]);
+  }, [channels]);
 
   // Realtime subscription — auto-refresh when channels are added/removed
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface StreamStatus {
@@ -22,8 +22,9 @@ export function useStreamStatus({ accounts, interval = 60_000, enabled = true }:
   const [loading, setLoading] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
 
-  const streamAccounts = accounts.filter(
-    (a) => a.platform === "twitch" || a.platform === "youtube"
+  const streamAccounts = useMemo(
+    () => accounts.filter((a) => a.platform === "twitch" || a.platform === "youtube"),
+    [accounts]
   );
 
   const fetchStatuses = useCallback(async () => {
@@ -62,7 +63,7 @@ export function useStreamStatus({ accounts, interval = 60_000, enabled = true }:
     } catch {
       // Silent — monitoring is best-effort
     }
-  }, [streamAccounts.map((a) => `${a.platform}:${a.username}`).join(",")]);
+  }, [streamAccounts]);
 
   useEffect(() => {
     if (!enabled || streamAccounts.length === 0) return;

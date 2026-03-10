@@ -22,7 +22,48 @@ from sqlalchemy import BigInteger, Boolean, Column, DateTime, Integer, String, a
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-# ... (rest of the constants remain the same)
+def _env_bool(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _env_int(name: str, default: int, *, min_value: Optional[int] = None, max_value: Optional[int] = None) -> int:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        return default
+    if min_value is not None and value < min_value:
+        return min_value
+    if max_value is not None and value > max_value:
+        return max_value
+    return value
+
+
+def _normalize_webhook_path(path: Optional[str]) -> str:
+    result = (path or "/telegram/webhook").strip()
+    if not result.startswith("/"):
+        result = f"/{result}"
+    return result.rstrip("/") or "/telegram/webhook"
+
+
+def _normalize_db_url(raw_url: Optional[str]) -> Optional[str]:
+    if not raw_url:
+        return None
+    raw_url = raw_url.strip()
+    if raw_url.startswith("postgresql+asyncpg://"):
+        return raw_url
+    if raw_url.startswith("postgresql://"):
+        return raw_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    if raw_url.startswith("postgres://"):
+        return raw_url.replace("postgres://", "postgresql+asyncpg://", 1)
+    return f"postgresql+asyncpg://{raw_url}"
+
+
 TOKEN = os.getenv("BOT_TOKEN")
 APP_URL = os.getenv("APP_URL") or os.getenv("RENDER_EXTERNAL_URL")
 SPACE_HOST = os.getenv("SPACE_HOST")
@@ -32,23 +73,19 @@ TWITCH_SECRET = os.getenv("TWITCH_SECRET")
 YT_KEY = os.getenv("YOUTUBE_API_KEY")
 YT_HANDOFF_WEBHOOK_URL = os.getenv("YT_HANDOFF_WEBHOOK_URL")
 DONATALERTS_ACCESS_TOKEN = os.getenv("DONATALERTS_ACCESS_TOKEN")
-DONATALERTS_API_BASE = os.getenv("DONATALERTS_API_BASE", "https://www.donationalerts.com/api/v1")
-# Force webhook mode on server
-WEBHOOK_ENABLED = True
-WEBHOOK_PATH = os.getenv("WEBHOOK_PATH", "/telegram/webhook")
-REQUIRE_INIT_DATA = os.getenv("REQUIRE_INIT_DATA", "true").lower() in {"1", "true", "yes"}
-LOCAL_DEV_MODE = os.getenv("LOCAL_DEV_MODE", "false").lower() in {"1", "true", "yes"}
-SELF_PING_ENABLED = os.getenv("SELF_PING_ENABLED", "true").lower() in {"1", "true", "yes"} # Enabled by default now
-SELF_PING_INTERVAL_SECONDS = int(os.getenv("SELF_PING_INTERVAL_SECONDS", "600"))
-OWNER_TELEGRAM_ID = os.getenv("OWNER_TELEGRAM_ID", "6983727854")
-OWNER_ADMIN_PASSWORD = os.getenv("OWNER_ADMIN_PASSWORD", "22922292")
-ADMIN_TOKEN_TTL_SECONDS = int(os.getenv("ADMIN_TOKEN_TTL_SECONDS", "43200"))
+DONATALERTS_API_BASE = os.getenv("DONATALERTS_API_BASE", "https://www.donationalerts.com/api/v1").rstrip("/")
+LOCAL_DEV_MODE = _env_bool("LOCAL_DEV_MODE", False)
+WEBHOOK_ENABLED = _env_bool("WEBHOOK_ENABLED", not LOCAL_DEV_MODE)
+WEBHOOK_PATH = _normalize_webhook_path(os.getenv("WEBHOOK_PATH"))
+REQUIRE_INIT_DATA = _env_bool("REQUIRE_INIT_DATA", True)
+SELF_PING_ENABLED = _env_bool("SELF_PING_ENABLED", True)
+SELF_PING_INTERVAL_SECONDS = _env_int("SELF_PING_INTERVAL_SECONDS", 600, min_value=60, max_value=86_400)
+OWNER_TELEGRAM_ID = os.getenv("OWNER_TELEGRAM_ID")
+OWNER_ADMIN_PASSWORD = os.getenv("OWNER_ADMIN_PASSWORD")
+ADMIN_TOKEN_TTL_SECONDS = _env_int("ADMIN_TOKEN_TTL_SECONDS", 43_200, min_value=300, max_value=604_800)
 
 
-if RAW_DB_URL:
-    DB_URL = f"postgresql+asyncpg://{RAW_DB_URL.split('://', 1)[1]}"
-else:
-    DB_URL = None
+DB_URL = _normalize_db_url(RAW_DB_URL)
 
 Base = declarative_base()
 
@@ -109,6 +146,43 @@ rate_limit_cache: dict[str, deque[float]] = defaultdict(deque)
 def log_event(event: str, **fields: Any):
     payload = {"event": event, "ts": datetime.now(timezone.utc).isoformat(), **fields}
     logger.info(json.dumps(payload, ensure_ascii=False))
+
+
+def validate_runtime_config() -> None:
+    if OWNER_TELEGRAM_ID:
+        try:
+            int(OWNER_TELEGRAM_ID)
+        except ValueError:
+            log_event("config_warning", key="OWNER_TELEGRAM_ID", reason="must_be_integer")
+
+    if TWITCH_ID and not TWITCH_SECRET:
+        log_event("config_warning", key="TWITCH_SECRET", reason="missing_while_twitch_id_is_set")
+    if TWITCH_SECRET and not TWITCH_ID:
+        log_event("config_warning", key="TWITCH_CLIENT_ID", reason="missing_while_twitch_secret_is_set")
+    if YT_HANDOFF_WEBHOOK_URL and not YT_HANDOFF_WEBHOOK_URL.startswith(("http://", "https://")):
+        log_event("config_warning", key="YT_HANDOFF_WEBHOOK_URL", reason="must_be_http_url")
+    if DONATALERTS_ACCESS_TOKEN and not DONATALERTS_API_BASE.startswith(("http://", "https://")):
+        log_event("config_warning", key="DONATALERTS_API_BASE", reason="must_be_http_url")
+
+    log_event(
+        "runtime_config",
+        webhook_enabled=WEBHOOK_ENABLED,
+        webhook_path=WEBHOOK_PATH,
+        require_init_data=REQUIRE_INIT_DATA,
+        local_dev_mode=LOCAL_DEV_MODE,
+        self_ping_enabled=SELF_PING_ENABLED,
+        self_ping_interval_seconds=SELF_PING_INTERVAL_SECONDS,
+        admin_token_ttl_seconds=ADMIN_TOKEN_TTL_SECONDS,
+        app_url_set=bool(APP_URL or SPACE_HOST),
+        db_configured=bool(DB_URL),
+        twitch_configured=bool(TWITCH_ID and TWITCH_SECRET),
+        youtube_configured=bool(YT_KEY),
+        yt_handoff_configured=bool(YT_HANDOFF_WEBHOOK_URL),
+        donationalerts_configured=bool(DONATALERTS_ACCESS_TOKEN),
+        owner_id_set=bool(OWNER_TELEGRAM_ID),
+        owner_password_set=bool(OWNER_ADMIN_PASSWORD),
+    )
+
 
 def get_public_app_url() -> str:
     if APP_URL: return APP_URL.rstrip("/")
@@ -325,6 +399,7 @@ async def keep_app_awake():
 
 
 async def main():
+    validate_runtime_config()
     if not TOKEN and not LOCAL_DEV_MODE: raise RuntimeError("BOT_TOKEN is not set")
     if not DB_URL and not LOCAL_DEV_MODE: raise RuntimeError("DATABASE_URL is not set")
     

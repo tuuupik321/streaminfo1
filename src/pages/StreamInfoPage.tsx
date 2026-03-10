@@ -1,6 +1,6 @@
 ﻿import { useState } from "react";
 import { motion } from "framer-motion";
-import { CalendarDays, DollarSign, Eye, Link2, MousePointerClick, RefreshCw, ShieldCheck, TrendingUp, UserCheck, Users, Sparkles, MoreHorizontal, Radio } from "lucide-react";
+import { CalendarDays, DollarSign, Eye, Link2, MousePointerClick, RefreshCw, ShieldCheck, TrendingUp, UserCheck, Users, MoreHorizontal, Radio, PlusCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,30 +12,21 @@ import { AchievementsBlock } from "@/components/dashboard/AchievementsBlock";
 import { PredictionCard } from "@/components/dashboard/PredictionCard";
 import { StreamSeriesRail } from "@/components/dashboard/StreamSeriesRail";
 import { PartnersCarousel } from "@/components/dashboard/PartnersCarousel";
+import { LiveEventsFeed } from "@/components/dashboard/LiveEventsFeed";
+import { LiveStreamFeed } from "@/components/dashboard/LiveStreamFeed";
+import { LockedOverlay } from "@/components/dashboard/LockedOverlay";
 import { useI18n } from "@/lib/i18n";
 import { getCurrentTelegramId, hasAdminSession, isOwnerTelegramId } from "@/lib/adminAccess";
 import { useStreamInfo } from "@/hooks/useStreamInfo";
+import { cn } from "@/lib/utils";
 
-function OnboardingWelcome() {
-  const navigate = useNavigate();
+function AddWidgetCard() {
   const { t } = useI18n();
-
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.5, delay: 0.2 }}
-      className="my-12 rounded-2xl border border-primary/20 bg-gradient-to-br from-background to-background/50 p-6 text-center"
-    >
-      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 glow-primary">
-        <Sparkles className="text-primary" />
-      </div>
-      <h2 className="text-xl font-bold font-heading">{t("streamInfo.welcomeTitle")}</h2>
-      <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">{t("streamInfo.welcomeSubtitle")}</p>
-      <Button onClick={() => navigate("/integrations")} className="mt-6 gap-2">
-        <Link2 size={16} /> {t("streamInfo.welcomeButton")}
-      </Button>
-    </motion.div>
+    <div className="flex h-full min-h-[120px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border/50 bg-background/30 text-muted-foreground transition-colors hover:border-primary/50 hover:bg-primary/5 hover:text-primary">
+      <PlusCircle size={24} className="mb-2" />
+      <span className="text-xs font-medium">{t("streamInfo.addWidget", "Добавить виджет")}</span>
+    </div>
   );
 }
 
@@ -68,8 +59,12 @@ export default function StreamInfoPage() {
   const showOnboarding = data?.is_linked === false && !isLoading;
   const isLive = data?.twitch?.online ?? false;
 
+  if (showOnboarding) {
+    return <LockedOverlay />;
+  }
+
   return (
-    <div className="mx-auto max-w-5xl px-3 py-4 sm:p-4 md:p-8">
+    <div className="mx-auto max-w-6xl px-3 py-4 sm:p-4 md:p-8">
       <div className="mb-5 flex items-center justify-between sm:mb-8">
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-xl font-black font-heading sm:text-2xl md:text-3xl">{t("streamInfo.title")}</h1>
@@ -91,56 +86,64 @@ export default function StreamInfoPage() {
         </motion.div>
       )}
 
-      {showOnboarding ? (
-        <OnboardingWelcome />
-      ) : (
-        <>
-          <div className="mb-5 flex gap-2.5 sm:mb-6 sm:gap-3">
-            <Select value={period} onValueChange={setPeriod}>
-              <SelectTrigger className="flex-1">
-                <CalendarDays size={14} className="mr-2" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="today">{t("streamInfo.today")}</SelectItem>
-                <SelectItem value="yesterday">{t("streamInfo.yesterday")}</SelectItem>
-                <SelectItem value="7d">{t("streamInfo.d7")}</SelectItem>
-                <SelectItem value="30d">{t("streamInfo.d30")}</SelectItem>
-                <SelectItem value="all">{t("streamInfo.all")}</SelectItem>
-              </SelectContent>
-            </Select>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon">
-                  <MoreHorizontal size={16} />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => navigate("/integrations")} className="gap-2">
-                  <Link2 size={14} /> {t("streamInfo.sources")}
-                </DropdownMenuItem>
-                {canSeeAdmin && (
-                  <DropdownMenuItem onClick={() => navigate("/admin")} className="gap-2">
-                    <ShieldCheck size={14} /> {t("streamInfo.admin")}
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+      <div className="mb-5 flex gap-2.5 sm:mb-6 sm:gap-3">
+        <Select value={period} onValueChange={setPeriod}>
+          <SelectTrigger className="flex-1">
+            <CalendarDays size={14} className="mr-2" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="today">{t("streamInfo.today")}</SelectItem>
+            <SelectItem value="yesterday">{t("streamInfo.yesterday")}</SelectItem>
+            <SelectItem value="7d">{t("streamInfo.d7")}</SelectItem>
+            <SelectItem value="30d">{t("streamInfo.d30")}</SelectItem>
+            <SelectItem value="all">{t("streamInfo.all")}</SelectItem>
+          </SelectContent>
+        </Select>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon">
+              <MoreHorizontal size={16} />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => navigate("/integrations")} className="gap-2">
+              <Link2 size={14} /> {t("streamInfo.sources")}
+            </DropdownMenuItem>
+            {canSeeAdmin && (
+              <DropdownMenuItem onClick={() => navigate("/admin")} className="gap-2">
+                <ShieldCheck size={14} /> {t("streamInfo.admin")}
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
-          <div className="mb-5 grid grid-cols-2 gap-2.5 sm:mb-8 sm:gap-4 lg:grid-cols-3">
-            {stats.map((s, i) => (
-              <StatsCard key={s.label} icon={s.icon} label={s.label} value={s.value} delay={i * 0.07} loading={isLoading} suffix={s.suffix} />
-            ))}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:gap-8">
+        <div className="lg:col-span-2">
+          <LiveStreamFeed />
+          <div className="mt-8">
+            <ViewerChart loading={isLoading} data={timeline} />
           </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-2 lg:gap-4">
+          {stats.map((s, i) => (
+            <StatsCard key={s.label} icon={s.icon} label={s.label} value={s.value} delay={i * 0.07} loading={isLoading} suffix={s.suffix} />
+          ))}
+          <div className={cn("sm:col-span-1", stats.length % 2 !== 0 ? "lg:col-span-2" : "lg:col-span-1")}>
+              <AddWidgetCard />
+          </div>
+        </div>
+      </div>
 
-          <div className="mb-8"><ViewerChart loading={isLoading} data={timeline} /></div>
-          <div className="mb-8"><PartnersCarousel /></div>
-          <div className="mb-8"><PredictionCard data={timeline} liveViewers={data?.twitch?.viewers ?? 0} isLive={isLive} /></div>
-          <div className="mb-8"><StreamSeriesRail data={timeline} /></div>
-          <AchievementsBlock />
-        </>
-      )}
+      <div className="my-8"><PartnersCarousel /></div>
+      <div className="my-8"><LiveEventsFeed /></div>
+
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:gap-8">
+        <PredictionCard data={timeline} liveViewers={data?.twitch?.viewers ?? 0} isLive={isLive} />
+        <StreamSeriesRail data={timeline} />
+      </div>
+      <div className="mt-8"><AchievementsBlock /></div>
     </div>
   );
 }

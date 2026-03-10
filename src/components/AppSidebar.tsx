@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Activity, BarChart3, Info, ShieldCheck, Star } from "lucide-react";
+import { Activity, BarChart3, Info, LifeBuoy, Puzzle, Settings, ShieldCheck, Star } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { PartnerBanner } from "@/components/PartnerBanner";
 import {
@@ -17,10 +17,16 @@ import { Separator } from "@/components/ui/separator";
 import { getCurrentTelegramId, hasAdminSession, isAdminRole, isOwnerTelegramId } from "@/lib/adminAccess";
 import { supabase } from "@/integrations/supabase/client";
 
-const items = [
+const mainItems = [
   { title: "Информация", url: "/", icon: Info },
   { title: "Аналитика", url: "/analytics", icon: BarChart3 },
   { title: "Донаты", url: "/donations", icon: Star },
+  { title: "Интеграции", url: "/integrations", icon: Puzzle },
+];
+
+const secondaryItems = [
+  { title: "Поддержка", url: "/support", icon: LifeBuoy },
+  { title: "Настройки", url: "/settings", icon: Settings },
 ];
 
 export function AppSidebar() {
@@ -79,12 +85,35 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
+              {mainItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink
                       to={item.url}
                       end={item.url === "/"}
+                      className="rounded-lg transition-all duration-200 hover:bg-primary/5 active:scale-[0.98]"
+                      activeClassName="bg-primary/10 text-primary font-semibold"
+                    >
+                      <item.icon className="mr-2 h-4 w-4" />
+                      {!collapsed && <span>{item.title}</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <Separator className="mx-3 my-2 border-border/20" />
+
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {secondaryItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink
+                      to={item.url}
                       className="rounded-lg transition-all duration-200 hover:bg-primary/5 active:scale-[0.98]"
                       activeClassName="bg-primary/10 text-primary font-semibold"
                     >
