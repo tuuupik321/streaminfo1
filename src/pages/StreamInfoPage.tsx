@@ -18,7 +18,7 @@ import { WidgetManager } from "@/components/dashboard/WidgetManager";
 import { useI18n } from "@/lib/i18n";
 import { getCurrentTelegramId, hasAdminSession, isOwnerTelegramId } from "@/lib/adminAccess";
 import { useStreamInfo } from "@/hooks/useStreamInfo";
-import { useDashboardStore } from "@/store/useDashboardStore";
+import { useDashboardStore, type Widget } from "@/store/useDashboardStore";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -68,7 +68,7 @@ export default function StreamInfoPage() {
   const isLive = data?.twitch?.online ?? false;
 
   const HeroWidget = isLive ? LiveStreamFeed : ViewerChart;
-  const heroWidgetName = isLive ? "liveStreamFeed" : "viewerChart";
+  const heroWidgetName: Widget = isLive ? "liveStreamFeed" : "viewerChart";
 
   if (showOnboarding) {
     return <LockedOverlay />;
@@ -199,7 +199,7 @@ export default function StreamInfoPage() {
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
             >
-              {widgets.includes(heroWidgetName as any) && <HeroWidget loading={isLoading} data={timeline} />}
+              {widgets.includes(heroWidgetName) && <HeroWidget loading={isLoading} data={timeline} />}
             </motion.div>
           </AnimatePresence>
         </div>

@@ -35,6 +35,8 @@ import { useSettingsStore } from "@/store/useSettingsStore";
 import { UiLanguage } from "@/lib/language";
 import { useTheme } from "./ThemeProvider";
 
+type UiTheme = "light" | "dark" | "system";
+
 const mainItems = [
   { key: "info", url: "/", icon: Info, fallback: "Info" },
   { key: "analytics", url: "/analytics", icon: BarChart3, fallback: "Analytics" },
@@ -80,7 +82,7 @@ function SettingsMenu({ canSeeAdmin, collapsed }: { canSeeAdmin: boolean; collap
         {t("sidebar.theme", "Theme")}
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent>
-        <DropdownMenuRadioGroup value={theme} onValueChange={(v) => setTheme(v as any)}>
+        <DropdownMenuRadioGroup value={theme} onValueChange={(v) => setTheme(v as UiTheme)}>
           <DropdownMenuRadioItem value="light">{t("sidebar.light", "Light")}</DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="dark">{t("sidebar.dark", "Dark")}</DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="system">{t("sidebar.systemTheme", "System")}</DropdownMenuRadioItem>
@@ -236,3 +238,5 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
+
+
