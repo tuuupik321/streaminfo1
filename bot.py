@@ -488,12 +488,17 @@ def build_app():
         setup_application(app, dp, bot=bot)
 
     # Static files serving (must be last)
-    public_path = os.path.join(os.path.dirname(__file__), "public")
-    if os.path.exists(public_path):
-        app.router.add_static("/assets", os.path.join(public_path, "assets"))
-        # For any other route, serve index.html to support client-side routing
+    base_dir = os.path.dirname(__file__)
+    dist_path = os.path.join(base_dir, "dist")
+    public_path = os.path.join(base_dir, "public")
+    static_root = dist_path if os.path.exists(dist_path) else public_path
+    assets_path = os.path.join(static_root, "assets")
+    if os.path.exists(assets_path):
+        app.router.add_static("/assets", assets_path)
+    index_path = os.path.join(static_root, "index.html")
+    if os.path.exists(index_path):
         async def serve_index(request):
-            return web.FileResponse(os.path.join(public_path, "index.html"))
+            return web.FileResponse(index_path)
         app.router.add_route("GET", "/{tail:.*}", serve_index)
 
     return app
