@@ -17,7 +17,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const root = window.document.documentElement;
     root.classList.remove("light", "dark");
 
-    root.style.setProperty("--glow-intensity", String(glowIntensity));
+    const intensity = Math.max(0, Math.min(glowIntensity, 1));
+    root.style.setProperty("--glow-intensity", String(intensity));
+    root.style.setProperty("--glow-soft", `${Math.round(10 + 18 * intensity)}px`);
+    root.style.setProperty("--glow-strong", `${Math.round(40 + 90 * intensity)}px`);
+    root.style.setProperty("--glow-alpha", `${(0.18 + 0.35 * intensity).toFixed(2)}`);
+    root.style.setProperty("--glow-alpha-strong", `${(0.08 + 0.22 * intensity).toFixed(2)}`);
     root.style.setProperty("--card-style", cardStyle);
 
     if (theme === "system") {
@@ -27,7 +32,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
 
     root.classList.add(theme);
-  }, [theme]);
+  }, [theme, glowIntensity, cardStyle]);
 
   const value = {
     theme,

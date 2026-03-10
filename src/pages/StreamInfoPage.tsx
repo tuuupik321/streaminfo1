@@ -74,8 +74,8 @@ export default function StreamInfoPage() {
     return <LockedOverlay />;
   }
 
-  const title = "StreamInfo";
-  const subtitle = "Уведомления и интеграции для Twitch, YouTube и Telegram";
+  const title = t("hero.title", "StreamInfo");
+  const subtitle = t("hero.subtitle", "Notifications and integrations for Twitch, YouTube, and Telegram");
 
   return (
     <div className="mx-auto max-w-6xl px-3 py-4 sm:p-4 md:p-8">
@@ -113,7 +113,7 @@ export default function StreamInfoPage() {
               transition={{ duration: 0.3, ease: "easeOut" }}
               className="relative overflow-hidden rounded-2xl bg-white/10 px-5 py-3 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(0,0,0,0.35)] backdrop-blur"
             >
-              Launch Bot
+              {t("hero.ctaPrimary", "Launch Bot")}
               <span className="absolute inset-0 rounded-2xl shadow-[0_0_40px_rgba(145,70,255,0.55)] opacity-0 transition-opacity duration-300 hover:opacity-100" />
             </motion.button>
             <motion.button
@@ -123,7 +123,7 @@ export default function StreamInfoPage() {
               onClick={() => navigate("/integrations")}
               className="relative overflow-hidden rounded-2xl border border-white/20 bg-white/5 px-5 py-3 text-sm font-semibold text-white/90"
             >
-              Integrations
+              {t("hero.ctaSecondary", "Integrations")}
               <span className="absolute inset-0 rounded-2xl shadow-[0_0_40px_rgba(0,178,255,0.45)] opacity-0 transition-opacity duration-300 hover:opacity-100" />
             </motion.button>
           </div>

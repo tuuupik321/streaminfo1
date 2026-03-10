@@ -1,8 +1,8 @@
-﻿import { motion } from "framer-motion";
-import { Bell, Globe, Palette, Sun, Moon, Laptop } from "lucide-react";
+import { motion } from "framer-motion";
+import { Sparkles } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import { useI18n } from "@/lib/i18n";
 import { useSettingsStore } from "@/store/useSettingsStore";
 import { UiLanguage } from "@/lib/language";
@@ -27,17 +27,29 @@ function Section({ title, description, children }: { title: string; description:
 function LanguageSettings() {
   const { t } = useI18n();
   const { language, setLanguage } = useSettingsStore();
+  const activeLanguage = language === "ru" ? "ru" : "en";
 
   return (
     <div className="space-y-2">
       <label className="font-mono text-sm">{t("settings.language")}</label>
-      <Select value={language} onValueChange={(value) => setLanguage(value as UiLanguage)}>
-        <SelectTrigger className="font-mono text-sm"><SelectValue /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value="ru" className="font-mono text-sm">{t("settings.languageRu")}</SelectItem>
-          <SelectItem value="en" className="font-mono text-sm">{t("settings.languageEn")}</SelectItem>
-        </SelectContent>
-      </Select>
+      <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-secondary/40 px-3 py-2">
+        <span className={activeLanguage === "ru" ? "text-foreground drop-shadow-[0_0_10px_rgba(145,70,255,0.6)]" : "text-muted-foreground"}>RU</span>
+        <button
+          type="button"
+          onClick={() => setLanguage((activeLanguage === "ru" ? "en" : "ru") as UiLanguage)}
+          className="relative h-6 w-16 rounded-full border border-border/40 bg-background/80"
+          aria-label={t("settings.language", "Language")}
+        >
+          <motion.span
+            layout
+            transition={{ type: "spring", stiffness: 260, damping: 20 }}
+            className="absolute top-1 h-4 w-7 rounded-full bg-primary shadow-[0_0_14px_rgba(145,70,255,0.6)]"
+            style={{ left: activeLanguage === "ru" ? "0.25rem" : "2.75rem" }}
+          />
+        </button>
+        <span className={activeLanguage === "en" ? "text-foreground drop-shadow-[0_0_10px_rgba(145,70,255,0.6)]" : "text-muted-foreground"}>EN</span>
+      </div>
+      <p className="text-xs text-muted-foreground">{t("settings.languageDesc", "Switch the interface language instantly across the app.")}</p>
     </div>
   );
 }
@@ -45,14 +57,29 @@ function LanguageSettings() {
 function ThemeSettings() {
   const { t } = useI18n();
   const { theme, setTheme } = useTheme();
+  const { glowIntensity, setGlowIntensity } = useSettingsStore();
 
   return (
-    <div className="space-y-2">
-      <label className="font-mono text-sm">{t("settings.theme")}</label>
-      <div className="grid grid-cols-3 gap-2">
-        <Button variant={theme === 'light' ? 'default' : 'outline'} onClick={() => setTheme('light')} className="gap-2"><Sun size={14}/> {t("settings.themeLight")}</Button>
-        <Button variant={theme === 'dark' ? 'default' : 'outline'} onClick={() => setTheme('dark')} className="gap-2"><Moon size={14}/> {t("settings.themeDark")}</Button>
-        <Button variant={theme === 'system' ? 'default' : 'outline'} onClick={() => setTheme('system')} className="gap-2"><Laptop size={14}/> {t("settings.themeSystem")}</Button>
+    <div className="space-y-3">
+      <div className="space-y-2">
+        <label className="font-mono text-sm">{t("settings.theme")}</label>
+        <div className="grid grid-cols-3 gap-2">
+          <Button variant={theme === "light" ? "default" : "outline"} onClick={() => setTheme("light")} className="gap-2">{t("settings.themeLight", "Light")}</Button>
+          <Button variant={theme === "dark" ? "default" : "outline"} onClick={() => setTheme("dark")} className="gap-2">{t("settings.themeDark", "Dark")}</Button>
+          <Button variant={theme === "system" ? "default" : "outline"} onClick={() => setTheme("system")} className="gap-2">{t("settings.themeSystem", "System")}</Button>
+        </div>
+      </div>
+      <div className="space-y-2 rounded-2xl border border-border/60 bg-secondary/40 p-4">
+        <div className="flex items-center gap-2 text-sm font-semibold">
+          <Sparkles size={14} /> {t("settings.cardStyle", "Card Style")}
+        </div>
+        <p className="text-xs text-muted-foreground">{t("settings.glowIntensity", "Liquid Glow intensity")}</p>
+        <Slider value={[Math.round(glowIntensity * 100)]} step={50} onValueChange={(value) => setGlowIntensity(value[0] / 100)} />
+        <div className="flex justify-between text-[11px] text-muted-foreground">
+          <span>{t("settings.glowLow", "Low")}</span>
+          <span>{t("settings.glowMedium", "Medium")}</span>
+          <span>{t("settings.glowHigh", "High")}</span>
+        </div>
       </div>
     </div>
   );
@@ -60,30 +87,46 @@ function ThemeSettings() {
 
 export default function SettingsPage() {
   const { t } = useI18n();
+  const SUPPORT_URL = "https://t.me/streaminfo_support";
 
   return (
     <div className="mx-auto max-w-3xl px-3 py-4 pb-24 sm:p-4 md:p-8">
       <motion.h1 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-5 text-gradient-primary sm:mb-8">
-        {t("settings.title", "Настройки")}
+        {t("settings.title", "Settings")}
       </motion.h1>
       <div className="space-y-6">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <Section
-            title={t("settings.appearance", "Внешний вид")}
-            description={t("settings.appearanceDesc", "Настройте язык, тему и цвета приложения.")}
+            title={t("settings.language", "Language")}
+            description={t("settings.languageDesc", "Switch the interface language instantly across the app.")}
           >
             <LanguageSettings />
-            <ThemeSettings />
           </Section>
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <Section
-            title={t("settings.notifications", "Уведомления")}
-            description={t("settings.notificationsDesc", "Выберите, какие уведомления и куда вы хотите получать.")}
+            title={t("settings.appearance", "Appearance")}
+            description={t("settings.appearanceDesc", "Customize your theme and glow style.")}
           >
-            {/* Notification settings will go here */}
-            <p className="text-sm text-muted-foreground">{t("settings.notificationsComingSoon", "Настройки уведомлений скоро появятся здесь.")}</p>
+            <ThemeSettings />
+          </Section>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+          <Section
+            title={t("settings.support", "Support")}
+            description={t("support.contactSupport", "Contact support")}
+          >
+            <div className="rounded-2xl border border-border/60 bg-secondary/40 p-4">
+              <p className="text-sm font-semibold">{t("support.needHelp", "Need help?")}</p>
+              <p className="text-xs text-muted-foreground">{t("support.contactSupport", "Contact support")}</p>
+              <Button asChild className="mt-4 w-full hover-lift">
+                <a href={SUPPORT_URL} target="_blank" rel="noreferrer">
+                  {t("support.openSupport", "Open Support")}
+                </a>
+              </Button>
+            </div>
           </Section>
         </motion.div>
       </div>

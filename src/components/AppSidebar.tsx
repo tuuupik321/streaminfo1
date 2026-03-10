@@ -36,11 +36,11 @@ import { UiLanguage } from "@/lib/language";
 import { useTheme } from "./ThemeProvider";
 
 const mainItems = [
-  { title: "Информация", url: "/", icon: Info },
-  { title: "Аналитика", url: "/analytics", icon: BarChart3 },
-  { title: "Донаты", url: "/donations", icon: Star },
-  { title: "Анонсы", url: "/announcements", icon: Megaphone },
-  { title: "Интеграции", url: "/integrations", icon: Puzzle },
+  { key: "info", url: "/", icon: Info, fallback: "Info" },
+  { key: "analytics", url: "/analytics", icon: BarChart3, fallback: "Analytics" },
+  { key: "donations", url: "/donations", icon: Star, fallback: "Donations" },
+  { key: "announcements", url: "/announcements", icon: Megaphone, fallback: "Announcements" },
+  { key: "integrations", url: "/integrations", icon: Puzzle, fallback: "Integrations" },
 ];
 
 function SettingsMenu({ canSeeAdmin, collapsed }: { canSeeAdmin: boolean; collapsed: boolean }) {
@@ -50,8 +50,8 @@ function SettingsMenu({ canSeeAdmin, collapsed }: { canSeeAdmin: boolean; collap
   const { theme, setTheme } = useTheme();
 
   const menuItems = [
-    { title: t("sidebar.settings", "Настройки"), url: "/settings", icon: Settings },
-    { title: t("sidebar.support", "Поддержка"), url: "/support", icon: LifeBuoy },
+    { title: t("sidebar.settings", "Settings"), url: "/settings", icon: Settings },
+    { title: t("sidebar.support", "Support"), url: "/support", icon: LifeBuoy },
   ];
 
   const handleLanguageChange = (lang: string) => {
@@ -62,11 +62,11 @@ function SettingsMenu({ canSeeAdmin, collapsed }: { canSeeAdmin: boolean; collap
     <DropdownMenuSub>
       <DropdownMenuSubTrigger className="gap-2">
         <Languages size={14} />
-        {t("sidebar.language", "Язык")}
+        {t("sidebar.language", "Language")}
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent>
         <DropdownMenuRadioGroup value={language} onValueChange={handleLanguageChange}>
-          <DropdownMenuRadioItem value="ru">Русский</DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="ru">�������</DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="en">English</DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
       </DropdownMenuSubContent>
@@ -76,14 +76,14 @@ function SettingsMenu({ canSeeAdmin, collapsed }: { canSeeAdmin: boolean; collap
   const themeSubMenu = (
     <DropdownMenuSub>
       <DropdownMenuSubTrigger className="gap-2">
-        {theme === 'light' ? <Sun size={14} /> : <Moon size={14} />}
-        {t("sidebar.theme", "Тема")}
+        {theme === "light" ? <Sun size={14} /> : <Moon size={14} />}
+        {t("sidebar.theme", "Theme")}
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent>
         <DropdownMenuRadioGroup value={theme} onValueChange={(v) => setTheme(v as any)}>
-          <DropdownMenuRadioItem value="light">{t("sidebar.light", "Светлая")}</DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="dark">{t("sidebar.dark", "Темная")}</DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="system">{t("sidebar.systemTheme", "Системная")}</DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="light">{t("sidebar.light", "Light")}</DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="dark">{t("sidebar.dark", "Dark")}</DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="system">{t("sidebar.systemTheme", "System")}</DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
       </DropdownMenuSubContent>
     </DropdownMenuSub>
@@ -98,7 +98,7 @@ function SettingsMenu({ canSeeAdmin, collapsed }: { canSeeAdmin: boolean; collap
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent side="right" align="start" className="ml-2">
-          <DropdownMenuLabel>{t("sidebar.systemMenu", "Системное меню")}</DropdownMenuLabel>
+          <DropdownMenuLabel>{t("sidebar.systemMenu", "System Menu")}</DropdownMenuLabel>
           <DropdownMenuSeparator />
           {menuItems.map((item) => (
             <DropdownMenuItem key={item.url} onClick={() => navigate(item.url)} className="gap-2">
@@ -114,7 +114,7 @@ function SettingsMenu({ canSeeAdmin, collapsed }: { canSeeAdmin: boolean; collap
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => navigate("/admin")} className="gap-2">
                 <ShieldCheck size={14} />
-                <span>{t("sidebar.adminCenter", "Админ-центр")}</span>
+                <span>{t("sidebar.adminCenter", "Admin Center")}</span>
               </DropdownMenuItem>
             </>
           )}
@@ -126,7 +126,7 @@ function SettingsMenu({ canSeeAdmin, collapsed }: { canSeeAdmin: boolean; collap
   return (
     <SidebarGroup>
       <SidebarGroupLabel className="text-xs text-muted-foreground/60 font-mono uppercase tracking-widest">
-        {t("sidebar.system", "Система")}
+        {t("sidebar.system", "System")}
       </SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>
@@ -145,7 +145,7 @@ function SettingsMenu({ canSeeAdmin, collapsed }: { canSeeAdmin: boolean; collap
               <SidebarMenuButton asChild>
                 <Link to="/admin" className="flex items-center gap-2 rounded-lg p-2 transition-all duration-200 hover:bg-primary/5 active:scale-[0.98]">
                   <ShieldCheck className="h-4 w-4" />
-                  <span>{t("sidebar.adminCenter", "Админ-центр")}</span>
+                  <span>{t("sidebar.adminCenter", "Admin Center")}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -205,12 +205,12 @@ export function AppSidebar() {
 
         <SidebarGroup className="flex-1">
           <SidebarGroupLabel className="text-xs text-muted-foreground/60 font-mono uppercase tracking-widest">
-            {t("sidebar.menu", "Меню")}
+            {t("sidebar.menu", "Menu")}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {mainItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
+                <SidebarMenuItem key={item.key}>
                   <SidebarMenuButton asChild>
                     <NavLink
                       to={item.url}
@@ -219,7 +219,7 @@ export function AppSidebar() {
                       activeClassName="bg-primary/10 text-primary font-semibold"
                     >
                       <item.icon className="mr-2 h-4 w-4" />
-                      {!collapsed && <span>{t(`sidebar.${item.title.toLowerCase()}`, item.title)}</span>}
+                      {!collapsed && <span>{t(`sidebar.${item.key}`, item.fallback)}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

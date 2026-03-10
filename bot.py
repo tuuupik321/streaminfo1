@@ -165,6 +165,7 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=TOKEN) if TOKEN else None
 dp = Dispatcher()
 rate_limit_cache: dict[str, deque[float]] = defaultdict(deque)
+donation_events: deque[dict[str, Any]] = deque(maxlen=100)
 
 # ... (rest of the utility functions remain the same)
 def log_event(event: str, **fields: Any):
@@ -345,6 +346,75 @@ async def resolve_youtube_channel_id(value: str) -> Optional[str]:
                 return channel_id
     except Exception as error:
         log_event("youtube_lookup_error", error=str(error))
+        return None
+
+async def fetch_twitch_channel_details(login: str) -> Optional[dict[str, Any]]:
+    token = await _get_twitch_app_token()
+    if not token or not TWITCH_ID:
+        return None
+    try:
+        url = f"https://api.twitch.tv/helix/users?login={quote_plus(login)}"
+        headers = {"Client-ID": TWITCH_ID, "Authorization": f"Bearer {token}"}
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers, timeout=12) as resp:
+                data = await resp.json()
+                if resp.status != 200:
+                    log_event("twitch_user_failed", status=resp.status, body=str(data)[:200])
+                    return None
+                users = data.get("data") or []
+                if not users:
+                    return None
+                user = users[0]
+        followers = None
+        try:
+            url = f"https://api.twitch.tv/helix/channels/followers?broadcaster_id={quote_plus(user.get('id', ''))}"
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, headers=headers, timeout=12) as resp:
+                    data = await resp.json()
+                    if resp.status == 200:
+                        followers = data.get("total")
+        except Exception as error:
+            log_event("twitch_followers_error", error=str(error))
+        return {
+            "id": user.get("id"),
+            "login": user.get("login"),
+            "name": user.get("display_name") or user.get("login"),
+            "avatar": user.get("profile_image_url"),
+            "followers": followers,
+        }
+    except Exception as error:
+        log_event("twitch_user_error", error=str(error))
+        return None
+
+async def fetch_youtube_channel_details(channel_id: str) -> Optional[dict[str, Any]]:
+    if not YT_KEY:
+        return None
+    try:
+        url = (
+            "https://www.googleapis.com/youtube/v3/channels"
+            f"?part=snippet,statistics&id={quote_plus(channel_id)}&key={quote_plus(YT_KEY)}"
+        )
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, timeout=12) as resp:
+                data = await resp.json()
+                if resp.status != 200:
+                    log_event("youtube_channel_failed", status=resp.status, body=str(data)[:200])
+                    return None
+                items = data.get("items") or []
+                if not items:
+                    return None
+                item = items[0]
+                snippet = item.get("snippet") or {}
+                stats = item.get("statistics") or {}
+                return {
+                    "id": item.get("id"),
+                    "name": snippet.get("title"),
+                    "avatar": ((snippet.get("thumbnails") or {}).get("medium") or {}).get("url"),
+                    "subscribers": int(stats.get("subscriberCount", 0)) if stats.get("subscriberCount") else None,
+                    "videos": int(stats.get("videoCount", 0)) if stats.get("videoCount") else None,
+                }
+    except Exception as error:
+        log_event("youtube_channel_error", error=str(error))
         return None
 
 async def api_ping(request: web.Request):
@@ -549,11 +619,14 @@ async def verify_channel(request: web.Request):
         resolved_twitch = await resolve_twitch_login(username)
         if not resolved_twitch:
             return web.json_response({"error": "twitch_not_found"}, status=404)
+        details = await fetch_twitch_channel_details(resolved_twitch)
         return web.json_response({
             "status": "ok",
             "platform": "twitch",
-            "name": resolved_twitch,
+            "name": (details or {}).get("name") or resolved_twitch,
             "url": f"https://twitch.tv/{resolved_twitch}",
+            "avatar": (details or {}).get("avatar"),
+            "followers": (details or {}).get("followers"),
         })
 
     if platform == "youtube":
@@ -563,11 +636,15 @@ async def verify_channel(request: web.Request):
         resolved_youtube = await resolve_youtube_channel_id(channel_id)
         if not resolved_youtube:
             return web.json_response({"error": "youtube_not_found"}, status=404)
+        details = await fetch_youtube_channel_details(resolved_youtube)
         return web.json_response({
             "status": "ok",
             "platform": "youtube",
-            "name": resolved_youtube,
+            "name": (details or {}).get("name") or resolved_youtube,
             "url": f"https://youtube.com/channel/{resolved_youtube}",
+            "avatar": (details or {}).get("avatar"),
+            "subscribers": (details or {}).get("subscribers"),
+            "videos": (details or {}).get("videos"),
         })
 
     if platform == "telegram":
@@ -579,16 +656,74 @@ async def verify_channel(request: web.Request):
         try:
             chat = await bot.get_chat(f"@{username}")
             display = chat.title or f"@{username}"
+            subscribers = None
+            try:
+                subscribers = await bot.get_chat_member_count(f"@{username}")
+            except TelegramAPIError:
+                subscribers = None
             return web.json_response({
                 "status": "ok",
                 "platform": "telegram",
                 "name": display,
                 "url": f"https://t.me/{username}",
+                "channel": f"@{username}",
+                "subscribers": subscribers,
             })
         except TelegramAPIError:
             return web.json_response({"error": "telegram_not_found"}, status=404)
 
+    if platform == "donatealerts":
+        username = _extract_username(channel_raw)
+        if not username:
+            return web.json_response({"error": "donatealerts_not_found"}, status=404)
+        if not DONATALERTS_ACCESS_TOKEN:
+            return web.json_response({"error": "donatealerts_not_configured"}, status=500)
+        return web.json_response({
+            "status": "ok",
+            "platform": "donatealerts",
+            "name": username,
+            "url": f"https://www.donationalerts.com/r/{username}",
+        })
+
     return web.json_response({"error": "unsupported_platform"}, status=400)
+
+def _normalize_donation_payload(payload: dict[str, Any]) -> Optional[dict[str, Any]]:
+    donor = payload.get("donor") or payload.get("username") or payload.get("name")
+    amount = payload.get("amount") or payload.get("sum") or payload.get("value")
+    currency = payload.get("currency") or payload.get("curr") or "USD"
+    message = payload.get("message") or payload.get("comment") or ""
+    event_type = payload.get("type") or payload.get("event") or "donation"
+    if donor is None or amount is None:
+        return None
+    try:
+        amount_value = float(amount)
+    except Exception:
+        return None
+    return {
+        "id": f"{int(time.time() * 1000)}",
+        "donor": str(donor),
+        "amount": amount_value,
+        "currency": str(currency),
+        "message": str(message),
+        "source": str(event_type),
+        "createdAt": datetime.now(timezone.utc).isoformat(),
+    }
+
+async def donations_webhook(request: web.Request):
+    try:
+        payload = await request.json()
+    except Exception:
+        return web.json_response({"error": "bad_request"}, status=400)
+    event = _normalize_donation_payload(payload if isinstance(payload, dict) else {})
+    if not event:
+        return web.json_response({"error": "invalid_payload"}, status=400)
+    donation_events.appendleft(event)
+    return web.json_response({"status": "ok"})
+
+async def get_donations_live(request: web.Request):
+    configured = bool(DONATALERTS_ACCESS_TOKEN)
+    items = list(donation_events)[:20]
+    return web.json_response({"items": items, "configured": configured})
 
 
 async def save_settings(request: web.Request):
@@ -667,6 +802,8 @@ def build_app():
     app.router.add_post("/api/live_banner", set_live_banner)
     app.router.add_get("/api/live_banner", get_live_banner)
     app.router.add_post("/api/verify_channel", verify_channel)
+    app.router.add_post("/api/donations/webhook", donations_webhook)
+    app.router.add_get("/api/donations/live", get_donations_live)
     # ... (add other api routes here)
 
     if bot and WEBHOOK_ENABLED:

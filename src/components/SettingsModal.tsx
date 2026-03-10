@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Cog, ShieldCheck, Users, MessageSquare, Palette, Languages } from "lucide-react";
+import { Cog, MessageSquare, Palette, Languages, Sparkles } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -28,10 +28,12 @@ const panelVariants = {
 };
 
 export function SettingsModal({ open, onClose }: SettingsModalProps) {
-  const { language } = useI18n();
+  const { language, t } = useI18n();
+  const activeLanguage = language === "ru" ? "ru" : "en";
   const { theme, setTheme } = useTheme();
-  const { glowIntensity, setGlowIntensity, cardStyle, setCardStyle, setLanguage } = useSettingsStore();
+  const { glowIntensity, setGlowIntensity, setLanguage } = useSettingsStore();
   const [ripples, setRipples] = useState<Ripple[]>([]);
+  const SUPPORT_URL = "https://t.me/streaminfo_support";
 
   const handleRipple = (event: React.MouseEvent<HTMLButtonElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -67,65 +69,39 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                   <Cog size={16} className="text-white" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-white">Settings</p>
-                  <p className="text-[11px] text-white/50">StreamInfo control center</p>
+                  <p className="text-sm font-semibold text-white">{t("settings.title", "Settings")}</p>
+                  <p className="text-[11px] text-white/50">{t("settings.subtitle", "StreamInfo control center")}</p>
                 </div>
               </div>
               <Button variant="ghost" onClick={onClose} className="text-white/60 hover:text-white h-8 px-2 text-xs">
-                Close
+                {t("actions.close", "Close")}
               </Button>
             </div>
 
             <div className="px-4 py-4 sm:px-6 sm:py-5">
-              <Tabs defaultValue="admin" className="w-full">
+              <Tabs defaultValue="language" className="w-full">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-white/70">
                     <Languages size={12} className="text-white/70" />
-                    <span className={language === "ru" ? "text-white" : "text-white/40"}>RU</span>
-                    <input
-                      type="range"
-                      min={0}
-                      max={1}
-                      step={1}
-                      value={language === "ru" ? 0 : 1}
-                      onChange={(e) => setLanguage(e.target.value === "0" ? "ru" : "en")}
-                      className="h-1 w-16 accent-white"
-                    />
-                    <span className={language === "en" ? "text-white" : "text-white/40"}>EN</span>
+                    <span className={activeLanguage === "ru" ? "text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.6)]" : "text-white/40"}>RU</span>
+                    <button
+                      type="button"
+                      onClick={() => setLanguage(activeLanguage === "ru" ? "en" : "ru")}
+                      className="relative h-5 w-16 rounded-full border border-white/10 bg-white/5 px-1"
+                      aria-label={t("settings.language", "Language")}
+                    >
+                      <motion.span
+                        layout
+                        transition={{ type: "spring", stiffness: 260, damping: 20 }}
+                        className="absolute top-1 h-3 w-6 rounded-full bg-white/90 shadow-[0_0_12px_rgba(145,70,255,0.7)]"
+                        style={{ left: activeLanguage === "ru" ? "0.25rem" : "2.5rem" }}
+                      />
+                    </button>
+                    <span className={activeLanguage === "en" ? "text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.6)]" : "text-white/40"}>EN</span>
                   </div>
-                  <p className="text-[10px] text-white/40">UI language</p>
+                  <p className="text-[10px] text-white/40">{t("settings.languageHint", "UI language")}</p>
                 </div>
-                <TabsList className="grid w-full grid-cols-3 md:grid-cols-6 gap-2 bg-white/5">
-                  <TabsTrigger
-                    value="admin"
-                    onClick={(e) => handleRipple(e)}
-                    className="data-[state=active]:shadow-[0_0_18px_rgba(145,70,255,0.5)]"
-                  >
-                    <motion.span animate={{ y: [0, -2, 0] }} transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }} className="mr-1 inline-flex">
-                      <ShieldCheck size={12} />
-                    </motion.span>
-                    Admin
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="creators"
-                    onClick={(e) => handleRipple(e)}
-                    className="data-[state=active]:shadow-[0_0_18px_rgba(145,70,255,0.5)]"
-                  >
-                    <motion.span animate={{ y: [0, 2, 0] }} transition={{ duration: 3.4, repeat: Infinity, ease: "easeInOut" }} className="mr-1 inline-flex">
-                      <Users size={12} />
-                    </motion.span>
-                    Creators
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="mods"
-                    onClick={(e) => handleRipple(e)}
-                    className="data-[state=active]:shadow-[0_0_18px_rgba(145,70,255,0.5)]"
-                  >
-                    <motion.span animate={{ y: [0, -2, 0] }} transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }} className="mr-1 inline-flex">
-                      <Users size={12} />
-                    </motion.span>
-                    Moderators
-                  </TabsTrigger>
+                <TabsList className="grid w-full grid-cols-3 gap-2 bg-white/5">
                   <TabsTrigger
                     value="support"
                     onClick={(e) => handleRipple(e)}
@@ -134,7 +110,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                     <motion.span animate={{ y: [0, 2, 0] }} transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }} className="mr-1 inline-flex">
                       <MessageSquare size={12} />
                     </motion.span>
-                    Support
+                    {t("settings.support", "Support")}
                   </TabsTrigger>
                   <TabsTrigger
                     value="appearance"
@@ -144,7 +120,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                     <motion.span animate={{ y: [0, -2, 0] }} transition={{ duration: 3.1, repeat: Infinity, ease: "easeInOut" }} className="mr-1 inline-flex">
                       <Palette size={12} />
                     </motion.span>
-                    Appearance
+                    {t("settings.appearance", "Appearance")}
                   </TabsTrigger>
                   <TabsTrigger
                     value="language"
@@ -154,88 +130,71 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                     <motion.span animate={{ y: [0, 2, 0] }} transition={{ duration: 3.3, repeat: Infinity, ease: "easeInOut" }} className="mr-1 inline-flex">
                       <Languages size={12} />
                     </motion.span>
-                    Language
+                    {t("settings.language", "Language")}
                   </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="admin" className="mt-4 space-y-3 text-xs text-white/70">
-                  <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2 text-white">
-                    <ShieldCheck size={12} /> Admin Center
-                  </motion.div>
-                  <ul className="list-disc pl-5 space-y-1">
-                    <li>Управление каналами, пользователями, ролями</li>
-                    <li>Добавление и удаление модераторов</li>
-                    <li>Глобальные функции и статистика</li>
-                  </ul>
-                </TabsContent>
-
-                <TabsContent value="creators" className="mt-4 space-y-3 text-xs text-white/70">
-                  <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2 text-white">
-                    <Users size={12} /> Creators
-                  </motion.div>
-                  <ul className="list-disc pl-5 space-y-1">
-                    <li>Доступ к аналитике своих каналов</li>
-                    <li>Управление контентом и интеграциями</li>
-                    <li>Запуск кампаний и анонсов</li>
-                  </ul>
-                </TabsContent>
-
-                <TabsContent value="mods" className="mt-4 space-y-3 text-xs text-white/70">
-                  <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2 text-white">
-                    <Users size={12} /> Moderators
-                  </motion.div>
-                  <ul className="list-disc pl-5 space-y-1">
-                    <li>Контроль комментариев, донатов и сообщений</li>
-                    <li>Фильтры и предупреждения</li>
-                    <li>Просмотр активности пользователей</li>
-                  </ul>
-                </TabsContent>
-
                 <TabsContent value="support" className="mt-4 space-y-3 text-xs text-white/70">
                   <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2 text-white">
-                    <MessageSquare size={12} /> Support
+                    <MessageSquare size={12} /> {t("settings.support", "Support")}
                   </motion.div>
-                  <ul className="list-disc pl-5 space-y-1">
-                    <li>FAQ / документация</li>
-                    <li>Контакты / чат с техподдержкой</li>
-                  </ul>
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm">
+                    <p className="text-white">{t("support.needHelp", "Need help?")}</p>
+                    <p className="text-white/60">{t("support.contactSupport", "Contact support")}</p>
+                    <Button
+                      asChild
+                      className="mt-4 w-full gap-2 rounded-[22px] bg-white/10 text-white hover:bg-white/20 hover:shadow-[0_0_30px_rgba(0,178,255,0.55)] hover-lift"
+                    >
+                      <a href={SUPPORT_URL} target="_blank" rel="noreferrer">
+                        {t("support.openSupport", "Open Support")}
+                      </a>
+                    </Button>
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="appearance" className="mt-4 space-y-4 text-xs text-white/70">
                   <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2 text-white">
-                    <Palette size={12} /> Appearance
+                    <Palette size={12} /> {t("settings.appearance", "Appearance")}
                   </motion.div>
                   <div className="grid gap-3 md:grid-cols-2">
                     <div className="space-y-2">
-                      <p className="text-xs uppercase tracking-wide text-white/40">Theme</p>
+                      <p className="text-xs uppercase tracking-wide text-white/40">{t("settings.theme", "Theme")}</p>
                       <div className="flex gap-2">
-                        <Button size="sm" variant={theme === "dark" ? "default" : "outline"} onClick={(e) => { handleRipple(e); setTheme("dark"); }} className="relative overflow-hidden">Dark</Button>
-                        <Button size="sm" variant={theme === "light" ? "default" : "outline"} onClick={(e) => { handleRipple(e); setTheme("light"); }} className="relative overflow-hidden">Light</Button>
-                        <Button size="sm" variant={theme === "system" ? "default" : "outline"} onClick={(e) => { handleRipple(e); setTheme("system"); }} className="relative overflow-hidden">System</Button>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-xs uppercase tracking-wide text-white/40">Card Style</p>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant={cardStyle === "minimal" ? "default" : "outline"} onClick={(e) => { handleRipple(e); setCardStyle("minimal"); }} className="relative overflow-hidden">Minimal</Button>
-                        <Button size="sm" variant={cardStyle === "colorful" ? "default" : "outline"} onClick={(e) => { handleRipple(e); setCardStyle("colorful"); }} className="relative overflow-hidden">Colorful</Button>
+                        <Button size="sm" variant={theme === "dark" ? "default" : "outline"} onClick={(e) => { handleRipple(e); setTheme("dark"); }} className="relative overflow-hidden">{t("settings.themeDark", "Dark")}</Button>
+                        <Button size="sm" variant={theme === "light" ? "default" : "outline"} onClick={(e) => { handleRipple(e); setTheme("light"); }} className="relative overflow-hidden">{t("settings.themeLight", "Light")}</Button>
+                        <Button size="sm" variant={theme === "system" ? "default" : "outline"} onClick={(e) => { handleRipple(e); setTheme("system"); }} className="relative overflow-hidden">{t("settings.themeSystem", "System")}</Button>
                       </div>
                     </div>
                     <div className="space-y-2 md:col-span-2">
-                      <p className="text-xs uppercase tracking-wide text-white/40">Liquid Glow</p>
-                      <Slider
-                        value={[glowIntensity * 100]}
-                        onValueChange={(value) => setGlowIntensity(value[0] / 100)}
-                      />
+                      <div className="flex items-center gap-2 text-white">
+                        <Sparkles size={12} /> {t("settings.cardStyle", "Card Style")}
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <p className="text-xs uppercase tracking-wide text-white/40">{t("settings.glowIntensity", "Liquid Glow intensity")}</p>
+                        <div className="mt-4">
+                          <Slider
+                            value={[Math.round(glowIntensity * 100)]}
+                            step={50}
+                            onValueChange={(value) => setGlowIntensity(value[0] / 100)}
+                          />
+                          <div className="mt-3 flex justify-between text-[11px] text-white/40">
+                            <span>{t("settings.glowLow", "Low")}</span>
+                            <span>{t("settings.glowMedium", "Medium")}</span>
+                            <span>{t("settings.glowHigh", "High")}</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </TabsContent>
 
                 <TabsContent value="language" className="mt-4 space-y-3 text-xs text-white/70">
                   <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2 text-white">
-                    <Languages size={12} /> Language
+                    <Languages size={12} /> {t("settings.language", "Language")}
                   </motion.div>
-                  <p className="text-xs text-white/40">Global UI language switch is available above.</p>
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <p className="text-xs text-white/60">{t("settings.languageDesc", "Switch the interface language instantly across the app.")}</p>
+                  </div>
                 </TabsContent>
               </Tabs>
             </div>

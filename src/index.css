@@ -36,6 +36,13 @@
     --font-mono: 'JetBrains Mono', monospace;
     --gradient-primary: linear-gradient(135deg, #0f0f1a, #1a0033, #2b0066);
     --glow-intensity: 0.6;
+    --glow-soft: 20px;
+    --glow-strong: 80px;
+    --glow-alpha: 0.4;
+    --glow-alpha-strong: 0.2;
+    --twitch: 270 100% 64%;
+    --youtube: 0 100% 50%;
+    --telegram: 196 100% 50%;
   }
 
   .light {
@@ -263,7 +270,9 @@
   }
 
   .liquid-glow {
-    box-shadow: 0 0 24px hsl(var(--primary) / 0.35), 0 0 80px hsl(var(--primary) / 0.2);
+    box-shadow:
+      0 0 var(--glow-soft) hsl(var(--primary) / var(--glow-alpha)),
+      0 0 var(--glow-strong) hsl(var(--primary) / var(--glow-alpha-strong));
   }
 
   .premium-card {
@@ -273,6 +282,40 @@
 
   .premium-button {
     @apply rounded-[22px] transition-all duration-300 ease-out;
+  }
+
+  .card-glass {
+    @apply rounded-[22px] border border-white/10 bg-card/60 backdrop-blur-xl;
+    box-shadow:
+      0 0 var(--glow-soft) hsl(var(--primary) / var(--glow-alpha)),
+      0 0 var(--glow-strong) hsl(var(--primary) / var(--glow-alpha-strong));
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .hover-lift {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .hover-lift:hover {
+    transform: translateY(-4px);
+  }
+
+  .float-slow {
+    animation: float 5s ease-in-out infinite;
+  }
+
+  .liquid-ring {
+    box-shadow:
+      inset 0 0 18px hsl(var(--primary) / 0.25),
+      0 0 var(--glow-soft) hsl(var(--primary) / var(--glow-alpha));
+  }
+
+  .ripple-surface {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .tap-highlight:active {
+    transform: scale(0.98);
   }
 }
 
@@ -290,4 +333,17 @@
   0% { opacity: 0.55; }
   50% { opacity: 0.9; }
   100% { opacity: 0.55; }
+}
+
+@keyframes streakFlame {
+  0%, 100% { transform: translateY(0) scale(1); opacity: 0.8; }
+  50% { transform: translateY(-4px) scale(1.05); opacity: 1; }
+}
+
+@media (max-width: 640px) {
+  button,
+  [role="button"],
+  .tap-highlight {
+    min-height: 44px;
+  }
 }

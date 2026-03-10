@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { BarChart3, CalendarDays, Clock, Download, Eye, TrendingUp, Users, PieChart } from "lucide-react";
+import { BarChart3, CalendarDays, Clock, Download, Eye, TrendingUp, Users, PieChart, Flame, Award } from "lucide-react";
 import { StatsCard } from "@/shared/ui/StatsCard";
 import { DataPoint, ViewerChart } from "@/components/dashboard/ViewerChart";
 import { PredictionCard } from "@/components/dashboard/PredictionCard";
@@ -47,6 +47,25 @@ export default function Analytics() {
 
   const timeline = useMemo(() => mapTimeline(data?.timeline), [data?.timeline]);
   const peak = useMemo(() => Math.max(...timeline.map((p) => p.viewers), 0), [timeline]);
+  const peakTime = useMemo(() => {
+    if (!timeline.length) return "20:00";
+    const max = timeline.reduce((acc, cur) => (cur.viewers > acc.viewers ? cur : acc), timeline[0]);
+    return max.time;
+  }, [timeline]);
+
+  const expectedViewers = useMemo(() => {
+    const avg = data?.avg_peak ?? 0;
+    const max = data?.max_peak ?? 0;
+    if (!avg && !max) return 320;
+    return Math.max(avg, Math.round(max * 0.8));
+  }, [data?.avg_peak, data?.max_peak]);
+
+  const achievements = [
+    t("analytics.achievementFirstStream", "First Stream"),
+    t("analytics.achievement100", "100 viewers"),
+    t("analytics.achievement10Donations", "First 10 donations"),
+    t("analytics.achievementStreak", "7 day stream streak"),
+  ];
 
   const exportCsv = () => {
     const rows = [["time", "viewers", "clicks", "donations", "event"], ...timeline.map((p) => [p.time, String(p.viewers), String(p.clicks ?? 0), String(p.donations ?? 0), p.event || ""])];
@@ -77,6 +96,35 @@ export default function Analytics() {
       <motion.h1 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 text-2xl font-black font-heading md:text-3xl">
         {t("analytics.title")}
       </motion.h1>
+
+      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-[24px] border border-white/10 bg-white/5 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
+          <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.streamForecast", "Stream Forecast")}</p>
+          <p className="mt-3 text-sm text-white/70">{t("analytics.expectedViewers", "Expected viewers today")}: <span className="text-white font-semibold">{expectedViewers}</span></p>
+          <p className="text-sm text-white/70">{t("analytics.peakTime", "Peak time")}: <span className="text-white font-semibold">{peakTime}</span></p>
+        </motion.div>
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="rounded-[24px] border border-white/10 bg-white/5 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
+          <div className="flex items-center gap-2 text-white">
+            <Flame size={18} className="animate-[streakFlame_1.6s_ease-in-out_infinite]" />
+            <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.streamStreak", "Stream Streak")}</p>
+          </div>
+          <p className="mt-3 text-sm text-white/70">{t("analytics.currentStreak", "Current streak")}: <span className="text-white font-semibold">5 days</span></p>
+          <p className="text-sm text-white/70">{t("analytics.longestStreak", "Longest streak")}: <span className="text-white font-semibold">14 days</span></p>
+        </motion.div>
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-[24px] border border-white/10 bg-white/5 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
+          <div className="flex items-center gap-2 text-white">
+            <Award size={16} />
+            <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.achievements", "Achievements")}</p>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {achievements.map((badge) => (
+              <span key={badge} className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-[11px] text-white/80 shadow-[0_0_20px_rgba(145,70,255,0.35)]">
+                {badge}
+              </span>
+            ))}
+          </div>
+        </motion.div>
+      </div>
 
       <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-4">
         <Select value={period} onValueChange={setPeriod}>

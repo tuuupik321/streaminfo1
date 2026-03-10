@@ -1,12 +1,30 @@
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Twitch, Youtube, Send } from "lucide-react";
+import { Twitch, Youtube, Send, Heart, Sparkles } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { Button } from "@/components/ui/button";
 
 type Ripple = { id: number; x: number; y: number };
-type Platform = "twitch" | "youtube" | "telegram";
-type PlatformConfig = { key: Platform; label: string; color: string; placeholder: string; icon: typeof Twitch };
-type VerifyResult = { name: string; url: string; platform: Platform };
+type Platform = "twitch" | "youtube" | "telegram" | "donatealerts";
+
+type PlatformConfig = {
+  key: Platform;
+  label: string;
+  color: string;
+  placeholder: string;
+  icon: typeof Twitch;
+};
+
+type VerifyResult = {
+  name: string;
+  url: string;
+  platform: Platform;
+  avatar?: string | null;
+  followers?: number | null;
+  subscribers?: number | null;
+  videos?: number | null;
+  channel?: string | null;
+};
 
 type TelegramWindow = Window & {
   Telegram?: {
@@ -20,7 +38,8 @@ type TelegramWindow = Window & {
 const platforms: PlatformConfig[] = [
   { key: "twitch", label: "Twitch", color: "#9146FF", placeholder: "https://twitch.tv/username", icon: Twitch },
   { key: "youtube", label: "YouTube", color: "#FF0000", placeholder: "https://youtube.com/@channel", icon: Youtube },
-  { key: "telegram", label: "Telegram", color: "#00B2FF", placeholder: "@username", icon: Send },
+  { key: "telegram", label: "Telegram", color: "#00B2FF", placeholder: "@channel", icon: Send },
+  { key: "donatealerts", label: "DonateAlerts", color: "#F57B20", placeholder: "https://donationalerts.com/r/username", icon: Heart },
 ];
 
 function IntegrationCard({
@@ -28,11 +47,15 @@ function IntegrationCard({
   color,
   icon: Icon,
   onOpen,
+  connected,
+  connectedLabel,
 }: {
   label: string;
   color: string;
   icon: typeof Twitch;
   onOpen: () => void;
+  connected?: boolean;
+  connectedLabel: string;
 }) {
   const [ripples, setRipples] = useState<Ripple[]>([]);
 
@@ -54,10 +77,10 @@ function IntegrationCard({
         handleRipple(event);
         onOpen();
       }}
-      whileHover={{ y: -4, scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
+      whileHover={{ y: -4, scale: 1.04 }}
+      whileTap={{ scale: 0.96 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
-      className="group relative flex h-56 w-full items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-[#0b0b0f] shadow-[0_18px_50px_rgba(0,0,0,0.35)]"
+      className="group relative flex h-56 w-full items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-[#0b0b0f] shadow-[0_18px_50px_rgba(0,0,0,0.35)] hover-lift"
     >
       <motion.div
         className="absolute -inset-8 opacity-70 blur-3xl"
@@ -83,6 +106,12 @@ function IntegrationCard({
       >
         <Icon size={54} color="#ffffff" />
       </motion.div>
+
+      {connected && (
+        <div className="absolute top-4 right-4 rounded-full bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/80 shadow-[0_0_18px_rgba(0,178,255,0.5)]">
+          {connectedLabel}
+        </div>
+      )}
 
       <div className="pointer-events-none absolute inset-0">
         {ripples.map((ripple) => (
@@ -120,6 +149,15 @@ export default function IntegrationsPage() {
   const [inputValue, setInputValue] = useState("");
   const [status, setStatus] = useState<"idle" | "verifying" | "success" | "error">("idle");
   const [result, setResult] = useState<VerifyResult | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [connected, setConnected] = useState<Record<Platform, VerifyResult | null>>({
+    twitch: null,
+    youtube: null,
+    telegram: null,
+    donatealerts: null,
+  });
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successData, setSuccessData] = useState<VerifyResult | null>(null);
 
   const tg = (window as TelegramWindow).Telegram?.WebApp;
   const userId = tg?.initDataUnsafe?.user?.id;
@@ -130,18 +168,22 @@ export default function IntegrationsPage() {
     setInputValue("");
     setStatus("idle");
     setResult(null);
+    setErrorMessage(null);
   };
 
   const verify = async () => {
     if (!inputValue.trim()) {
       setStatus("error");
+      setErrorMessage(t("integrations.errorEmpty", "Enter a username or link"));
       return;
     }
     if (!activePlatform || !userId) {
       setStatus("error");
+      setErrorMessage(t("integrations.errorTelegram", "Open the app via Telegram to verify"));
       return;
     }
     setStatus("verifying");
+    setErrorMessage(null);
     try {
       const response = await fetch("/api/verify_channel", {
         method: "POST",
@@ -156,17 +198,32 @@ export default function IntegrationsPage() {
       const data = await response.json().catch(() => ({}));
       if (!response.ok || data?.error) {
         setStatus("error");
+        setErrorMessage(t("integrations.errorNotFound", "Channel not found. Please check username or link"));
         return;
       }
       setResult({
         name: data.name || inputValue.trim(),
         url: data.url || "",
         platform: activePlatform.key,
+        avatar: data.avatar || null,
+        followers: data.followers ?? null,
+        subscribers: data.subscribers ?? null,
+        videos: data.videos ?? null,
+        channel: data.channel || null,
       });
       setStatus("success");
     } catch {
       setStatus("error");
+      setErrorMessage(t("integrations.errorNotFound", "Channel not found. Please check username or link"));
     }
+  };
+
+  const confirmConnection = () => {
+    if (!result) return;
+    setConnected((prev) => ({ ...prev, [result.platform]: result }));
+    setSuccessData(result);
+    setShowSuccess(true);
+    closeModal();
   };
 
   return (
@@ -176,21 +233,24 @@ export default function IntegrationsPage() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-10 text-center text-2xl font-black font-heading md:text-4xl"
       >
-        {t("integrations.title", "Интеграции")}
+        {t("integrations.title", "Integrations")}
       </motion.h1>
 
-      <div className="grid w-full max-w-4xl grid-cols-1 gap-6 md:grid-cols-3">
+      <div className="grid w-full max-w-4xl grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
         {platforms.map((platform) => (
           <IntegrationCard
             key={platform.key}
             label={platform.label}
             color={platform.color}
             icon={platform.icon}
+            connected={Boolean(connected[platform.key])}
+            connectedLabel={t("integrations.connected", "Connected")}
             onOpen={() => {
               setActivePlatform(platform);
               setStatus("idle");
               setResult(null);
               setInputValue("");
+              setErrorMessage(null);
             }}
           />
         ))}
@@ -199,9 +259,39 @@ export default function IntegrationsPage() {
       <p className="mt-8 max-w-xl text-center text-sm text-muted-foreground">
         {t(
           "integrations.description",
-          "Подключайте каналы одним касанием. Премиальные карточки с живым свечением и мягкими анимациями.",
+          "Connect channels in one tap. Premium cards with liquid glow and floating motion.",
         )}
       </p>
+
+      {Object.values(connected).some(Boolean) && (
+        <div className="mt-10 grid w-full max-w-4xl grid-cols-1 gap-4 md:grid-cols-2">
+          {Object.entries(connected).map(([key, value]) =>
+            value ? (
+              <div key={key} className="rounded-3xl border border-white/10 bg-white/5 p-4 text-sm text-white/80 shadow-[0_0_40px_rgba(0,0,0,0.35)]">
+                <div className="flex items-center gap-3">
+                  <div className="h-12 w-12 overflow-hidden rounded-2xl bg-white/10">
+                    {value.avatar ? (
+                      <img src={value.avatar} alt={value.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-xs text-white/60">{value.name.slice(0, 1)}</div>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold">{t("integrations.connected", "Connected")} � {value.platform}</p>
+                    <p className="text-xs text-white/60">{value.channel || value.name}</p>
+                  </div>
+                </div>
+                {value.subscribers !== null && (
+                  <p className="mt-3 text-xs text-white/60">{t("integrations.subscribers", "Subscribers")}: {value.subscribers.toLocaleString()}</p>
+                )}
+                {value.followers !== null && (
+                  <p className="mt-1 text-xs text-white/60">{t("integrations.followers", "Followers")}: {value.followers.toLocaleString()}</p>
+                )}
+              </div>
+            ) : null,
+          )}
+        </div>
+      )}
 
       {activePlatform && (
         <IntegrationModal
@@ -210,8 +300,20 @@ export default function IntegrationsPage() {
           setInputValue={setInputValue}
           status={status}
           result={result}
+          errorMessage={errorMessage}
           onClose={closeModal}
           onVerify={verify}
+          onConfirm={confirmConnection}
+        />
+      )}
+
+      {showSuccess && successData && (
+        <SuccessModal
+          platform={successData.platform}
+          onClose={() => setShowSuccess(false)}
+          title={t("integrations.successTitle", "Channel Connected")}
+          description={t("integrations.successDesc", "Your channel has been successfully connected.")}
+          actionLabel={t("actions.continue", "Continue")}
         />
       )}
     </div>
@@ -224,18 +326,23 @@ function IntegrationModal({
   setInputValue,
   status,
   result,
+  errorMessage,
   onClose,
   onVerify,
+  onConfirm,
 }: {
   platform: PlatformConfig;
   inputValue: string;
   setInputValue: (value: string) => void;
   status: "idle" | "verifying" | "success" | "error";
   result: VerifyResult | null;
+  errorMessage: string | null;
   onClose: () => void;
   onVerify: () => void;
+  onConfirm: () => void;
 }) {
-  const { label, color, placeholder, icon: Icon } = platform;
+  const { t } = useI18n();
+  const { label, color, placeholder, icon: Icon, key } = platform;
   const glow = `0 0 60px ${color}55`;
   const particles = useMemo(() => Array.from({ length: 6 }, (_, i) => i), []);
 
@@ -264,10 +371,20 @@ function IntegrationModal({
                 <Icon size={26} color="#fff" />
               </div>
               <div>
-                <h3 className="text-lg font-bold">Connect your {label} channel</h3>
-                <p className="text-xs text-white/60">Secure verification with premium effects.</p>
+                <h3 className="text-lg font-bold">{t("integrations.connectTitle", "Connect your channel")}: {label}</h3>
+                <p className="text-xs text-white/60">{t("integrations.connectSubtitle", "Secure verification with premium effects.")}</p>
               </div>
             </div>
+
+            {key === "telegram" && (
+              <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-white/70">
+                <p className="font-semibold text-white">{t("integrations.telegramSteps", "Connect Telegram")}</p>
+                <ol className="mt-2 list-decimal pl-4 space-y-1">
+                  <li>{t("integrations.telegramStep1", "Add bot to channel")}</li>
+                  <li>{t("integrations.telegramStep2", "Enter channel username")}</li>
+                </ol>
+              </div>
+            )}
 
             <div className="mt-6 space-y-3">
               <input
@@ -285,7 +402,7 @@ function IntegrationModal({
                   boxShadow: `0 0 40px ${color}66`,
                 }}
               >
-                Verify Channel
+                {t("integrations.verify", "Verify Channel")}
                 {status === "verifying" && <span className="absolute inset-0 animate-pulse bg-white/10" />}
               </motion.button>
               {status === "verifying" && (
@@ -315,31 +432,122 @@ function IntegrationModal({
                   animate={{ x: 0, opacity: 1 }}
                   className="text-sm text-red-400"
                 >
-                  Channel not found. Please check username or link
+                  {errorMessage || t("integrations.errorNotFound", "Channel not found. Please check username or link")}
                 </motion.p>
               )}
-              {status === "success" && (
+              {status === "success" && result && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="rounded-2xl border border-white/10 bg-white/5 p-4"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-white/10" />
+                  <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("integrations.channelFound", "Channel Found")}</p>
+                  <div className="mt-3 flex items-center gap-3">
+                    <div className="h-12 w-12 overflow-hidden rounded-full bg-white/10">
+                      {result.avatar ? (
+                        <img src={result.avatar} alt={result.name} className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-xs text-white/60">{result.name.slice(0, 1)}</div>
+                      )}
+                    </div>
                     <div>
-                      <p className="text-sm font-semibold">{result?.name || `${label} channel`}</p>
-                      <p className="text-xs text-white/60">{result?.url || "Verified"}</p>
+                      <p className="text-sm font-semibold">{result.name}</p>
+                      <p className="text-xs text-white/60">{result.url || t("integrations.verified", "Verified")}</p>
                     </div>
                   </div>
+                  <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-white/60">
+                    <div className="rounded-xl border border-white/10 bg-white/5 p-2 text-center">
+                      <p className="text-[10px] uppercase">{t("integrations.followers", "Followers")}</p>
+                      <p className="text-sm text-white">{result.followers ?? "�"}</p>
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-white/5 p-2 text-center">
+                      <p className="text-[10px] uppercase">{t("integrations.subscribers", "Subscribers")}</p>
+                      <p className="text-sm text-white">{result.subscribers ?? "�"}</p>
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-white/5 p-2 text-center">
+                      <p className="text-[10px] uppercase">{t("integrations.videos", "Videos")}</p>
+                      <p className="text-sm text-white">{result.videos ?? "�"}</p>
+                    </div>
+                  </div>
+                  {key === "telegram" && result.channel && (
+                    <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-white/70">
+                      <p className="font-semibold text-white">{t("integrations.telegramConnected", "Telegram Connected")}</p>
+                      <p>{t("integrations.channelLabel", "Channel")}: {result.channel}</p>
+                      {result.subscribers !== null && (
+                        <p>{t("integrations.subscribers", "Subscribers")}: {result.subscribers.toLocaleString()}</p>
+                      )}
+                    </div>
+                  )}
                   <button
-                    className="mt-4 w-full rounded-2xl bg-white/10 py-2 text-sm font-semibold"
+                    className="mt-4 w-full rounded-2xl bg-white/10 py-2 text-sm font-semibold hover:shadow-[0_0_30px_rgba(0,178,255,0.4)]"
                     style={{ boxShadow: glow }}
+                    onClick={onConfirm}
                   >
-                    Connect channel ✔
+                    {t("integrations.confirm", "Confirm connection")}
                   </button>
                 </motion.div>
               )}
             </div>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+function SuccessModal({
+  platform,
+  title,
+  description,
+  actionLabel,
+  onClose,
+}: {
+  platform: Platform;
+  title: string;
+  description: string;
+  actionLabel: string;
+  onClose: () => void;
+}) {
+  const glowColor = platform === "twitch" ? "#9146FF" : platform === "youtube" ? "#FF0000" : platform === "telegram" ? "#00B2FF" : "#F57B20";
+  const particles = useMemo(() => Array.from({ length: 12 }, (_, i) => i), []);
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+      >
+        <motion.div
+          onClick={(e) => e.stopPropagation()}
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.96 }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          className="relative w-full max-w-sm overflow-hidden rounded-[24px] border border-white/10 bg-[#0c0c12] p-6 text-white"
+          style={{ boxShadow: `0 0 80px ${glowColor}55` }}
+        >
+          <div className="absolute inset-0 opacity-40" style={{ background: `radial-gradient(circle at 50% 20%, ${glowColor}55, transparent 70%)` }} />
+          {particles.map((p) => (
+            <motion.span
+              key={p}
+              className="absolute h-2 w-2 rounded-full"
+              style={{ background: glowColor, left: `${10 + p * 6}%`, top: `${15 + (p % 6) * 10}%` }}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: [0, 1, 0], y: [-4, -12, -22] }}
+              transition={{ duration: 1.6, delay: p * 0.08, repeat: Infinity }}
+            />
+          ))}
+          <div className="relative z-10">
+            <div className="flex items-center gap-2 text-xl font-bold">
+              <Sparkles size={20} /> {title}
+            </div>
+            <p className="mt-2 text-sm text-white/70">{description}</p>
+            <Button className="mt-6 w-full hover-lift" onClick={onClose}>
+              {actionLabel}
+            </Button>
           </div>
         </motion.div>
       </motion.div>

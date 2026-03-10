@@ -1,4 +1,5 @@
-﻿import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { useI18n } from "@/lib/i18n";
 import { EmptyState } from "@/shared/ui/EmptyState";
@@ -21,6 +22,12 @@ type DonationsApiResponse = {
   error?: string;
 };
 
+type ActivityItem = {
+  id: string;
+  text: string;
+  kind: "donation" | "subscription" | "gift";
+};
+
 const fetchDonations = async (): Promise<DonationsApiResponse> => {
   const response = await fetch("/api/donations/live");
   if (!response.ok) {
@@ -29,30 +36,21 @@ const fetchDonations = async (): Promise<DonationsApiResponse> => {
   return response.json();
 };
 
-function DonationCard({ donation, delay }: { donation: Donation; delay: number }) {
-  const { t } = useI18n();
-  const formattedDate = new Date(donation.createdAt).toLocaleTimeString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
+function ActivityRow({ item, index }: { item: ActivityItem; index: number }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay }}
-      className="card-glass rounded-lg p-4"
+      initial={{ opacity: 0, x: 30 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: index * 0.08 }}
+      className="group flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80 hover-lift"
     >
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <p className="font-bold font-heading">{donation.donor}</p>
-          <p className="text-sm text-primary font-semibold">
-            {donation.amount.toLocaleString()} {donation.currency}
-          </p>
+      <div className="flex items-center gap-3">
+        <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center shadow-[0_0_20px_rgba(145,70,255,0.45)]">
+          {item.kind === "donation" ? "??" : item.kind === "gift" ? "??" : "?"}
         </div>
-        <div className="text-xs text-muted-foreground">{formattedDate}</div>
+        <p className="font-semibold">{item.text}</p>
       </div>
-      {donation.message && <p className="mt-2 text-sm bg-secondary/50 p-3 rounded-md">{donation.message}</p>}
+      <div className="h-2 w-2 rounded-full bg-white/30 group-hover:bg-white/70 transition-all duration-300" />
     </motion.div>
   );
 }
@@ -62,47 +60,73 @@ export default function DonationsPage() {
   const { data, isLoading, error } = useQuery<DonationsApiResponse, Error>({
     queryKey: ["donations"],
     queryFn: fetchDonations,
-    refetchInterval: 15_000, // Refresh every 15 seconds
+    refetchInterval: 15_000,
   });
 
-  const renderContent = () => {
-    if (isLoading) {
-      return (
+  const activity = useMemo<ActivityItem[]>(() => {
+    if (!data?.items?.length) {
+      return [
+        { id: "demo-1", text: t("donations.demo1", "John donated $10"), kind: "donation" },
+        { id: "demo-2", text: t("donations.demo2", "Mike subscribed"), kind: "subscription" },
+        { id: "demo-3", text: t("donations.demo3", "Alex gifted 5 subs"), kind: "gift" },
+        { id: "demo-4", text: t("donations.demo4", "Kate donated $5"), kind: "donation" },
+      ];
+    }
+    return data.items.map((donation) => ({
+      id: donation.id,
+      text: `${donation.donor} ${t("donations.donated", "donated")} ${donation.amount.toLocaleString()} ${donation.currency}`,
+      kind: "donation",
+    }));
+  }, [data?.items, t]);
+
+  if (isLoading) {
+    return (
+      <div className="mx-auto max-w-3xl p-4 md:p-8">
+        <motion.h1 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 text-2xl font-black font-heading md:text-3xl">
+          {t("donations.title")}
+        </motion.h1>
         <div className="space-y-4">
           <Skeleton className="h-24 w-full" />
           <Skeleton className="h-24 w-full" />
           <Skeleton className="h-24 w-full" />
         </div>
-      );
-    }
-
-    if (error) {
-      return <EmptyState icon={DollarSign} title={t("donations.errorTitle")} description={t("donations.errorDescription")} />;
-    }
-
-    if (!data?.configured) {
-      return <EmptyState icon={Gift} title={t("donations.notConfiguredTitle")} description={t("donations.notConfiguredDescription")} />;
-    }
-
-    if (data.items.length === 0) {
-      return <EmptyState icon={DollarSign} title={t("donations.emptyTitle")} description={t("donations.emptyDescription")} />;
-    }
-
-    return (
-      <div className="space-y-4">
-        {data.items.map((donation, index) => (
-          <DonationCard key={donation.id} donation={donation} delay={index * 0.05} />
-        ))}
       </div>
     );
-  };
+  }
+
+  if (error) {
+    return <EmptyState icon={DollarSign} title={t("donations.errorTitle")} description={t("donations.errorDescription")} />;
+  }
+
+  if (!data?.configured) {
+    return <EmptyState icon={Gift} title={t("donations.notConfiguredTitle")} description={t("donations.notConfiguredDescription")} />;
+  }
 
   return (
     <div className="mx-auto max-w-3xl p-4 md:p-8">
       <motion.h1 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 text-2xl font-black font-heading md:text-3xl">
         {t("donations.title")}
       </motion.h1>
-      {renderContent()}
+
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="rounded-[24px] border border-white/10 bg-[#0c0c12] p-6 text-white shadow-[0_30px_80px_rgba(0,0,0,0.35)]"
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("donations.recent", "Recent Activity")}</p>
+            <h2 className="mt-2 text-lg font-semibold">{t("donations.feedTitle", "Donations Feed")}</h2>
+          </div>
+          <div className="h-10 w-10 rounded-2xl bg-white/10 flex items-center justify-center liquid-glow">??</div>
+        </div>
+
+        <div className="mt-6 space-y-3">
+          {activity.map((item, index) => (
+            <ActivityRow key={item.id} item={item} index={index} />
+          ))}
+        </div>
+      </motion.div>
     </div>
   );
 }
