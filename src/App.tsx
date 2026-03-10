@@ -12,7 +12,7 @@ import { CommandPalette } from "./components/CommandPalette";
 import { AppShellSkeleton } from "./components/AppShellSkeleton";
 import { PageTransition } from "./components/PageTransition";
 import { GlobalStatusBar } from "./components/GlobalStatusBar";
-import { MobileQuickDock } from "./components/MobileQuickDock";
+import { BottomNav } from "./components/BottomNav";
 import { cn } from "./lib/utils";
 
 const StreamInfoPage = lazy(() => import("./pages/StreamInfoPage"));
@@ -119,9 +119,7 @@ const App = () => (
                       <AnimatedRoutes />
                     </Suspense>
                   </main>
-                  <div className="md:hidden">
-                    <MobileQuickDock />
-                  </div>
+                  <BottomNav />
                 </div>
               </div>
             </SidebarProvider>
