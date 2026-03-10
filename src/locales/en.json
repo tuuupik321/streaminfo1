@@ -112,6 +112,10 @@
   "integrations.telegramSteps": "Connect Telegram",
   "integrations.telegramStep1": "Add bot to channel",
   "integrations.telegramStep2": "Enter channel username",
+  "integrations.telegramMenuChannel": "Add to Channel",
+  "integrations.telegramMenuGroup": "Add to Group",
+  "integrations.telegramMenuHint": "After adding the bot, enter @channel or @chat username below.",
+  "integrations.errorBotUsername": "Bot username is not available",
   "integrations.telegramConnected": "Telegram Connected",
   "integrations.channelLabel": "Channel",
 

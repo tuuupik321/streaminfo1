@@ -95,6 +95,7 @@ class SaveSettingsPayload(BaseModel):
     user_id: int
     twitch_name: Optional[str] = None
     yt_channel_id: Optional[str] = None
+    donationalerts_name: Optional[str] = None
 
 class VerifyChannelPayload(BaseModel):
     user_id: int
@@ -107,6 +108,7 @@ class User(Base):
     clicks = Column(Integer, default=0)
     twitch_name = Column(String, nullable=True)
     yt_channel_id = Column(String, nullable=True)
+    donationalerts_name = Column(String, nullable=True)
 
 class Question(Base):
     __tablename__ = "questions"
@@ -433,6 +435,16 @@ async def fetch_youtube_channel_details(channel_id: str) -> Optional[dict[str, A
 async def api_ping(request: web.Request):
     return web.json_response({"ok": True})
 
+async def get_bot_info(request: web.Request):
+    if not bot:
+        return web.json_response({"error": "telegram_bot_not_configured"}, status=500)
+    try:
+        me = await bot.get_me()
+        return web.json_response({"username": me.username, "id": me.id})
+    except Exception as error:
+        log_event("bot_info_failed", error=str(error))
+        return web.json_response({"error": "bot_info_failed"}, status=500)
+
 # ... (security and other functions remain the same)
 async def _require_verified_user(request: web.Request):
     init_data = request.query.get("init_data")
@@ -466,6 +478,10 @@ async def setup_database():
         return
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        try:
+            await conn.execute(text("ALTER TABLE users ADD COLUMN donationalerts_name VARCHAR"))
+        except Exception:
+            pass
 
 async def keep_database_warm():
     if not engine:
@@ -802,6 +818,7 @@ async def save_settings(request: web.Request):
 
     twitch_name = payload.twitch_name
     yt_channel_id = payload.yt_channel_id
+    donationalerts_name = payload.donationalerts_name
 
     if twitch_name:
         if not all([TWITCH_ID, TWITCH_SECRET]):
@@ -819,6 +836,11 @@ async def save_settings(request: web.Request):
             return web.json_response({"error": "youtube_not_found"}, status=400)
         yt_channel_id = resolved_youtube
 
+    if donationalerts_name:
+        if not DONATALERTS_ACCESS_TOKEN:
+            return web.json_response({"error": "donatealerts_not_configured"}, status=500)
+        donationalerts_name = _extract_username(donationalerts_name)
+
     async with async_session() as session:
         user = await session.get(User, payload.user_id)
         if not user:
@@ -827,15 +849,21 @@ async def save_settings(request: web.Request):
 
         user.twitch_name = twitch_name
         user.yt_channel_id = yt_channel_id
+        user.donationalerts_name = donationalerts_name
         await session.commit()
 
-    await write_audit_log(str(payload.user_id), "save_integrations", json.dumps({"twitch": twitch_name, "youtube": yt_channel_id}))
+    await write_audit_log(
+        str(payload.user_id),
+        "save_integrations",
+        json.dumps({"twitch": twitch_name, "youtube": yt_channel_id, "donationalerts": donationalerts_name}),
+    )
 
     return web.json_response(
         {
             "status": "ok",
             "twitch_name": twitch_name,
             "yt_channel_id": yt_channel_id,
+            "donationalerts_name": donationalerts_name,
         }
     )
 
@@ -849,6 +877,7 @@ def build_app():
 
     # API routes
     app.router.add_post("/api/ping", api_ping)
+    app.router.add_get("/api/bot_info", get_bot_info)
     app.router.add_get("/api/stats", get_all_stats)
     app.router.add_get("/api/settings", get_settings)
     app.router.add_get("/api/analytics", get_analytics)
@@ -981,8 +1010,13 @@ async def get_settings(request: web.Request):
     if not async_session: return web.json_response({"error": "db_not_configured"}, status=500)
     async with async_session() as session:
         user = await session.get(User, int(uid))
-        if not user: return web.json_response({"is_linked": False, "twitch_name": None, "yt_channel_id": None})
-        return web.json_response({"is_linked": bool(user.twitch_name or user.yt_channel_id), "twitch_name": user.twitch_name, "yt_channel_id": user.yt_channel_id})
+        if not user: return web.json_response({"is_linked": False, "twitch_name": None, "yt_channel_id": None, "donationalerts_name": None})
+        return web.json_response({
+            "is_linked": bool(user.twitch_name or user.yt_channel_id),
+            "twitch_name": user.twitch_name,
+            "yt_channel_id": user.yt_channel_id,
+            "donationalerts_name": user.donationalerts_name,
+        })
 
 async def get_analytics(request: web.Request):
     auth_error = await _require_verified_user(request)

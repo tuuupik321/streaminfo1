@@ -112,6 +112,10 @@
   "integrations.telegramSteps": "Подключение Telegram",
   "integrations.telegramStep1": "Добавьте бота в канал",
   "integrations.telegramStep2": "Введите username канала",
+  "integrations.telegramMenuChannel": "В канал",
+  "integrations.telegramMenuGroup": "В группу",
+  "integrations.telegramMenuHint": "После добавления бота укажи @канал или @чат ниже.",
+  "integrations.errorBotUsername": "Не удалось определить username бота",
   "integrations.telegramConnected": "Telegram подключён",
   "integrations.channelLabel": "Канал",
 

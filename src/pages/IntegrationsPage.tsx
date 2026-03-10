@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Twitch, Youtube, Send, Heart, Sparkles } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
@@ -84,6 +84,9 @@ const extractHandle = (value: string) => {
   }
   if (raw.includes("youtube.com/channel/")) {
     return raw.split("youtube.com/channel/")[1].split(/[/?#]/)[0];
+  }
+  if (raw.includes("donationalerts.com/r/")) {
+    return raw.split("donationalerts.com/r/")[1].split(/[/?#]/)[0];
   }
   return raw;
 };
@@ -202,6 +205,7 @@ export default function IntegrationsPage() {
     telegram: null,
     donatealerts: null,
   });
+  const [botUsername, setBotUsername] = useState<string | null>(null);
   const platformLabels = useMemo(() => {
     return platforms.reduce<Record<Platform, string>>((acc, p) => {
       acc[p.key] = p.label;
@@ -214,6 +218,28 @@ export default function IntegrationsPage() {
   const tg = (window as TelegramWindow).Telegram?.WebApp;
   const userId = tg?.initDataUnsafe?.user?.id;
   const initData = tg?.initData || "";
+
+  const openTelegramLink = (url: string) => {
+    if (tg?.openTelegramLink) {
+      tg.openTelegramLink(url);
+      return;
+    }
+    window.open(url, "_blank");
+  };
+
+  const fetchBotUsername = async () => {
+    try {
+      const res = await fetch("/api/bot_info");
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data?.username) {
+        setBotUsername(data.username);
+        return;
+      }
+    } catch {
+      // ignore
+    }
+    setBotUsername(null);
+  };
 
   const closeModal = () => {
     setActivePlatform(null);
@@ -271,6 +297,22 @@ export default function IntegrationsPage() {
     }
   };
 
+  const openAddChannel = () => {
+    if (!botUsername) {
+      setErrorMessage(t("integrations.errorBotUsername", "Bot username is not available"));
+      return;
+    }
+    openTelegramLink(`https://t.me/${botUsername}?startchannel=true&admin=post_messages`);
+  };
+
+  const openAddGroup = () => {
+    if (!botUsername) {
+      setErrorMessage(t("integrations.errorBotUsername", "Bot username is not available"));
+      return;
+    }
+    openTelegramLink(`https://t.me/${botUsername}?startgroup=true`);
+  };
+
   const confirmConnection = async () => {
     if (!result) return;
     if (userId && initData) {
@@ -288,6 +330,14 @@ export default function IntegrationsPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ user_id: userId, yt_channel_id: youtubeIdOrHandle, init_data: initData }),
+        });
+      }
+      if (result.platform === "donatealerts") {
+        const donatealertsName = extractHandle(result.url || result.name);
+        await fetch("/api/save_settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: userId, donationalerts_name: donatealertsName, init_data: initData }),
         });
       }
     }
@@ -372,6 +422,10 @@ export default function IntegrationsPage() {
           onClose={closeModal}
           onVerify={verify}
           onConfirm={confirmConnection}
+          botUsername={botUsername}
+          onRequestBotUsername={fetchBotUsername}
+          onOpenAddChannel={openAddChannel}
+          onOpenAddGroup={openAddGroup}
         />
       )}
 
@@ -398,6 +452,10 @@ function IntegrationModal({
   onClose,
   onVerify,
   onConfirm,
+  botUsername,
+  onRequestBotUsername,
+  onOpenAddChannel,
+  onOpenAddGroup,
 }: {
   platform: PlatformConfig;
   inputValue: string;
@@ -408,6 +466,10 @@ function IntegrationModal({
   onClose: () => void;
   onVerify: () => void;
   onConfirm: () => void;
+  botUsername: string | null;
+  onRequestBotUsername: () => void;
+  onOpenAddChannel: () => void;
+  onOpenAddGroup: () => void;
 }) {
   const { t } = useI18n();
   const { label, color, placeholder, icon: Icon, key } = platform;
@@ -415,6 +477,12 @@ function IntegrationModal({
   const particles = useMemo(() => Array.from({ length: 6 }, (_, i) => i), []);
 
   const stats = result ? buildChannelStats(key, result, t) : [];
+
+  useEffect(() => {
+    if (key === "telegram" && !botUsername) {
+      onRequestBotUsername();
+    }
+  }, [key, botUsername, onRequestBotUsername]);
 
   return (
     <AnimatePresence>
@@ -449,10 +517,25 @@ function IntegrationModal({
             {key === "telegram" && (
               <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-white/70">
                 <p className="font-semibold text-white">{t("integrations.telegramSteps", "Connect Telegram")}</p>
-                <ol className="mt-2 list-decimal pl-4 space-y-1">
-                  <li>{t("integrations.telegramStep1", "Add bot to channel")}</li>
-                  <li>{t("integrations.telegramStep2", "Enter channel username")}</li>
-                </ol>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={onOpenAddChannel}
+                    className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white/80 transition hover:border-white/30 hover:bg-white/10"
+                  >
+                    {t("integrations.telegramMenuChannel", "Add to Channel")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onOpenAddGroup}
+                    className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white/80 transition hover:border-white/30 hover:bg-white/10"
+                  >
+                    {t("integrations.telegramMenuGroup", "Add to Group")}
+                  </button>
+                </div>
+                <p className="mt-3 text-[11px] text-white/60">
+                  {t("integrations.telegramMenuHint", "After adding the bot, enter @channel or @chat username below.")}
+                </p>
               </div>
             )}
 
