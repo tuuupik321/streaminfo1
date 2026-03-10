@@ -128,7 +128,7 @@ export default function DonationsPage() {
 
       <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
         <div className="saas-card">
-          <p className="text-xs uppercase tracking-[0.3em] text-white/50">Top supporters</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("donations.topSupporters", "Top supporters")}</p>
           <div className="mt-4 space-y-3 text-sm text-white/70">
             <div className="flex items-center gap-3">
               <div className="h-8 w-8 rounded-full bg-white/10" />
@@ -145,18 +145,18 @@ export default function DonationsPage() {
           </div>
         </div>
         <div className="saas-card">
-          <p className="text-xs uppercase tracking-[0.3em] text-white/50">Donation goal</p>
-          <p className="mt-3 text-sm text-white/70">Goal: 20 000 ₽</p>
-          <p className="text-sm text-white/70">Progress: 12 400 ₽</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("donations.goalTitle", "Donation goal")}</p>
+          <p className="mt-3 text-sm text-white/70">{t("donations.goalTarget", "Goal")}: 20 000 ₽</p>
+          <p className="text-sm text-white/70">{t("donations.goalProgress", "Progress")}: 12 400 ₽</p>
           <div className="mt-3 h-2 rounded-full bg-white/10">
             <div className="h-2 rounded-full bg-emerald-400" style={{ width: "62%" }} />
           </div>
         </div>
         <div className="saas-card">
-          <p className="text-xs uppercase tracking-[0.3em] text-white/50">OBS Widget</p>
-          <p className="mt-3 text-sm text-white/70">Copy OBS widget link</p>
-          <Button size="sm" variant="outline" className="mt-3 w-full">Copy widget link</Button>
-          <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-white/60">Preview widget</div>
+          <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("donations.obsWidget", "OBS Widget")}</p>
+          <p className="mt-3 text-sm text-white/70">{t("donations.obsCopy", "Copy OBS widget link")}</p>
+          <Button size="sm" variant="outline" className="mt-3 w-full">{t("donations.obsCopyButton", "Copy widget link")}</Button>
+          <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-white/60">{t("donations.obsPreview", "Preview widget")}</div>
         </div>
       </div>
     </div>

@@ -179,7 +179,7 @@ export default function Analytics() {
 
       <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="saas-card lg:col-span-2">
-          <p className="text-xs uppercase tracking-[0.3em] text-white/50">Viewers growth</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.viewersGrowth", "Viewers growth")}</p>
           <div className="mt-4 h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
@@ -193,20 +193,20 @@ export default function Analytics() {
         </div>
         <div className="saas-card">
           <div className="flex items-center justify-between">
-            <p className="text-xs uppercase tracking-[0.3em] text-white/50">AI Insight</p>
+            <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.aiInsight", "AI Insight")}</p>
             <Sparkles size={14} className="text-white/60" />
           </div>
           <div className="mt-4 space-y-2 text-sm text-white/70">
-            <p>Best time to stream: <span className="text-white font-semibold">19:00</span></p>
-            <p>Best platform today: <span className="text-white font-semibold">Twitch</span></p>
-            <p>Viewer peak: <span className="text-white font-semibold">21:30</span></p>
+            <p>{t("analytics.bestTime", "Best time to stream")}: <span className="text-white font-semibold">19:00</span></p>
+            <p>{t("analytics.bestPlatform", "Best platform today")}: <span className="text-white font-semibold">Twitch</span></p>
+            <p>{t("analytics.viewerPeak", "Viewer peak")}: <span className="text-white font-semibold">21:30</span></p>
           </div>
         </div>
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="saas-card">
-          <p className="text-xs uppercase tracking-[0.3em] text-white/50">Clicks to stream</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.clicksToStream", "Clicks to stream")}</p>
           <div className="mt-4 h-56">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
@@ -219,7 +219,7 @@ export default function Analytics() {
           </div>
         </div>
         <div className="saas-card">
-          <p className="text-xs uppercase tracking-[0.3em] text-white/50">Donations per stream</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.donationsPerStream", "Donations per stream")}</p>
           <div className="mt-4 h-56">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
@@ -232,7 +232,7 @@ export default function Analytics() {
           </div>
         </div>
         <div className="saas-card">
-          <p className="text-xs uppercase tracking-[0.3em] text-white/50">Followers per stream</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.followersPerStream", "Followers per stream")}</p>
           <div className="mt-4 h-56">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
@@ -248,7 +248,7 @@ export default function Analytics() {
 
       <div className="mb-8 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="saas-card lg:col-span-2">
-          <p className="text-xs uppercase tracking-[0.3em] text-white/50">Platform comparison</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.platformComparison", "Platform comparison")}</p>
           <div className="mt-4 h-56">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={platformComparison}>
@@ -261,7 +261,7 @@ export default function Analytics() {
           </div>
         </div>
         <div className="saas-card">
-          <p className="text-xs uppercase tracking-[0.3em] text-white/50">Donut chart</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.donutChart", "Donut chart")}</p>
           <div className="mt-4 h-56">
             <ResponsiveContainer width="100%" height="100%">
               <RePieChart>

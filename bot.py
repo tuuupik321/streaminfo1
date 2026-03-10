@@ -263,8 +263,10 @@ def parse_and_verify_init_data(init_data: Optional[str]) -> Optional[dict[str, A
 _twitch_token: Optional[str] = None
 _twitch_token_expiry: float = 0.0
 _twitch_stats_cache: dict[str, tuple[float, dict[str, Any]]] = {}
+_twitch_profile_cache: dict[str, tuple[float, dict[str, Any]]] = {}
 _youtube_stats_cache: dict[str, tuple[float, dict[str, Any]]] = {}
 STATS_CACHE_TTL_SECONDS = _env_int("STATS_CACHE_TTL_SECONDS", 30, min_value=5, max_value=600)
+PROFILE_CACHE_TTL_SECONDS = _env_int("PROFILE_CACHE_TTL_SECONDS", 180, min_value=30, max_value=1800)
 
 async def _get_twitch_app_token() -> Optional[str]:
     global _twitch_token, _twitch_token_expiry
@@ -472,6 +474,22 @@ async def fetch_youtube(channel_id: Optional[str]) -> dict[str, Any]:
     details = await fetch_youtube_channel_details(channel_id)
     payload = {"subscribers": int(details.get("subscribers", 0)) if details else 0}
     _youtube_stats_cache[channel_id] = (time.time(), payload)
+    return payload
+
+async def fetch_twitch_profile(login: Optional[str]) -> dict[str, Any]:
+    if not login:
+        return {}
+    cached = _twitch_profile_cache.get(login)
+    if cached and time.time() - cached[0] < PROFILE_CACHE_TTL_SECONDS:
+        return cached[1]
+    details = await fetch_twitch_channel_details(login)
+    payload = {
+        "followers": details.get("followers") if details else None,
+        "views": details.get("views") if details else None,
+        "name": details.get("name") if details else None,
+        "avatar": details.get("avatar") if details else None,
+    }
+    _twitch_profile_cache[login] = (time.time(), payload)
     return payload
 
 async def update_stream_history(session: AsyncSession, user_id: int, is_live: bool, viewers: int) -> None:
@@ -1056,6 +1074,12 @@ async def get_all_stats(request: web.Request):
         user = await session.get(User, int(uid))
         if not user: return web.json_response({"is_linked": False, "clicks": 0, "twitch": {"online": False, "viewers": 0}, "youtube": {"subscribers": 0}})
         twitch_data = await fetch_twitch(user.twitch_name)
+        if user.twitch_name:
+            profile = await fetch_twitch_profile(user.twitch_name)
+            if profile.get("followers") is not None:
+                twitch_data["followers"] = profile.get("followers")
+            if profile.get("views") is not None:
+                twitch_data["views"] = profile.get("views")
         youtube_data = await fetch_youtube(user.yt_channel_id)
         await update_stream_history(session, int(uid), bool(twitch_data.get("online")), int(twitch_data.get("viewers", 0)))
         await session.commit()

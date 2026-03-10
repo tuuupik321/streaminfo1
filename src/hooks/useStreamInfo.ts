@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 type StatsApiResponse = {
   is_linked?: boolean;
   clicks?: number;
-  twitch?: { online?: boolean; viewers?: number };
+  twitch?: { online?: boolean; viewers?: number; followers?: number; views?: number };
   youtube?: { subscribers?: number };
 };
 

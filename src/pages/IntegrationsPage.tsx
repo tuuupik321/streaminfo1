@@ -496,13 +496,13 @@ export default function IntegrationsPage() {
                   <p key={stat.label} className="mt-2 text-xs text-white/60">{stat.label}: {stat.value ?? "--"}</p>
                 ))}
                 {value.platform === "twitch" && (
-                  <p className="mt-2 text-xs text-white/50">Last stream: 2h ago</p>
+                  <p className="mt-2 text-xs text-white/50">{t("integrations.lastStream", "Last stream")}: 2h ago</p>
                 )}
                 {value.platform === "youtube" && (
-                  <p className="mt-2 text-xs text-white/50">Last video: 1 day ago</p>
+                  <p className="mt-2 text-xs text-white/50">{t("integrations.lastVideo", "Last video")}: 1 day ago</p>
                 )}
                 {value.platform === "telegram" && (
-                  <p className="mt-2 text-xs text-white/50">Members: {value.subscribers ?? "--"}</p>
+                  <p className="mt-2 text-xs text-white/50">{t("integrations.members", "Members")}: {value.subscribers ?? "--"}</p>
                 )}
                 <div className="mt-3 flex justify-end">
                   <button
