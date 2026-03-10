@@ -6,11 +6,13 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { I18nProvider } from "@/lib/i18n.tsx";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import { BottomNav } from "./components/BottomNav";
 import { AppSidebar } from "./components/AppSidebar";
 import { CommandPalette } from "./components/CommandPalette";
 import { AppShellSkeleton } from "./components/AppShellSkeleton";
 import { PageTransition } from "./components/PageTransition";
+import { cn } from "./lib/utils";
 
 const StreamInfoPage = lazy(() => import("./pages/StreamInfoPage"));
 const IntegrationsPage = lazy(() => import("./pages/IntegrationsPage"));
@@ -19,6 +21,7 @@ const AdminPage = lazy(() => import("./pages/AdminPage"));
 const Analytics = lazy(() => import("./pages/Analytics"));
 const SupportPage = lazy(() => import("./pages/SupportPage"));
 const DonationsPage = lazy(() => import("./pages/DonationsPage"));
+const AnnouncementsPage = lazy(() => import("./pages/AnnouncementsPage"));
 const DesignAgentPage = lazy(() => import("./pages/DesignAgentPage"));
 const BridgeTransferPage = lazy(() => import("./pages/BridgeTransferPage"));
 const LiveDashboardPage = lazy(() => import("./pages/LiveDashboardPage"));
@@ -73,8 +76,9 @@ function AnimatedRoutes() {
       <Routes location={location}>
         <Route path="/" element={<StreamInfoPage />} />
         <Route path="/analytics" element={<Analytics />} />
-        <Route path="/support" element={<SupportPage />} />
         <Route path="/donations" element={<DonationsPage />} />
+        <Route path="/announcements" element={<AnnouncementsPage />} />
+        <Route path="/support" element={<SupportPage />} />
         <Route path="/design-agent" element={<DesignAgentPage />} />
         <Route path="/bridge" element={<BridgeTransferPage />} />
         <Route path="/integrations" element={<IntegrationsPage />} />
@@ -89,38 +93,40 @@ function AnimatedRoutes() {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <I18nProvider>
-        <TelegramWebAppInit />
-        <Toaster />
-        <Sonner position="top-center" />
-        <BrowserRouter>
-          <CommandPalette />
-          <SidebarProvider>
-            <div className="flex min-h-[100dvh] w-full">
-              <aside className="hidden md:block">
-                <AppSidebar />
-              </aside>
-              <div className="flex w-full flex-col min-w-0">
-                <header className="sticky top-0 z-40 h-12 border-b border-border/50 bg-background/60 backdrop-blur-lg">
-                  <div className="mx-auto flex h-full w-full max-w-6xl items-center px-3 sm:px-4">
-                    <span className="text-sm font-bold font-heading text-gradient-primary">StreamInfo</span>
+    <ThemeProvider>
+      <TooltipProvider>
+        <I18nProvider>
+          <TelegramWebAppInit />
+          <Toaster />
+          <Sonner position="top-center" />
+          <BrowserRouter>
+            <CommandPalette />
+            <SidebarProvider>
+              <div className="flex min-h-[100dvh] w-full">
+                <aside className={cn("hidden md:block", "glass-strong")}>
+                  <AppSidebar />
+                </aside>
+                <div className="flex w-full flex-col min-w-0">
+                  <header className={cn("sticky top-0 z-40 h-12 border-b", "glass")}>
+                    <div className="mx-auto flex h-full w-full max-w-6xl items-center px-3 sm:px-4">
+                      <span className="text-sm font-bold font-heading text-gradient-primary">StreamInfo</span>
+                    </div>
+                  </header>
+                  <main className="flex-1 pb-20 md:pb-6">
+                    <Suspense fallback={<AppShellSkeleton />}>
+                      <AnimatedRoutes />
+                    </Suspense>
+                  </main>
+                  <div className="md:hidden">
+                    <BottomNav />
                   </div>
-                </header>
-                <main className="flex-1 pb-20 md:pb-6">
-                  <Suspense fallback={<AppShellSkeleton />}>
-                    <AnimatedRoutes />
-                  </Suspense>
-                </main>
-                <div className="md:hidden">
-                  <BottomNav />
                 </div>
               </div>
-            </div>
-          </SidebarProvider>
-        </BrowserRouter>
-      </I18nProvider>
-    </TooltipProvider>
+            </SidebarProvider>
+          </BrowserRouter>
+        </I18nProvider>
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 

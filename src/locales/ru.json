@@ -19,5 +19,37 @@
   "streamInfo.welcomeTitle": "Добро пожаловать в StreamFly!",
   "streamInfo.welcomeSubtitle": "Подключите свои аккаунты Twitch и YouTube, чтобы начать отслеживать статистику и получать уведомления.",
   "streamInfo.welcomeButton": "Подключить аккаунты",
-  "streamInfo.more": "Еще"
+  "streamInfo.more": "Еще",
+  "streamInfo.addWidget": "Добавить виджет",
+
+  "sidebar.menu": "Меню",
+  "sidebar.system": "Система",
+  "sidebar.systemMenu": "Системное меню",
+  "sidebar.language": "Язык",
+  "sidebar.theme": "Тема",
+  "sidebar.light": "Светлая",
+  "sidebar.dark": "Темная",
+  "sidebar.systemTheme": "Системная",
+  "sidebar.adminCenter": "Админ-центр",
+  "sidebar.settings": "Настройки",
+  "sidebar.support": "Поддержка",
+  "sidebar.информация": "Информация",
+  "sidebar.аналитика": "Аналитика",
+  "sidebar.донаты": "Донаты",
+  "sidebar.анонсы": "Анонсы",
+  "sidebar.интеграции": "Интеграции",
+
+  "bottomNav.info": "Инфо",
+  "bottomNav.analytics": "Аналитика",
+  "bottomNav.donations": "Донаты",
+  "bottomNav.announcements": "Анонсы",
+  "bottomNav.integrations": "Интеграции",
+  "bottomNav.support": "Поддержка",
+  "bottomNav.settings": "Настройки",
+  "bottomNav.more": "Еще",
+  "bottomNav.menuTitle": "Дополнительно",
+  "bottomNav.admin": "Админ-центр",
+
+  "announcements.title": "Центр Анонсов",
+  "announcements.description": "Создавайте и отправляйте анонсы ваших стримов в Telegram и Discord."
 }

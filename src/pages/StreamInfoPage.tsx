@@ -15,15 +15,20 @@ import { PartnersCarousel } from "@/components/dashboard/PartnersCarousel";
 import { LiveEventsFeed } from "@/components/dashboard/LiveEventsFeed";
 import { LiveStreamFeed } from "@/components/dashboard/LiveStreamFeed";
 import { LockedOverlay } from "@/components/dashboard/LockedOverlay";
+import { WidgetManager } from "@/components/dashboard/WidgetManager";
 import { useI18n } from "@/lib/i18n";
 import { getCurrentTelegramId, hasAdminSession, isOwnerTelegramId } from "@/lib/adminAccess";
 import { useStreamInfo } from "@/hooks/useStreamInfo";
+import { useDashboardStore } from "@/store/useDashboardStore";
 import { cn } from "@/lib/utils";
 
-function AddWidgetCard() {
+function AddWidgetCard({ onClick }: { onClick: () => void }) {
   const { t } = useI18n();
   return (
-    <div className="flex h-full min-h-[120px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border/50 bg-background/30 text-muted-foreground transition-colors hover:border-primary/50 hover:bg-primary/5 hover:text-primary">
+    <div
+      onClick={onClick}
+      className="flex h-full min-h-[120px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border/50 bg-background/30 text-muted-foreground transition-colors hover:border-primary/50 hover:bg-primary/5 hover:text-primary"
+    >
       <PlusCircle size={24} className="mb-2" />
       <span className="text-xs font-medium">{t("streamInfo.addWidget", "Добавить виджет")}</span>
     </div>
@@ -34,6 +39,8 @@ export default function StreamInfoPage() {
   const navigate = useNavigate();
   const { t } = useI18n();
   const [period, setPeriod] = useState("today");
+  const [isWidgetManagerOpen, setWidgetManagerOpen] = useState(false);
+  const { widgets } = useDashboardStore();
 
   const { data, isLoading, isRefetching, refetch } = useStreamInfo(period);
 
@@ -65,9 +72,10 @@ export default function StreamInfoPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-3 py-4 sm:p-4 md:p-8">
+      <WidgetManager open={isWidgetManagerOpen} onOpenChange={setWidgetManagerOpen} />
       <div className="mb-5 flex items-center justify-between sm:mb-8">
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-xl font-black font-heading sm:text-2xl md:text-3xl">{t("streamInfo.title")}</h1>
+          <h1 className="text-gradient-primary">{t("streamInfo.title")}</h1>
           <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
             <button onClick={() => refetch()} disabled={isRefetching} aria-label={t("streamInfo.refresh")}>
               <RefreshCw size={13} className={isRefetching ? "animate-spin" : ""} />
@@ -120,30 +128,31 @@ export default function StreamInfoPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:gap-8">
-        <div className="lg:col-span-2">
-          <LiveStreamFeed />
-          <div className="mt-8">
-            <ViewerChart loading={isLoading} data={timeline} />
-          </div>
+        <div className="lg:col-span-2 space-y-8">
+          {widgets.includes("liveStreamFeed") && <LiveStreamFeed />}
+          {widgets.includes("viewerChart") && <ViewerChart loading={isLoading} data={timeline} />}
         </div>
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-2 lg:gap-4">
-          {stats.map((s, i) => (
-            <StatsCard key={s.label} icon={s.icon} label={s.label} value={s.value} delay={i * 0.07} loading={isLoading} suffix={s.suffix} />
-          ))}
-          <div className={cn("sm:col-span-1", stats.length % 2 !== 0 ? "lg:col-span-2" : "lg:col-span-1")}>
-              <AddWidgetCard />
-          </div>
+        <div className="space-y-4">
+          {widgets.includes("stats") && (
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-2 lg:gap-4">
+              {stats.map((s, i) => (
+                <StatsCard key={s.label} icon={s.icon} label={s.label} value={s.value} delay={i * 0.07} loading={isLoading} suffix={s.suffix} />
+              ))}
+            </div>
+          )}
+          <AddWidgetCard onClick={() => setWidgetManagerOpen(true)} />
         </div>
       </div>
 
-      <div className="my-8"><PartnersCarousel /></div>
-      <div className="my-8"><LiveEventsFeed /></div>
+      {widgets.includes("partners") && <div className="my-8"><PartnersCarousel /></div>}
+      {widgets.includes("liveEvents") && <div className="my-8"><LiveEventsFeed /></div>}
 
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:gap-8">
-        <PredictionCard data={timeline} liveViewers={data?.twitch?.viewers ?? 0} isLive={isLive} />
-        <StreamSeriesRail data={timeline} />
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:gap-8 mt-8">
+        {widgets.includes("predictions") && <PredictionCard data={timeline} liveViewers={data?.twitch?.viewers ?? 0} isLive={isLive} />}
+        {widgets.includes("streamSeries") && <StreamSeriesRail data={timeline} />}
       </div>
-      <div className="mt-8"><AchievementsBlock /></div>
+      
+      {widgets.includes("achievements") && <div className="mt-8"><AchievementsBlock /></div>}
     </div>
   );
 }
