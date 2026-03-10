@@ -74,6 +74,7 @@ YT_KEY = os.getenv("YOUTUBE_API_KEY")
 YT_HANDOFF_WEBHOOK_URL = os.getenv("YT_HANDOFF_WEBHOOK_URL")
 DONATALERTS_ACCESS_TOKEN = os.getenv("DONATALERTS_ACCESS_TOKEN")
 DONATALERTS_API_BASE = os.getenv("DONATALERTS_API_BASE", "https://www.donationalerts.com/api/v1").rstrip("/")
+DONATIONS_WEBHOOK_SECRET = os.getenv("DONATIONS_WEBHOOK_SECRET")
 LOCAL_DEV_MODE = _env_bool("LOCAL_DEV_MODE", False)
 WEBHOOK_ENABLED = _env_bool("WEBHOOK_ENABLED", not LOCAL_DEV_MODE)
 WEBHOOK_PATH = _normalize_webhook_path(os.getenv("WEBHOOK_PATH"))
@@ -149,6 +150,16 @@ class RateLimitEvent(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     scope = Column(String, nullable=False, index=True)
     key = Column(String, nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+
+class DonationEvent(Base):
+    __tablename__ = "donation_events"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    donor = Column(String, nullable=False)
+    amount = Column(Integer, nullable=False)
+    currency = Column(String, nullable=False, default="USD")
+    message = Column(String, nullable=True)
+    source = Column(String, nullable=False, default="donation")
     created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
 
 class PartnerBannerMetric(Base):
@@ -710,6 +721,10 @@ def _normalize_donation_payload(payload: dict[str, Any]) -> Optional[dict[str, A
     }
 
 async def donations_webhook(request: web.Request):
+    if DONATIONS_WEBHOOK_SECRET:
+        provided = request.headers.get("X-Webhook-Token") or request.query.get("token")
+        if not provided or provided != DONATIONS_WEBHOOK_SECRET:
+            return web.json_response({"error": "unauthorized"}, status=401)
     try:
         payload = await request.json()
     except Exception:
@@ -718,11 +733,47 @@ async def donations_webhook(request: web.Request):
     if not event:
         return web.json_response({"error": "invalid_payload"}, status=400)
     donation_events.appendleft(event)
+    if async_session:
+        try:
+            async with async_session() as session:
+                session.add(
+                    DonationEvent(
+                        donor=event["donor"],
+                        amount=int(event["amount"]),
+                        currency=event["currency"],
+                        message=event["message"] or None,
+                        source=event["source"],
+                    )
+                )
+                await session.commit()
+        except Exception as error:
+            log_event("donation_event_persist_failed", error=str(error))
     return web.json_response({"status": "ok"})
 
 async def get_donations_live(request: web.Request):
     configured = bool(DONATALERTS_ACCESS_TOKEN)
-    items = list(donation_events)[:20]
+    items: list[dict[str, Any]] = []
+    if async_session:
+        try:
+            async with async_session() as session:
+                query = select(DonationEvent).order_by(desc(DonationEvent.created_at)).limit(20)
+                rows = (await session.execute(query)).scalars().all()
+                items = [
+                    {
+                        "id": str(row.id),
+                        "donor": row.donor,
+                        "amount": row.amount,
+                        "currency": row.currency,
+                        "message": row.message or "",
+                        "source": row.source,
+                        "createdAt": row.created_at.isoformat(),
+                    }
+                    for row in rows
+                ]
+        except Exception as error:
+            log_event("donation_event_fetch_failed", error=str(error))
+    if not items:
+        items = list(donation_events)[:20]
     return web.json_response({"items": items, "configured": configured})
 
 

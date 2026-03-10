@@ -156,6 +156,12 @@ export default function IntegrationsPage() {
     telegram: null,
     donatealerts: null,
   });
+  const platformLabels = useMemo(() => {
+    return platforms.reduce<Record<Platform, string>>((acc, p) => {
+      acc[p.key] = p.label;
+      return acc;
+    }, { twitch: "Twitch", youtube: "YouTube", telegram: "Telegram", donatealerts: "DonateAlerts" });
+  }, []);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successData, setSuccessData] = useState<VerifyResult | null>(null);
 
@@ -277,7 +283,7 @@ export default function IntegrationsPage() {
                     )}
                   </div>
                   <div>
-                    <p className="text-sm font-semibold">{t("integrations.connected", "Connected")} · {value.platform}</p>
+                    <p className="text-sm font-semibold">{t("integrations.connected", "Connected")} · {platformLabels[value.platform]}</p>
                     <p className="text-xs text-white/60">{value.channel || value.name}</p>
                   </div>
                 </div>
