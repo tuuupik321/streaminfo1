@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { UiLanguage, detectTelegramUiLanguage } from "@/lib/language";
 
-type Theme = "light" | "dark" | "system";
+type Theme = "light" | "dark" | "system" | "neon";
 type CardStyle = "minimal" | "colorful";
 
 interface SettingsState {

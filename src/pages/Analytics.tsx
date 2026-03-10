@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { BarChart3, CalendarDays, Clock, Download, Eye, TrendingUp, Users, PieChart, Flame, Award } from "lucide-react";
+import { BarChart3, CalendarDays, Clock, Download, Eye, TrendingUp, Users, PieChart, Flame, Award, Sparkles } from "lucide-react";
 import { StatsCard } from "@/shared/ui/StatsCard";
 import { DataPoint, ViewerChart } from "@/components/dashboard/ViewerChart";
 import { PredictionCard } from "@/components/dashboard/PredictionCard";
@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAnalyticsData } from "@/hooks/useAnalyticsData";
 import { EmptyState } from "@/shared/ui/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Bar, BarChart, Cell, Line, LineChart, Pie, PieChart as RePieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 type TimelineItem = {
   time: string;
@@ -91,6 +92,25 @@ export default function Analytics() {
   };
 
   const hasData = !isLoading && timeline.length > 0;
+  const chartData = timeline.map((p, index) => ({
+    time: p.time,
+    viewers: p.viewers,
+    clicks: p.clicks ?? 0,
+    donations: p.donations ?? 0,
+    followers: Math.max(0, Math.round((p.viewers + index) / 8)),
+  }));
+
+  const platformComparison = [
+    { name: "Twitch", value: Math.max(20, (data?.clicks ?? 40) * 0.6) },
+    { name: "YouTube", value: Math.max(10, (data?.clicks ?? 40) * 0.25) },
+    { name: "Telegram", value: Math.max(5, (data?.clicks ?? 40) * 0.15) },
+  ];
+
+  const donutData = [
+    { name: "Twitch", value: 58, color: "#9146FF" },
+    { name: "YouTube", value: 27, color: "#FF0000" },
+    { name: "Telegram", value: 15, color: "#00B2FF" },
+  ];
 
   if (error) {
     return <EmptyState icon={PieChart} title={t("analytics.errorTitle", "Failed to load analytics")} description={t("analytics.errorDescription", "Check your connection and try again.")} />;
@@ -155,6 +175,106 @@ export default function Analytics() {
             </div>
           )}
         </motion.div>
+      </div>
+
+      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="saas-card lg:col-span-2">
+          <p className="text-xs uppercase tracking-[0.3em] text-white/50">Viewers growth</p>
+          <div className="mt-4 h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData}>
+                <XAxis dataKey="time" stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
+                <YAxis stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
+                <Tooltip />
+                <Line type="monotone" dataKey="viewers" stroke="#9146FF" strokeWidth={2} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+        <div className="saas-card">
+          <div className="flex items-center justify-between">
+            <p className="text-xs uppercase tracking-[0.3em] text-white/50">AI Insight</p>
+            <Sparkles size={14} className="text-white/60" />
+          </div>
+          <div className="mt-4 space-y-2 text-sm text-white/70">
+            <p>Best time to stream: <span className="text-white font-semibold">19:00</span></p>
+            <p>Best platform today: <span className="text-white font-semibold">Twitch</span></p>
+            <p>Viewer peak: <span className="text-white font-semibold">21:30</span></p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="saas-card">
+          <p className="text-xs uppercase tracking-[0.3em] text-white/50">Clicks to stream</p>
+          <div className="mt-4 h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData}>
+                <XAxis dataKey="time" stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
+                <YAxis stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
+                <Tooltip />
+                <Bar dataKey="clicks" fill="#00B2FF" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+        <div className="saas-card">
+          <p className="text-xs uppercase tracking-[0.3em] text-white/50">Donations per stream</p>
+          <div className="mt-4 h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData}>
+                <XAxis dataKey="time" stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
+                <YAxis stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
+                <Tooltip />
+                <Bar dataKey="donations" fill="#F59E0B" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+        <div className="saas-card">
+          <p className="text-xs uppercase tracking-[0.3em] text-white/50">Followers per stream</p>
+          <div className="mt-4 h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData}>
+                <XAxis dataKey="time" stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
+                <YAxis stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
+                <Tooltip />
+                <Line type="monotone" dataKey="followers" stroke="#34D399" strokeWidth={2} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-8 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="saas-card lg:col-span-2">
+          <p className="text-xs uppercase tracking-[0.3em] text-white/50">Platform comparison</p>
+          <div className="mt-4 h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={platformComparison}>
+                <XAxis dataKey="name" stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
+                <YAxis stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
+                <Tooltip />
+                <Bar dataKey="value" fill="#9146FF" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+        <div className="saas-card">
+          <p className="text-xs uppercase tracking-[0.3em] text-white/50">Donut chart</p>
+          <div className="mt-4 h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <RePieChart>
+                <Pie data={donutData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={4}>
+                  {donutData.map((entry) => (
+                    <Cell key={entry.name} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </RePieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       </div>
 
       <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-4">

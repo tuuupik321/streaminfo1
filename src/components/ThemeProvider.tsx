@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect } from "react";
 import { useSettingsStore } from "@/store/useSettingsStore";
 
-type Theme = "dark" | "light" | "system";
+type Theme = "dark" | "light" | "system" | "neon";
 
 type ThemeProviderState = {
   theme: Theme;
@@ -15,7 +15,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const root = window.document.documentElement;
-    root.classList.remove("light", "dark");
+    root.classList.remove("light", "dark", "neon");
 
     const intensity = Math.max(0, Math.min(glowIntensity, 1));
     root.style.setProperty("--glow-intensity", String(intensity));
@@ -30,7 +30,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       root.classList.add(systemTheme);
       return;
     }
-
+    if (theme === "neon") {
+      root.classList.add("dark", "neon");
+      return;
+    }
     root.classList.add(theme);
   }, [theme, glowIntensity, cardStyle]);
 

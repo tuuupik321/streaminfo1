@@ -157,7 +157,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                       <div className="flex gap-2">
                         <Button size="sm" variant={theme === "dark" ? "default" : "outline"} onClick={(e) => { handleRipple(e); setTheme("dark"); }} className="relative overflow-hidden">{t("settings.themeDark", "Dark")}</Button>
                         <Button size="sm" variant={theme === "light" ? "default" : "outline"} onClick={(e) => { handleRipple(e); setTheme("light"); }} className="relative overflow-hidden">{t("settings.themeLight", "Light")}</Button>
-                        <Button size="sm" variant={theme === "system" ? "default" : "outline"} onClick={(e) => { handleRipple(e); setTheme("system"); }} className="relative overflow-hidden">{t("settings.themeSystem", "System")}</Button>
+                        <Button size="sm" variant={theme === "neon" ? "default" : "outline"} onClick={(e) => { handleRipple(e); setTheme("neon"); }} className="relative overflow-hidden">{t("settings.themeNeon", "Neon")}</Button>
                       </div>
                     </div>
                     <div className="space-y-2 md:col-span-2">

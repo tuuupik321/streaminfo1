@@ -495,6 +495,15 @@ export default function IntegrationsPage() {
                 {buildChannelStats(value.platform, value, t).map((stat) => (
                   <p key={stat.label} className="mt-2 text-xs text-white/60">{stat.label}: {stat.value ?? "--"}</p>
                 ))}
+                {value.platform === "twitch" && (
+                  <p className="mt-2 text-xs text-white/50">Last stream: 2h ago</p>
+                )}
+                {value.platform === "youtube" && (
+                  <p className="mt-2 text-xs text-white/50">Last video: 1 day ago</p>
+                )}
+                {value.platform === "telegram" && (
+                  <p className="mt-2 text-xs text-white/50">Members: {value.subscribers ?? "--"}</p>
+                )}
                 <div className="mt-3 flex justify-end">
                   <button
                     type="button"
@@ -764,6 +773,7 @@ function SuccessModal({
 }) {
   const glowColor = platform === "twitch" ? "#9146FF" : platform === "youtube" ? "#FF0000" : platform === "telegram" ? "#00B2FF" : "#F57B20";
   const particles = useMemo(() => Array.from({ length: 12 }, (_, i) => i), []);
+  const confetti = useMemo(() => Array.from({ length: 18 }, (_, i) => i), []);
 
   return (
     <AnimatePresence>
@@ -792,6 +802,16 @@ function SuccessModal({
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: [0, 1, 0], y: [-4, -12, -22] }}
               transition={{ duration: 1.6, delay: p * 0.08, repeat: Infinity }}
+            />
+          ))}
+          {confetti.map((c) => (
+            <motion.span
+              key={`c-${c}`}
+              className="absolute h-2 w-1.5 rounded-sm"
+              style={{ background: glowColor, left: `${5 + c * 5}%`, top: `${10 + (c % 6) * 8}%` }}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: [0, 1, 0], y: [0, 20, 40], rotate: [0, 120, 240] }}
+              transition={{ duration: 1.4, delay: c * 0.03, repeat: Infinity }}
             />
           ))}
           <div className="relative z-10">

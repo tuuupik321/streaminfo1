@@ -1,6 +1,6 @@
-﻿import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CalendarDays, DollarSign, Eye, Link2, MousePointerClick, RefreshCw, ShieldCheck, TrendingUp, UserCheck, Users, MoreHorizontal, Radio, PlusCircle, Twitch, Youtube, Send } from "lucide-react";
+import { CalendarDays, DollarSign, Eye, Link2, MousePointerClick, RefreshCw, ShieldCheck, TrendingUp, UserCheck, Users, MoreHorizontal, Radio, PlusCircle, Twitch, Youtube, Send, Share2, Copy, Megaphone, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -23,130 +23,72 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/shared/ui/EmptyState";
 
+type ActivityItem = { id: string; text: string; type: "donation" | "follow" | "click" | "sub" };
+
+const activitySeed: ActivityItem[] = [
+  { id: "a1", text: "User123 donated 120 ₽", type: "donation" },
+  { id: "a2", text: "User77 followed", type: "follow" },
+  { id: "a3", text: "User22 clicked Twitch link", type: "click" },
+  { id: "a4", text: "User10 subscribed", type: "sub" },
+];
+
 function AddWidgetCard({ onClick }: { onClick: () => void }) {
   const { t } = useI18n();
-  return (
-    <motion.div
-      onClick={onClick}
-      whileHover={{ scale: 1.03, backgroundColor: 'hsla(var(--primary) / 0.05)', borderColor: 'hsla(var(--primary) / 0.3)' }}
-      className="flex h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border border-border/30 bg-secondary/30 text-center text-muted-foreground transition-colors"
-    >
-      <PlusCircle size={24} className="mb-2" />
-      <span className="text-xs font-medium">{t("streamInfo.addWidget", "Добавить виджет")}</span>
-    </motion.div>
-  );
-}
+  const streamUrl = "https://twitch.tv/username";
+  const streamDuration = "02:14";
+  const viewersNow = data?.twitch?.viewers ?? 0;
+  const clicksToday = data?.clicks ?? 0;
 
-export default function StreamInfoPage() {
-  const navigate = useNavigate();
-  const { t } = useI18n();
-  const [period, setPeriod] = useState("today");
-  const [isWidgetManagerOpen, setWidgetManagerOpen] = useState(false);
-  const { widgets } = useDashboardStore();
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(streamUrl);
+    } catch {
+      // ignore
+    }
+  };
 
-  const { data, isLoading, isRefetching, refetch, error } = useStreamInfo(period);
-
-  const currentTelegramId = getCurrentTelegramId();
-  const canSeeAdmin = isOwnerTelegramId(currentTelegramId) || hasAdminSession(currentTelegramId);
-
-  const timeline: DataPoint[] = (data?.timeline || []).map((item) => {
-    const date = new Date(item.time);
-    const hh = String(date.getHours()).padStart(2, "0");
-    const mm = String(date.getMinutes()).padStart(2, "0");
-    return { time: `${hh}:${mm}`, viewers: item.viewers, event: item.event || null };
-  });
-
-  const stats = [
-    { icon: MousePointerClick, label: t("streamInfo.clicks"), value: data?.clicks },
-    { icon: Eye, label: t("streamInfo.viewersNow"), value: data?.twitch?.viewers },
-    { icon: TrendingUp, label: t("streamInfo.streamStatus"), value: data?.twitch?.online ? 1 : 0 },
-    { icon: Users, label: t("streamInfo.ytSubs"), value: data?.youtube?.subscribers },
-    { icon: DollarSign, label: t("streamInfo.streamDonations"), value: null, suffix: "₽" },
-    { icon: UserCheck, label: t("streamInfo.peakOnline"), value: Math.max(...timeline.map((i) => i.viewers), 0) },
-  ];
-
-  const showOnboarding = data?.is_linked === false && !isLoading;
-  const isLive = data?.twitch?.online ?? false;
-
-  const HeroWidget = isLive ? LiveStreamFeed : ViewerChart;
-  const heroWidgetName: Widget = isLive ? "liveStreamFeed" : "viewerChart";
-
-  if (showOnboarding) {
-    return <LockedOverlay />;
-  }
-
-  if (error) {
-    return <EmptyState icon={ShieldCheck} title={t("streamInfo.errorTitle", "Failed to load dashboard")} description={t("streamInfo.errorDescription", "Check your connection and try again.")} />;
-  }
-
-  const title = t("hero.title", "StreamInfo");
-  const subtitle = t("hero.subtitle", "Notifications and integrations for Twitch, YouTube, and Telegram");
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({ title: "Stream", url: streamUrl }).catch(() => undefined);
+      return;
+    }
+    handleCopyLink();
+  };
 
   return (
     <div className="mx-auto max-w-6xl px-3 py-4 sm:p-4 md:p-8">
-      <section className="relative overflow-hidden rounded-[24px] border border-white/10 bg-[radial-gradient(circle_at_20%_20%,rgba(145,70,255,0.25),transparent_40%),radial-gradient(circle_at_80%_10%,rgba(255,0,0,0.22),transparent_35%),radial-gradient(circle_at_60%_80%,rgba(0,178,255,0.2),transparent_40%),linear-gradient(135deg,#0f0f1a,#1a0033,#2b0066)] p-6 sm:p-8 md:p-10 mb-6 sm:mb-10">
-        <div className="absolute inset-0 opacity-70 animate-[heroGradient_14s_ease-in-out_infinite]" />
-        <div className="relative z-10">
-          <motion.h1
-            initial="hidden"
-            animate="visible"
-            className="text-3xl sm:text-4xl md:text-5xl font-black font-heading text-white"
-          >
-            {title.split("").map((char, index) => (
-              <motion.span
-                key={`${char}-${index}`}
-                variants={{ hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0 } }}
-                transition={{ duration: 0.6, delay: index * 0.04 }}
-                className="inline-block"
-              >
-                {char === " " ? "\u00A0" : char}
-              </motion.span>
-            ))}
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6, duration: 0.6 }}
-            className="mt-3 max-w-2xl text-sm sm:text-base text-white/70"
-          >
-            {subtitle}
-          </motion.p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <motion.button
-              whileHover={{ y: -4, scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              transition={{ duration: 0.3, ease: "easeOut" }}
-              className="relative overflow-hidden rounded-2xl bg-white/10 px-5 py-3 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(0,0,0,0.35)] backdrop-blur"
-            >
-              {t("hero.ctaPrimary", "Launch Bot")}
-              <span className="absolute inset-0 rounded-2xl shadow-[0_0_40px_rgba(145,70,255,0.55)] opacity-0 transition-opacity duration-300 hover:opacity-100" />
-            </motion.button>
-            <motion.button
-              whileHover={{ y: -4, scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              transition={{ duration: 0.3, ease: "easeOut" }}
-              onClick={() => navigate("/integrations")}
-              className="relative overflow-hidden rounded-2xl border border-white/20 bg-white/5 px-5 py-3 text-sm font-semibold text-white/90"
-            >
-              {t("hero.ctaSecondary", "Integrations")}
-              <span className="absolute inset-0 rounded-2xl shadow-[0_0_40px_rgba(0,178,255,0.45)] opacity-0 transition-opacity duration-300 hover:opacity-100" />
-            </motion.button>
+      <section className={cn("saas-card relative overflow-hidden", isLive ? "pulse-live" : "")}>
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-white/50">
+              <span className={cn("h-2 w-2 rounded-full", isLive ? "bg-red-500" : "bg-white/30")} />
+              LIVE STATUS
+            </div>
+            <h2 className="mt-2 text-xl font-bold">{title}</h2>
+            <p className="text-xs text-white/60">Channel: {streamUrl}</p>
+            <div className="mt-3 flex flex-wrap gap-4 text-sm text-white/70">
+              <span>Viewers: <span className="text-white font-semibold">{viewersNow}</span></span>
+              <span>Stream time: <span className="text-white font-semibold">{streamDuration}</span></span>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <Button size="sm" variant="outline" onClick={() => navigate("/announcements")} className="gap-2">
+              <Megaphone size={14} /> Start announcement
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleShare} className="gap-2">
+              <Share2 size={14} /> Share stream
+            </Button>
+            <Button size="sm" onClick={handleCopyLink} className="gap-2">
+              <Copy size={14} /> Copy stream link
+            </Button>
           </div>
         </div>
-        <motion.div
-          className="absolute right-6 top-6 hidden md:flex flex-col gap-4 text-white/70"
-          animate={{ y: [0, -6, 0] }}
-          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-        >
-          <Twitch size={26} className="drop-shadow-[0_0_20px_rgba(145,70,255,0.55)]" />
-          <Youtube size={26} className="drop-shadow-[0_0_20px_rgba(255,0,0,0.55)]" />
-          <Send size={26} className="drop-shadow-[0_0_20px_rgba(0,178,255,0.55)]" />
-        </motion.div>
       </section>
+
       <WidgetManager open={isWidgetManagerOpen} onOpenChange={setWidgetManagerOpen} />
-      <div className="mb-5 flex items-center justify-between sm:mb-8">
+      <div className="mb-4 mt-6 flex items-center justify-between sm:mb-6">
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-gradient-primary">{t("streamInfo.title")}</h1>
+          <h1 className="text-gradient-primary text-xl">{t("streamInfo.title")}</h1>
           <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
             <button onClick={() => refetch()} disabled={isRefetching} aria-label={t("streamInfo.refresh")}>
               <RefreshCw size={13} className={isRefetching ? "animate-spin" : ""} />
@@ -194,8 +136,8 @@ export default function StreamInfoPage() {
         </DropdownMenu>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:gap-8">
-        <div className="lg:col-span-2 space-y-8">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
+        <div className="lg:col-span-2 space-y-6">
           <AnimatePresence mode="wait">
             <motion.div
               key={heroWidgetName}
@@ -207,16 +149,74 @@ export default function StreamInfoPage() {
               {widgets.includes(heroWidgetName) && <HeroWidget loading={isLoading} data={timeline} />}
             </motion.div>
           </AnimatePresence>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="saas-card">
+              <h3 className="text-sm font-semibold">Activity Feed</h3>
+              <div className="mt-3 space-y-2">
+                {activity.slice(0, 6).map((item) => (
+                  <div key={item.id} className="flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-3 py-2 text-xs text-white/70">
+                    <span>{item.text}</span>
+                    <span className="text-[10px] text-white/40">now</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="saas-card">
+              <h3 className="text-sm font-semibold">Stream Goals</h3>
+              <div className="mt-4 space-y-3 text-xs text-white/70">
+                <div>
+                  <div className="flex justify-between"><span>🎯 Stream goal</span><span>{clicksToday}/50</span></div>
+                  <div className="mt-2 h-2 rounded-full bg-white/10">
+                    <div className="h-2 rounded-full bg-primary" style={{ width: `${Math.min(100, (clicksToday / 50) * 100)}%` }} />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between"><span>Donation goal</span><span>124/200 ₽</span></div>
+                  <div className="mt-2 h-2 rounded-full bg-white/10">
+                    <div className="h-2 rounded-full bg-emerald-400" style={{ width: "62%" }} />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between"><span>Follower goal</span><span>18/40</span></div>
+                  <div className="mt-2 h-2 rounded-full bg-white/10">
+                    <div className="h-2 rounded-full bg-blue-400" style={{ width: "45%" }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
         <div className="space-y-4">
-          {widgets.includes("stats") && (
-            <div className="grid grid-cols-2 gap-4">
-              {stats.map((s, i) => (
-                <StatsCard key={s.label} icon={s.icon} label={s.label} value={s.value} delay={i * 0.07} loading={isLoading} suffix={s.suffix} />
-              ))}
+          <div className="grid grid-cols-2 gap-3">
+            {stats.map((s) => (
+              <div key={s.label} className="saas-card text-xs">
+                <div className="flex items-center gap-2 text-white/60"><s.icon size={14} /> {s.label}</div>
+                <div className="mt-2 text-lg font-semibold">{isLoading ? "—" : `${s.value ?? 0}${s.suffix ?? ""}`}</div>
+              </div>
+            ))}
+          </div>
+          <div className="saas-card">
+            <h3 className="text-sm font-semibold">STREAM CENTER</h3>
+            <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+              <Button size="sm" variant="outline">Start stream</Button>
+              <Button size="sm" variant="outline">Send announcement</Button>
+              <Button size="sm" variant="outline">Copy stream link</Button>
+              <Button size="sm" variant="outline">Post to Telegram</Button>
             </div>
-          )}
-          <AddWidgetCard onClick={() => setWidgetManagerOpen(true)} />
+          </div>
+          <div className="saas-card">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold">STREAMER SCORE</h3>
+              <Sparkles size={14} className="text-white/60" />
+            </div>
+            <div className="mt-3 text-2xl font-bold">72 / 100</div>
+            <div className="mt-3 space-y-2 text-xs text-white/70">
+              <div className="flex justify-between"><span>Activity</span><span>18</span></div>
+              <div className="flex justify-between"><span>Clicks</span><span>{clicksToday}</span></div>
+              <div className="flex justify-between"><span>Donations</span><span>124 ₽</span></div>
+              <div className="flex justify-between"><span>Followers</span><span>18</span></div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -227,7 +227,7 @@ export default function StreamInfoPage() {
         {widgets.includes("predictions") && <PredictionCard data={timeline} liveViewers={data?.twitch?.viewers ?? 0} isLive={isLive} />}
         {widgets.includes("streamSeries") && <StreamSeriesRail data={timeline} />}
       </div>
-      
+
       {widgets.includes("achievements") && <div className="mt-8"><AchievementsBlock /></div>}
     </div>
   );

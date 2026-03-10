@@ -66,15 +66,15 @@ export default function DonationsPage() {
   const activity = useMemo<ActivityItem[]>(() => {
     if (!data?.items?.length) {
       return [
-        { id: "demo-1", text: t("donations.demo1", "John donated $10"), kind: "donation" },
-        { id: "demo-2", text: t("donations.demo2", "Mike subscribed"), kind: "subscription" },
-        { id: "demo-3", text: t("donations.demo3", "Alex gifted 5 subs"), kind: "gift" },
-        { id: "demo-4", text: t("donations.demo4", "Kate donated $5"), kind: "donation" },
+        { id: "demo-1", text: "John donated 750 ₽", kind: "donation" },
+        { id: "demo-2", text: "Mike subscribed", kind: "subscription" },
+        { id: "demo-3", text: "Alex gifted 5 subs", kind: "gift" },
+        { id: "demo-4", text: "Kate donated 420 ₽", kind: "donation" },
       ];
     }
     return data.items.map((donation) => ({
       id: donation.id,
-      text: `${donation.donor} ${t("donations.donated", "donated")} ${donation.amount.toLocaleString()} ${donation.currency}`,
+      text: `${donation.donor} ${t("donations.donated", "donated")} ${donation.amount.toLocaleString()} ₽`,
       kind: "donation",
     }));
   }, [data?.items, t]);
@@ -108,11 +108,7 @@ export default function DonationsPage() {
         {t("donations.title")}
       </motion.h1>
 
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="rounded-[24px] border border-white/10 bg-[#0c0c12] p-6 text-white shadow-[0_30px_80px_rgba(0,0,0,0.35)]"
-      >
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="saas-card">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("donations.recent", "Recent Activity")}</p>
@@ -129,6 +125,40 @@ export default function DonationsPage() {
           ))}
         </div>
       </motion.div>
+
+      <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="saas-card">
+          <p className="text-xs uppercase tracking-[0.3em] text-white/50">Top supporters</p>
+          <div className="mt-4 space-y-3 text-sm text-white/70">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-white/10" />
+              <span>1. Alex — 12 000 ₽</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-white/10" />
+              <span>2. Mike — 8 000 ₽</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-white/10" />
+              <span>3. Sam — 4 400 ₽</span>
+            </div>
+          </div>
+        </div>
+        <div className="saas-card">
+          <p className="text-xs uppercase tracking-[0.3em] text-white/50">Donation goal</p>
+          <p className="mt-3 text-sm text-white/70">Goal: 20 000 ₽</p>
+          <p className="text-sm text-white/70">Progress: 12 400 ₽</p>
+          <div className="mt-3 h-2 rounded-full bg-white/10">
+            <div className="h-2 rounded-full bg-emerald-400" style={{ width: "62%" }} />
+          </div>
+        </div>
+        <div className="saas-card">
+          <p className="text-xs uppercase tracking-[0.3em] text-white/50">OBS Widget</p>
+          <p className="mt-3 text-sm text-white/70">Copy OBS widget link</p>
+          <Button size="sm" variant="outline" className="mt-3 w-full">Copy widget link</Button>
+          <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-white/60">Preview widget</div>
+        </div>
+      </div>
     </div>
   );
 }

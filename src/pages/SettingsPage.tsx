@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Bell, Shield, User } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -8,6 +8,7 @@ import { useSettingsStore } from "@/store/useSettingsStore";
 import { UiLanguage } from "@/lib/language";
 import { useTheme } from "@/components/ThemeProvider";
 import { Link } from "react-router-dom";
+import { Switch } from "@/components/ui/switch";
 
 function Section({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
   return (
@@ -67,7 +68,7 @@ function ThemeSettings() {
         <div className="grid grid-cols-3 gap-2">
           <Button variant={theme === "light" ? "default" : "outline"} onClick={() => setTheme("light")} className="gap-2">{t("settings.themeLight", "Light")}</Button>
           <Button variant={theme === "dark" ? "default" : "outline"} onClick={() => setTheme("dark")} className="gap-2">{t("settings.themeDark", "Dark")}</Button>
-          <Button variant={theme === "system" ? "default" : "outline"} onClick={() => setTheme("system")} className="gap-2">{t("settings.themeSystem", "System")}</Button>
+          <Button variant={theme === "neon" ? "default" : "outline"} onClick={() => setTheme("neon")} className="gap-2">{t("settings.themeNeon", "Neon")}</Button>
         </div>
       </div>
       <div className="space-y-2 rounded-2xl border border-border/60 bg-secondary/40 p-4">
@@ -95,29 +96,66 @@ export default function SettingsPage() {
         {t("settings.title", "Settings")}
       </motion.h1>
       <div className="space-y-6">
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <Section
-            title={t("settings.language", "Language")}
-            description={t("settings.languageDesc", "Switch the interface language instantly across the app.")}
-          >
-            <LanguageSettings />
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+          <Section title={t("settings.account", "Account")} description={t("settings.accountDesc", "Manage your profile and access.")}>
+            <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-secondary/40 p-4">
+              <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center"><User size={16} /></div>
+              <div>
+                <p className="text-sm font-semibold">Streamer</p>
+                <p className="text-xs text-muted-foreground">Connected via Telegram</p>
+              </div>
+            </div>
           </Section>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <Section
-            title={t("settings.appearance", "Appearance")}
-            description={t("settings.appearanceDesc", "Customize your theme and glow style.")}
-          >
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <Section title={t("settings.appearance", "Appearance")} description={t("settings.appearanceDesc", "Customize your theme and glow style.")}>
             <ThemeSettings />
           </Section>
         </motion.div>
 
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+          <Section title={t("settings.notifications", "Notifications")} description={t("settings.notificationsDesc", "Choose what you want to be notified about.")}>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-secondary/40 p-3">
+                <span className="text-sm">Stream start</span>
+                <Switch defaultChecked />
+              </div>
+              <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-secondary/40 p-3">
+                <span className="text-sm">Donations</span>
+                <Switch defaultChecked />
+              </div>
+              <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-secondary/40 p-3">
+                <span className="text-sm">Followers</span>
+                <Switch />
+              </div>
+              <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-secondary/40 p-3">
+                <span className="text-sm">Subscribers</span>
+                <Switch />
+              </div>
+            </div>
+          </Section>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <Section title={t("settings.language", "Language")} description={t("settings.languageDesc", "Switch the interface language instantly across the app.")}>
+            <LanguageSettings />
+          </Section>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+          <Section title={t("settings.security", "Security")} description={t("settings.securityDesc", "Control access and protection.")}>
+            <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-secondary/40 p-4">
+              <div className="flex items-center gap-2 text-sm">
+                <Shield size={14} /> 2FA
+              </div>
+              <Button size="sm" variant="outline">Enable</Button>
+            </div>
+          </Section>
+        </motion.div>
+
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <Section
-            title={t("settings.support", "Support")}
-            description={t("support.contactSupport", "Contact support")}
-          >
+          <Section title={t("settings.support", "Support")} description={t("support.contactSupport", "Contact support")}>
             <div className="rounded-2xl border border-border/60 bg-secondary/40 p-4">
               <p className="text-sm font-semibold">{t("support.needHelp", "Need help?")}</p>
               <p className="text-xs text-muted-foreground">{t("support.contactSupport", "Contact support")}</p>
