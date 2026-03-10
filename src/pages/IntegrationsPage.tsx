@@ -23,6 +23,7 @@ type VerifyResult = {
   followers?: number | null;
   subscribers?: number | null;
   videos?: number | null;
+  views?: number | null;
   channel?: string | null;
 };
 
@@ -41,6 +42,35 @@ const platforms: PlatformConfig[] = [
   { key: "telegram", label: "Telegram", color: "#00B2FF", placeholder: "@channel", icon: Send },
   { key: "donatealerts", label: "DonateAlerts", color: "#F57B20", placeholder: "https://donationalerts.com/r/username", icon: Heart },
 ];
+
+const buildChannelStats = (platform: Platform, data: VerifyResult, t: (key: string, fallback?: string) => string) => {
+  if (platform === "youtube") {
+    return [
+      { label: t("integrations.subscribers", "Subscribers"), value: data.subscribers },
+      { label: t("integrations.views", "Views"), value: data.views },
+      { label: t("integrations.videos", "Videos"), value: data.videos },
+    ];
+  }
+  if (platform === "twitch") {
+    return [
+      { label: t("integrations.followers", "Followers"), value: data.followers },
+      { label: t("integrations.views", "Views"), value: data.views },
+      { label: t("integrations.videos", "Videos"), value: data.videos },
+    ];
+  }
+  if (platform === "telegram") {
+    return [
+      { label: t("integrations.subscribers", "Subscribers"), value: data.subscribers },
+      { label: t("integrations.views", "Views"), value: data.views },
+      { label: t("integrations.videos", "Videos"), value: data.videos },
+    ];
+  }
+  return [
+    { label: t("integrations.followers", "Followers"), value: data.followers },
+    { label: t("integrations.views", "Views"), value: data.views },
+    { label: t("integrations.videos", "Videos"), value: data.videos },
+  ];
+};
 
 function IntegrationCard({
   label,
@@ -215,6 +245,7 @@ export default function IntegrationsPage() {
         followers: data.followers ?? null,
         subscribers: data.subscribers ?? null,
         videos: data.videos ?? null,
+        views: data.views ?? null,
         channel: data.channel || null,
       });
       setStatus("success");
@@ -224,8 +255,24 @@ export default function IntegrationsPage() {
     }
   };
 
-  const confirmConnection = () => {
+  const confirmConnection = async () => {
     if (!result) return;
+    if (userId && initData) {
+      if (result.platform === "twitch") {
+        await fetch("/api/save_settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: userId, twitch_name: result.url || result.name, init_data: initData }),
+        });
+      }
+      if (result.platform === "youtube") {
+        await fetch("/api/save_settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: userId, yt_channel_id: result.url || result.name, init_data: initData }),
+        });
+      }
+    }
     setConnected((prev) => ({ ...prev, [result.platform]: result }));
     setSuccessData(result);
     setShowSuccess(true);
@@ -287,12 +334,9 @@ export default function IntegrationsPage() {
                     <p className="text-xs text-white/60">{value.channel || value.name}</p>
                   </div>
                 </div>
-                {value.subscribers !== null && (
-                  <p className="mt-3 text-xs text-white/60">{t("integrations.subscribers", "Subscribers")}: {value.subscribers.toLocaleString()}</p>
-                )}
-                {value.followers !== null && (
-                  <p className="mt-1 text-xs text-white/60">{t("integrations.followers", "Followers")}: {value.followers.toLocaleString()}</p>
-                )}
+                {buildChannelStats(value.platform, value, t).map((stat) => (
+                  <p key={stat.label} className="mt-2 text-xs text-white/60">{stat.label}: {stat.value ?? "--"}</p>
+                ))}
               </div>
             ) : null,
           )}
@@ -351,6 +395,8 @@ function IntegrationModal({
   const { label, color, placeholder, icon: Icon, key } = platform;
   const glow = `0 0 60px ${color}55`;
   const particles = useMemo(() => Array.from({ length: 6 }, (_, i) => i), []);
+
+  const stats = result ? buildChannelStats(key, result, t) : [];
 
   return (
     <AnimatePresence>
@@ -462,18 +508,12 @@ function IntegrationModal({
                     </div>
                   </div>
                   <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-white/60">
-                    <div className="rounded-xl border border-white/10 bg-white/5 p-2 text-center">
-                      <p className="text-[10px] uppercase">{t("integrations.followers", "Followers")}</p>
-                      <p className="text-sm text-white">{result.followers ?? "--"}</p>
-                    </div>
-                    <div className="rounded-xl border border-white/10 bg-white/5 p-2 text-center">
-                      <p className="text-[10px] uppercase">{t("integrations.subscribers", "Subscribers")}</p>
-                      <p className="text-sm text-white">{result.subscribers ?? "--"}</p>
-                    </div>
-                    <div className="rounded-xl border border-white/10 bg-white/5 p-2 text-center">
-                      <p className="text-[10px] uppercase">{t("integrations.videos", "Videos")}</p>
-                      <p className="text-sm text-white">{result.videos ?? "--"}</p>
-                    </div>
+                    {stats.map((stat) => (
+                      <div key={stat.label} className="rounded-xl border border-white/10 bg-white/5 p-2 text-center">
+                        <p className="text-[10px] uppercase">{stat.label}</p>
+                        <p className="text-sm text-white">{stat.value ?? "--"}</p>
+                      </div>
+                    ))}
                   </div>
                   {key === "telegram" && result.channel && (
                     <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-white/70">

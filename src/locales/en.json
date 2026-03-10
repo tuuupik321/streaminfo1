@@ -1,4 +1,4 @@
-{
+﻿{
   "hero.title": "StreamInfo",
   "hero.subtitle": "Notifications and integrations for Twitch, YouTube, and Telegram",
   "hero.ctaPrimary": "Launch Bot",
@@ -73,7 +73,7 @@
   "settings.subtitle": "StreamInfo control center",
   "settings.language": "Language",
   "settings.languageDesc": "Switch the interface language instantly across the app.",
-  "settings.languageHint": "UI language",
+  "settings.languageHint": "RU | EN",
   "settings.appearance": "Appearance",
   "settings.appearanceDesc": "Customize your theme and glow style.",
   "settings.theme": "Theme",
@@ -107,6 +107,7 @@
   "integrations.followers": "Followers",
   "integrations.subscribers": "Subscribers",
   "integrations.videos": "Videos",
+  "integrations.views": "Views",
   "integrations.connected": "Connected",
   "integrations.telegramSteps": "Connect Telegram",
   "integrations.telegramStep1": "Add bot to channel",

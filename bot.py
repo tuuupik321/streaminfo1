@@ -392,6 +392,7 @@ async def fetch_twitch_channel_details(login: str) -> Optional[dict[str, Any]]:
             "name": user.get("display_name") or user.get("login"),
             "avatar": user.get("profile_image_url"),
             "followers": followers,
+            "views": user.get("view_count"),
         }
     except Exception as error:
         log_event("twitch_user_error", error=str(error))
@@ -423,6 +424,7 @@ async def fetch_youtube_channel_details(channel_id: str) -> Optional[dict[str, A
                     "avatar": ((snippet.get("thumbnails") or {}).get("medium") or {}).get("url"),
                     "subscribers": int(stats.get("subscriberCount", 0)) if stats.get("subscriberCount") else None,
                     "videos": int(stats.get("videoCount", 0)) if stats.get("videoCount") else None,
+                    "views": int(stats.get("viewCount", 0)) if stats.get("viewCount") else None,
                 }
     except Exception as error:
         log_event("youtube_channel_error", error=str(error))
@@ -638,6 +640,7 @@ async def verify_channel(request: web.Request):
             "url": f"https://twitch.tv/{resolved_twitch}",
             "avatar": (details or {}).get("avatar"),
             "followers": (details or {}).get("followers"),
+            "views": (details or {}).get("views"),
         })
 
     if platform == "youtube":
@@ -656,6 +659,7 @@ async def verify_channel(request: web.Request):
             "avatar": (details or {}).get("avatar"),
             "subscribers": (details or {}).get("subscribers"),
             "videos": (details or {}).get("videos"),
+            "views": (details or {}).get("views"),
         })
 
     if platform == "telegram":
@@ -853,6 +857,7 @@ def build_app():
     app.router.add_post("/api/live_banner", set_live_banner)
     app.router.add_get("/api/live_banner", get_live_banner)
     app.router.add_post("/api/verify_channel", verify_channel)
+    app.router.add_post("/api/save_settings", save_settings)
     app.router.add_post("/api/donations/webhook", donations_webhook)
     app.router.add_get("/api/donations/live", get_donations_live)
     # ... (add other api routes here)
