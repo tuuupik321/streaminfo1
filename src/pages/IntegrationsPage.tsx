@@ -1,22 +1,33 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { Twitch, Youtube } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Twitch, Youtube, Send } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 
 type Ripple = { id: number; x: number; y: number };
+
+type Platform = "twitch" | "youtube" | "telegram";
+type PlatformConfig = { key: Platform; label: string; color: string; placeholder: string; icon: typeof Twitch };
+
+const platforms: PlatformConfig[] = [
+  { key: "twitch", label: "Twitch", color: "#9146FF", placeholder: "https://twitch.tv/username", icon: Twitch },
+  { key: "youtube", label: "YouTube", color: "#FF0000", placeholder: "https://youtube.com/@channel", icon: Youtube },
+  { key: "telegram", label: "Telegram", color: "#00B2FF", placeholder: "@username", icon: Send },
+];
 
 function IntegrationCard({
   label,
   color,
   icon: Icon,
+  onOpen,
 }: {
   label: string;
   color: string;
   icon: typeof Twitch;
+  onOpen: () => void;
 }) {
   const [ripples, setRipples] = useState<Ripple[]>([]);
 
-  const onClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleRipple = (event: React.MouseEvent<HTMLButtonElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
@@ -30,7 +41,10 @@ function IntegrationCard({
   return (
     <motion.button
       type="button"
-      onClick={onClick}
+      onClick={(event) => {
+        handleRipple(event);
+        onOpen();
+      }}
       whileHover={{ y: -4, scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
@@ -93,6 +107,26 @@ function IntegrationCard({
 
 export default function IntegrationsPage() {
   const { t } = useI18n();
+  const [activePlatform, setActivePlatform] = useState<PlatformConfig | null>(null);
+  const [inputValue, setInputValue] = useState("");
+  const [status, setStatus] = useState<"idle" | "verifying" | "success" | "error">("idle");
+
+  const closeModal = () => {
+    setActivePlatform(null);
+    setInputValue("");
+    setStatus("idle");
+  };
+
+  const verify = () => {
+    if (!inputValue.trim()) {
+      setStatus("error");
+      return;
+    }
+    setStatus("verifying");
+    setTimeout(() => {
+      setStatus("success");
+    }, 1200);
+  };
 
   return (
     <div className="relative mx-auto flex min-h-[70dvh] max-w-5xl flex-col items-center justify-center px-4 py-10 md:py-16">
@@ -104,9 +138,16 @@ export default function IntegrationsPage() {
         {t("integrations.title", "Интеграции")}
       </motion.h1>
 
-      <div className="grid w-full max-w-3xl grid-cols-1 gap-6 md:grid-cols-2">
-        <IntegrationCard label="Twitch" color="#9146FF" icon={Twitch} />
-        <IntegrationCard label="YouTube" color="#FF0000" icon={Youtube} />
+      <div className="grid w-full max-w-4xl grid-cols-1 gap-6 md:grid-cols-3">
+        {platforms.map((platform) => (
+          <IntegrationCard
+            key={platform.key}
+            label={platform.label}
+            color={platform.color}
+            icon={platform.icon}
+            onOpen={() => setActivePlatform(platform)}
+          />
+        ))}
       </div>
 
       <p className="mt-8 max-w-xl text-center text-sm text-muted-foreground">
@@ -115,6 +156,124 @@ export default function IntegrationsPage() {
           "Подключайте каналы одним касанием. Премиальные карточки с живым свечением и мягкими анимациями.",
         )}
       </p>
+
+      {activePlatform && (
+        <IntegrationModal
+          platform={activePlatform}
+          inputValue={inputValue}
+          setInputValue={setInputValue}
+          status={status}
+          onClose={closeModal}
+          onVerify={verify}
+        />
+      )}
     </div>
+  );
+}
+
+function IntegrationModal({
+  platform,
+  inputValue,
+  setInputValue,
+  status,
+  onClose,
+  onVerify,
+}: {
+  platform: PlatformConfig;
+  inputValue: string;
+  setInputValue: (value: string) => void;
+  status: "idle" | "verifying" | "success" | "error";
+  onClose: () => void;
+  onVerify: () => void;
+}) {
+  const { label, color, placeholder, icon: Icon } = platform;
+  const glow = `0 0 60px ${color}55`;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+      >
+        <motion.div
+          onClick={(e) => e.stopPropagation()}
+          initial={{ opacity: 0, y: 30, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 20, scale: 0.96 }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
+          className="relative w-full max-w-md overflow-hidden rounded-[24px] border border-white/10 bg-[#0c0c12] p-6 text-white shadow-[0_30px_80px_rgba(0,0,0,0.45)]"
+          style={{ boxShadow: glow }}
+        >
+          <div className="absolute -top-20 left-1/2 h-40 w-40 -translate-x-1/2 rounded-full opacity-40 blur-3xl" style={{ background: `${color}` }} />
+          <div className="relative z-10">
+            <div className="flex items-center gap-3">
+              <div className="rounded-2xl p-3" style={{ background: `${color}22` }}>
+                <Icon size={26} color="#fff" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold">Connect your {label} channel</h3>
+                <p className="text-xs text-white/60">Secure verification with premium effects.</p>
+              </div>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              <input
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder={placeholder}
+                className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm outline-none transition focus:border-white/30"
+              />
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={onVerify}
+                className="relative w-full overflow-hidden rounded-2xl px-4 py-3 text-sm font-semibold"
+                style={{
+                  background: status === "verifying" ? `${color}66` : `${color}`,
+                  boxShadow: `0 0 40px ${color}66`,
+                }}
+              >
+                Verify Channel
+                {status === "verifying" && (
+                  <span className="absolute inset-0 animate-pulse bg-white/10" />
+                )}
+              </motion.button>
+              {status === "error" && (
+                <motion.p
+                  initial={{ x: -8, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  className="text-sm text-red-400"
+                >
+                  Channel not found. Please check username or link
+                </motion.p>
+              )}
+              {status === "success" && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-2xl border border-white/10 bg-white/5 p-4"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-white/10" />
+                    <div>
+                      <p className="text-sm font-semibold">{label} channel</p>
+                      <p className="text-xs text-white/60">Subscribers • 12.4K</p>
+                    </div>
+                  </div>
+                  <button
+                    className="mt-4 w-full rounded-2xl bg-white/10 py-2 text-sm font-semibold"
+                    style={{ boxShadow: glow }}
+                  >
+                    Connect channel ✔
+                  </button>
+                </motion.div>
+              )}
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
   );
 }

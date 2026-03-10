@@ -1,6 +1,6 @@
 ﻿import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CalendarDays, DollarSign, Eye, Link2, MousePointerClick, RefreshCw, ShieldCheck, TrendingUp, UserCheck, Users, MoreHorizontal, Radio, PlusCircle } from "lucide-react";
+import { CalendarDays, DollarSign, Eye, Link2, MousePointerClick, RefreshCw, ShieldCheck, TrendingUp, UserCheck, Users, MoreHorizontal, Radio, PlusCircle, Twitch, Youtube, Send } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -74,8 +74,70 @@ export default function StreamInfoPage() {
     return <LockedOverlay />;
   }
 
+  const title = "StreamInfo";
+  const subtitle = "Уведомления и интеграции для Twitch, YouTube и Telegram";
+
   return (
     <div className="mx-auto max-w-6xl px-3 py-4 sm:p-4 md:p-8">
+      <section className="relative overflow-hidden rounded-[24px] border border-white/10 bg-[radial-gradient(circle_at_20%_20%,rgba(145,70,255,0.25),transparent_40%),radial-gradient(circle_at_80%_10%,rgba(255,0,0,0.22),transparent_35%),radial-gradient(circle_at_60%_80%,rgba(0,178,255,0.2),transparent_40%),linear-gradient(135deg,#0f0f1a,#1a0033,#2b0066)] p-6 sm:p-8 md:p-10 mb-6 sm:mb-10">
+        <div className="absolute inset-0 opacity-70 animate-[heroGradient_14s_ease-in-out_infinite]" />
+        <div className="relative z-10">
+          <motion.h1
+            initial="hidden"
+            animate="visible"
+            className="text-3xl sm:text-4xl md:text-5xl font-black font-heading text-white"
+          >
+            {title.split("").map((char, index) => (
+              <motion.span
+                key={`${char}-${index}`}
+                variants={{ hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0 } }}
+                transition={{ duration: 0.6, delay: index * 0.04 }}
+                className="inline-block"
+              >
+                {char === " " ? "\u00A0" : char}
+              </motion.span>
+            ))}
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6, duration: 0.6 }}
+            className="mt-3 max-w-2xl text-sm sm:text-base text-white/70"
+          >
+            {subtitle}
+          </motion.p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <motion.button
+              whileHover={{ y: -4, scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="relative overflow-hidden rounded-2xl bg-white/10 px-5 py-3 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(0,0,0,0.35)] backdrop-blur"
+            >
+              Launch Bot
+              <span className="absolute inset-0 rounded-2xl shadow-[0_0_40px_rgba(145,70,255,0.55)] opacity-0 transition-opacity duration-300 hover:opacity-100" />
+            </motion.button>
+            <motion.button
+              whileHover={{ y: -4, scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              onClick={() => navigate("/integrations")}
+              className="relative overflow-hidden rounded-2xl border border-white/20 bg-white/5 px-5 py-3 text-sm font-semibold text-white/90"
+            >
+              Integrations
+              <span className="absolute inset-0 rounded-2xl shadow-[0_0_40px_rgba(0,178,255,0.45)] opacity-0 transition-opacity duration-300 hover:opacity-100" />
+            </motion.button>
+          </div>
+        </div>
+        <motion.div
+          className="absolute right-6 top-6 hidden md:flex flex-col gap-4 text-white/70"
+          animate={{ y: [0, -6, 0] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        >
+          <Twitch size={26} className="drop-shadow-[0_0_20px_rgba(145,70,255,0.55)]" />
+          <Youtube size={26} className="drop-shadow-[0_0_20px_rgba(255,0,0,0.55)]" />
+          <Send size={26} className="drop-shadow-[0_0_20px_rgba(0,178,255,0.55)]" />
+        </motion.div>
+      </section>
       <WidgetManager open={isWidgetManagerOpen} onOpenChange={setWidgetManagerOpen} />
       <div className="mb-5 flex items-center justify-between sm:mb-8">
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
