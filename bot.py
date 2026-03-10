@@ -249,7 +249,7 @@ async def _require_verified_user(request: web.Request):
     init_data = request.query.get("init_data")
     log_event("auth_attempt", method=request.method, path=request.path, has_init_data=bool(init_data))
     
-    if request.method in {"POST", "PUT, "PATCH"}:
+    if request.method in {"POST", "PUT", "PATCH"}:
         try:
             payload = await request.json()
             init_data = payload.get("init_data", init_data)
