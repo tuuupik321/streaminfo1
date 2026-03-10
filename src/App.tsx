@@ -153,14 +153,6 @@ function AppShellWithOverlays() {
                   <header className={cn("sticky top-0 z-40 h-12 border-b", "glass")}>
                     <div className="mx-auto flex h-full w-full max-w-6xl items-center px-3 sm:px-4">
                       <span className="text-sm font-bold font-heading text-gradient-primary">StreamInfo</span>
-                      <button
-                        type="button"
-                        className="group ml-auto flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/80 shadow-[0_0_18px_rgba(145,70,255,0.25)] transition-all duration-300 hover:-translate-y-0.5 hover:scale-105 hover:text-white hover:shadow-[0_0_34px_rgba(145,70,255,0.55)] active:scale-95"
-                        onClick={() => setSettingsOpen(true)}
-                        aria-label="Open settings"
-                      >
-                        <Cog size={18} className="transition-transform duration-300 group-active:rotate-[18deg]" />
-                      </button>
                     </div>
                   </header>
                   <GlobalStatusBar />
@@ -169,7 +161,7 @@ function AppShellWithOverlays() {
                       <AnimatedRoutes />
                     </Suspense>
                   </main>
-                  <BottomNav />
+                  <BottomNav onOpenSettings={() => setSettingsOpen(true)} />
                 </div>
               </div>
       {showVpnWarning && (
