@@ -26,8 +26,9 @@ export function BottomNav() {
   const canSeeAdmin = isOwnerTelegramId(currentTelegramId) || hasAdminSession(currentTelegramId);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/10 bg-background/80 pb-[var(--safe-bottom)] backdrop-blur-xl">
-      <div className="mx-auto grid h-16 max-w-4xl grid-cols-5 items-center">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 pb-[calc(var(--safe-bottom)_+_0.75rem)]">
+      <div className="mx-auto w-full max-w-4xl px-3 sm:px-4">
+        <div className="grid h-16 grid-cols-5 items-center rounded-2xl border border-white/10 bg-background/85 shadow-[0_10px_40px_rgba(0,0,0,0.35)] backdrop-blur-2xl">
         {mainTabs.map((tab) => {
           const isActive = tab.path === "/" ? currentPath === "/" : currentPath.startsWith(tab.path);
           return (
@@ -35,20 +36,22 @@ export function BottomNav() {
               key={tab.path}
               to={tab.path}
               className={cn(
-                "flex h-full flex-col items-center justify-center gap-1 transition-all duration-200 active:scale-95",
-                isActive ? "text-primary" : "text-muted-foreground",
+                "group mx-1 flex h-12 flex-col items-center justify-center gap-1 rounded-xl text-muted-foreground transition-all duration-200 hover:bg-white/5 active:scale-95",
+                isActive && "bg-violet-500/25 text-violet-200 shadow-[0_8px_24px_rgba(124,58,237,0.35)]",
               )}
             >
-              <tab.icon size={20} strokeWidth={isActive ? 2.5 : 1.8} />
-              <span className={cn("text-[11px] font-mono", isActive && "font-semibold")}>{t(`bottomNav.${tab.key}`)}</span>
+              <tab.icon size={20} strokeWidth={isActive ? 2.5 : 1.8} className="transition-transform duration-200 group-active:scale-110" />
+              <span className={cn("text-[11px] font-mono transition-colors", isActive && "font-semibold text-violet-100")}>
+                {t(`bottomNav.${tab.key}`)}
+              </span>
             </NavLink>
           );
         })}
 
         <Drawer>
           <DrawerTrigger asChild>
-            <button className="flex h-full flex-col items-center justify-center gap-1 text-muted-foreground">
-              <MoreHorizontal size={20} strokeWidth={1.8} />
+            <button className="group mx-1 flex h-12 flex-col items-center justify-center gap-1 rounded-xl text-muted-foreground transition-all duration-200 hover:bg-white/5 active:scale-95">
+              <MoreHorizontal size={20} strokeWidth={1.8} className="transition-transform duration-200 group-active:scale-110" />
               <span className="text-[11px] font-mono">{t("bottomNav.more")}</span>
             </button>
           </DrawerTrigger>
@@ -84,6 +87,7 @@ export function BottomNav() {
             </div>
           </DrawerContent>
         </Drawer>
+        </div>
       </div>
     </nav>
   );
