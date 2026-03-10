@@ -72,6 +72,22 @@ const buildChannelStats = (platform: Platform, data: VerifyResult, t: (key: stri
   ];
 };
 
+const extractHandle = (value: string) => {
+  const raw = value.trim();
+  if (!raw) return "";
+  if (raw.startsWith("@")) return raw.slice(1);
+  if (raw.includes("twitch.tv/")) {
+    return raw.split("twitch.tv/")[1].split(/[/?#]/)[0];
+  }
+  if (raw.includes("youtube.com/@")) {
+    return raw.split("youtube.com/@")[1].split(/[/?#]/)[0];
+  }
+  if (raw.includes("youtube.com/channel/")) {
+    return raw.split("youtube.com/channel/")[1].split(/[/?#]/)[0];
+  }
+  return raw;
+};
+
 function IntegrationCard({
   label,
   color,
@@ -259,17 +275,19 @@ export default function IntegrationsPage() {
     if (!result) return;
     if (userId && initData) {
       if (result.platform === "twitch") {
+        const twitchLogin = extractHandle(result.url || result.name);
         await fetch("/api/save_settings", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: userId, twitch_name: result.url || result.name, init_data: initData }),
+          body: JSON.stringify({ user_id: userId, twitch_name: twitchLogin, init_data: initData }),
         });
       }
       if (result.platform === "youtube") {
+        const youtubeIdOrHandle = extractHandle(result.url || result.name);
         await fetch("/api/save_settings", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: userId, yt_channel_id: result.url || result.name, init_data: initData }),
+          body: JSON.stringify({ user_id: userId, yt_channel_id: youtubeIdOrHandle, init_data: initData }),
         });
       }
     }
