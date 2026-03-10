@@ -1,12 +1,21 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Twitch, Youtube, Send } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 
 type Ripple = { id: number; x: number; y: number };
-
 type Platform = "twitch" | "youtube" | "telegram";
 type PlatformConfig = { key: Platform; label: string; color: string; placeholder: string; icon: typeof Twitch };
+type VerifyResult = { name: string; url: string; platform: Platform };
+
+type TelegramWindow = Window & {
+  Telegram?: {
+    WebApp?: {
+      initData?: string;
+      initDataUnsafe?: { user?: { id?: number } };
+    };
+  };
+};
 
 const platforms: PlatformConfig[] = [
   { key: "twitch", label: "Twitch", color: "#9146FF", placeholder: "https://twitch.tv/username", icon: Twitch },
@@ -110,22 +119,54 @@ export default function IntegrationsPage() {
   const [activePlatform, setActivePlatform] = useState<PlatformConfig | null>(null);
   const [inputValue, setInputValue] = useState("");
   const [status, setStatus] = useState<"idle" | "verifying" | "success" | "error">("idle");
+  const [result, setResult] = useState<VerifyResult | null>(null);
+
+  const tg = (window as TelegramWindow).Telegram?.WebApp;
+  const userId = tg?.initDataUnsafe?.user?.id;
+  const initData = tg?.initData || "";
 
   const closeModal = () => {
     setActivePlatform(null);
     setInputValue("");
     setStatus("idle");
+    setResult(null);
   };
 
-  const verify = () => {
+  const verify = async () => {
     if (!inputValue.trim()) {
       setStatus("error");
       return;
     }
+    if (!activePlatform || !userId) {
+      setStatus("error");
+      return;
+    }
     setStatus("verifying");
-    setTimeout(() => {
+    try {
+      const response = await fetch("/api/verify_channel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: userId,
+          platform: activePlatform.key,
+          channel: inputValue.trim(),
+          init_data: initData,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data?.error) {
+        setStatus("error");
+        return;
+      }
+      setResult({
+        name: data.name || inputValue.trim(),
+        url: data.url || "",
+        platform: activePlatform.key,
+      });
       setStatus("success");
-    }, 1200);
+    } catch {
+      setStatus("error");
+    }
   };
 
   return (
@@ -145,7 +186,12 @@ export default function IntegrationsPage() {
             label={platform.label}
             color={platform.color}
             icon={platform.icon}
-            onOpen={() => setActivePlatform(platform)}
+            onOpen={() => {
+              setActivePlatform(platform);
+              setStatus("idle");
+              setResult(null);
+              setInputValue("");
+            }}
           />
         ))}
       </div>
@@ -163,6 +209,7 @@ export default function IntegrationsPage() {
           inputValue={inputValue}
           setInputValue={setInputValue}
           status={status}
+          result={result}
           onClose={closeModal}
           onVerify={verify}
         />
@@ -176,6 +223,7 @@ function IntegrationModal({
   inputValue,
   setInputValue,
   status,
+  result,
   onClose,
   onVerify,
 }: {
@@ -183,11 +231,13 @@ function IntegrationModal({
   inputValue: string;
   setInputValue: (value: string) => void;
   status: "idle" | "verifying" | "success" | "error";
+  result: VerifyResult | null;
   onClose: () => void;
   onVerify: () => void;
 }) {
   const { label, color, placeholder, icon: Icon } = platform;
   const glow = `0 0 60px ${color}55`;
+  const particles = useMemo(() => Array.from({ length: 6 }, (_, i) => i), []);
 
   return (
     <AnimatePresence>
@@ -236,10 +286,29 @@ function IntegrationModal({
                 }}
               >
                 Verify Channel
-                {status === "verifying" && (
-                  <span className="absolute inset-0 animate-pulse bg-white/10" />
-                )}
+                {status === "verifying" && <span className="absolute inset-0 animate-pulse bg-white/10" />}
               </motion.button>
+              {status === "verifying" && (
+                <div className="relative mt-3 h-2 overflow-hidden rounded-full bg-white/10">
+                  <motion.div
+                    className="h-full"
+                    style={{ background: color }}
+                    initial={{ x: "-60%" }}
+                    animate={{ x: "120%" }}
+                    transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
+                  />
+                  {particles.map((p) => (
+                    <motion.span
+                      key={p}
+                      className="absolute -top-1 h-3 w-3 rounded-full"
+                      style={{ background: `${color}88` }}
+                      initial={{ x: 0, opacity: 0 }}
+                      animate={{ x: [0, 120], opacity: [0, 1, 0] }}
+                      transition={{ duration: 1.2, delay: p * 0.15, repeat: Infinity }}
+                    />
+                  ))}
+                </div>
+              )}
               {status === "error" && (
                 <motion.p
                   initial={{ x: -8, opacity: 0 }}
@@ -258,8 +327,8 @@ function IntegrationModal({
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-full bg-white/10" />
                     <div>
-                      <p className="text-sm font-semibold">{label} channel</p>
-                      <p className="text-xs text-white/60">Subscribers • 12.4K</p>
+                      <p className="text-sm font-semibold">{result?.name || `${label} channel`}</p>
+                      <p className="text-xs text-white/60">{result?.url || "Verified"}</p>
                     </div>
                   </div>
                   <button

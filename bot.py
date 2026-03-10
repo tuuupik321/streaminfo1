@@ -95,6 +95,11 @@ class SaveSettingsPayload(BaseModel):
     twitch_name: Optional[str] = None
     yt_channel_id: Optional[str] = None
 
+class VerifyChannelPayload(BaseModel):
+    user_id: int
+    platform: str
+    channel: str
+
 class User(Base):
     __tablename__ = "users"
     user_id = Column(BigInteger, primary_key=True)
@@ -405,6 +410,85 @@ async def get_live_banner(request: web.Request):
             "link_url": banner.link_url,
         })
 
+def _extract_username(value: str) -> str:
+    raw = (value or "").strip()
+    if raw.startswith("http://") or raw.startswith("https://"):
+        raw = raw.split("://", 1)[-1]
+    raw = raw.replace("www.", "")
+    raw = raw.strip("/")
+    if "/" in raw:
+        parts = raw.split("/")
+        raw = parts[-1] or parts[-2]
+    if raw.startswith("@"):
+        raw = raw[1:]
+    return raw.strip()
+
+async def verify_channel(request: web.Request):
+    auth_error = await _require_verified_user(request)
+    if auth_error:
+        return auth_error
+
+    try:
+        payload = VerifyChannelPayload.model_validate(await request.json())
+    except ValidationError as e:
+        return web.json_response({"error": "validation_error", "details": e.errors()}, status=400)
+
+    if REQUIRE_INIT_DATA and request.get("verified_user_id") and request["verified_user_id"] != str(payload.user_id):
+        return web.json_response({"error": "user_mismatch"}, status=403)
+
+    platform = payload.platform.lower().strip()
+    channel_raw = payload.channel.strip()
+    if not platform or not channel_raw:
+        return web.json_response({"error": "bad_request"}, status=400)
+
+    if platform == "twitch":
+        if not all([TWITCH_ID, TWITCH_SECRET]):
+            return web.json_response({"error": "twitch_validation_not_configured"}, status=500)
+        username = _extract_username(channel_raw)
+        resolved_twitch = await resolve_twitch_login(username)
+        if not resolved_twitch:
+            return web.json_response({"error": "twitch_not_found"}, status=404)
+        return web.json_response({
+            "status": "ok",
+            "platform": "twitch",
+            "name": resolved_twitch,
+            "url": f"https://twitch.tv/{resolved_twitch}",
+        })
+
+    if platform == "youtube":
+        if not YT_KEY:
+            return web.json_response({"error": "youtube_validation_not_configured"}, status=500)
+        channel_id = _extract_username(channel_raw)
+        resolved_youtube = await resolve_youtube_channel_id(channel_id)
+        if not resolved_youtube:
+            return web.json_response({"error": "youtube_not_found"}, status=404)
+        return web.json_response({
+            "status": "ok",
+            "platform": "youtube",
+            "name": resolved_youtube,
+            "url": f"https://youtube.com/channel/{resolved_youtube}",
+        })
+
+    if platform == "telegram":
+        username = _extract_username(channel_raw)
+        if not username:
+            return web.json_response({"error": "telegram_not_found"}, status=404)
+        if not bot:
+            return web.json_response({"error": "telegram_bot_not_configured"}, status=500)
+        try:
+            chat = await bot.get_chat(f"@{username}")
+            display = chat.title or f"@{username}"
+            return web.json_response({
+                "status": "ok",
+                "platform": "telegram",
+                "name": display,
+                "url": f"https://t.me/{username}",
+            })
+        except TelegramAPIError:
+            return web.json_response({"error": "telegram_not_found"}, status=404)
+
+    return web.json_response({"error": "unsupported_platform"}, status=400)
+
 
 async def save_settings(request: web.Request):
     auth_error = await _require_verified_user(request)
@@ -481,6 +565,7 @@ def build_app():
     app.router.add_post("/api/questions/answer", answer_question)
     app.router.add_post("/api/live_banner", set_live_banner)
     app.router.add_get("/api/live_banner", get_live_banner)
+    app.router.add_post("/api/verify_channel", verify_channel)
     # ... (add other api routes here)
 
     if bot and WEBHOOK_ENABLED:
