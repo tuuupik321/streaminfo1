@@ -234,7 +234,7 @@ export default function Analytics() {
       <motion.div variants={item} className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="saas-card lg:col-span-2">
           <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.viewersGrowth", "Viewers growth")}</p>
-          <div className="mt-4 h-64">
+          <div className="mt-4 h-56 sm:h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
                 <XAxis dataKey="time" stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
@@ -278,7 +278,7 @@ export default function Analytics() {
               ))}
             </div>
           </div>
-          <div className="mt-4 h-64">
+          <div className="mt-4 h-56 sm:h-64">
             <ResponsiveContainer width="100%" height="100%">
               {activeChart === "followers" ? (
                 <LineChart data={chartData}>
@@ -307,7 +307,7 @@ export default function Analytics() {
       <motion.div variants={item} className="mb-8 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="saas-card lg:col-span-2">
           <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.platformComparison", "Platform comparison")}</p>
-          <div className="mt-4 h-56">
+          <div className="mt-4 h-52 sm:h-56">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={platformComparison}>
                 <XAxis dataKey="name" stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
@@ -320,7 +320,7 @@ export default function Analytics() {
         </div>
         <div className="saas-card">
           <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.donutChart", "Donut chart")}</p>
-          <div className="mt-4 h-56">
+          <div className="mt-4 h-52 sm:h-56">
             <ResponsiveContainer width="100%" height="100%">
               <RePieChart>
                 <Pie data={donutData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={4}>

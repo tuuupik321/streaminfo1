@@ -95,6 +95,7 @@
     padding-bottom: var(--safe-bottom);
     padding-left: var(--safe-left);
     padding-right: var(--safe-right);
+    touch-action: manipulation;
   }
 
   .dark body {
@@ -447,5 +448,29 @@
 
   .saas-card {
     padding: 14px;
+  }
+
+  .glass,
+  .glass-strong,
+  .card-glass {
+    backdrop-filter: blur(18px) saturate(1.2);
+    -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  }
+}
+
+@media (hover: none) {
+  .saas-card:hover,
+  .card-glow:hover,
+  .hover-lift:hover {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
