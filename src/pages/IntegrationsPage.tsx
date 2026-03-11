@@ -169,6 +169,9 @@ function mapIntegrationError(
   if (errorCode === "telegram_bot_not_configured") {
     return t("integrations.errorTelegramBot", "Telegram-бот ещё не настроен на сервере.");
   }
+  if (errorCode === "telegram_unreachable" || errorCode === "bot_info_unavailable") {
+    return t("integrations.errorTelegramUnavailable", "Сервер сейчас не может связаться с Telegram API. Это проблема окружения, а не канала.");
+  }
   if (errorCode === "save_settings_failed") {
     return t("integrations.errorSave", "Не удалось сохранить подключение в настройках.");
   }
@@ -309,6 +312,7 @@ export default function IntegrationsPage() {
     kick: null,
   });
   const [botUsername, setBotUsername] = useState<string | null>(null);
+  const [botInfoError, setBotInfoError] = useState<string | null>(null);
   const [telegramTargets, setTelegramTargets] = useState<TelegramTarget[]>([]);
   const [loadingTelegramTargets, setLoadingTelegramTargets] = useState(false);
   const [loadingSaved, setLoadingSaved] = useState(false);
@@ -337,19 +341,21 @@ export default function IntegrationsPage() {
     window.open(url, "_blank");
   };
 
-  const fetchBotUsername = async () => {
+  const fetchBotUsername = useCallback(async () => {
     try {
       const res = await fetch("/api/bot_info");
       const data = await res.json().catch(() => ({}));
       if (res.ok && data?.username) {
         setBotUsername(data.username);
+        setBotInfoError(null);
         return;
       }
+      setBotInfoError((data?.error as string | undefined) || "bot_info_unavailable");
     } catch {
-      // ignore
+      setBotInfoError("bot_info_unavailable");
     }
     setBotUsername(null);
-  };
+  }, []);
 
   const closeModal = () => {
     setActivePlatform(null);
@@ -514,7 +520,7 @@ export default function IntegrationsPage() {
 
   const openAddChannel = () => {
     if (!botUsername) {
-      setErrorMessage(t("integrations.errorBotUsername", "Bot username is not available"));
+      setErrorMessage(mapIntegrationError(botInfoError || "bot_info_unavailable", "telegram", t));
       return;
     }
     openTelegramLink(`https://t.me/${botUsername}?startchannel=true&admin=post_messages+edit_messages+delete_messages+manage_chat`);
@@ -522,7 +528,7 @@ export default function IntegrationsPage() {
 
   const openAddGroup = () => {
     if (!botUsername) {
-      setErrorMessage(t("integrations.errorBotUsername", "Bot username is not available"));
+      setErrorMessage(mapIntegrationError(botInfoError || "bot_info_unavailable", "telegram", t));
       return;
     }
     openTelegramLink(`https://t.me/${botUsername}?startgroup=true&admin=manage_chat+delete_messages`);
@@ -699,6 +705,7 @@ export default function IntegrationsPage() {
           onVerify={verify}
           onConfirm={confirmConnection}
           botUsername={botUsername}
+          botInfoError={botInfoError}
           telegramTargets={telegramTargets}
           loadingTelegramTargets={loadingTelegramTargets}
           onRequestBotUsername={fetchBotUsername}
@@ -736,6 +743,7 @@ function IntegrationModal({
   onVerify,
   onConfirm,
   botUsername,
+  botInfoError,
   telegramTargets,
   loadingTelegramTargets,
   onRequestBotUsername,
@@ -753,6 +761,7 @@ function IntegrationModal({
   onVerify: () => void;
   onConfirm: () => void;
   botUsername: string | null;
+  botInfoError: string | null;
   telegramTargets: TelegramTarget[];
   loadingTelegramTargets: boolean;
   onRequestBotUsername: () => void;
@@ -825,6 +834,11 @@ function IntegrationModal({
                 <p className="mt-3 text-[11px] text-white/60">
                   {t("integrations.telegramMenuHint", "After adding the bot, select the found channel or group below, or enter @username manually.")}
                 </p>
+                {botInfoError ? (
+                  <p className="mt-2 text-[11px] text-amber-300">
+                    {mapIntegrationError(botInfoError, "telegram", t)}
+                  </p>
+                ) : null}
                 <div className="mt-4 space-y-2">
                   <div className="flex items-center justify-between">
                     <p className="text-[11px] uppercase tracking-[0.2em] text-white/40">

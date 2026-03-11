@@ -134,6 +134,7 @@
   "integrations.errorUnknown": "Не удалось выполнить действие. Попробуйте ещё раз.",
   "integrations.errorBotAdmin": "Добавьте бота в канал или группу и дайте ему нужные права.",
   "integrations.errorTelegramBot": "Telegram-бот ещё не настроен на сервере.",
+  "integrations.errorTelegramUnavailable": "Сервер сейчас не может связаться с Telegram API. Это проблема окружения, а не канала.",
   "integrations.errorSave": "Не удалось сохранить подключение в настройках.",
   "integrations.errorRateLimit": "Слишком много попыток подряд. Подождите немного и повторите.",
   "integrations.errorTelegramTarget": "Не нашли канал или группу. Добавьте бота и выберите цель из списка ниже.",

@@ -101,6 +101,22 @@ def _normalize_db_url(raw_url: Optional[str]) -> tuple[Optional[str], dict[str, 
     return urlunparse(cleaned), connect_args
 
 
+def _is_telegram_network_error(error: Exception) -> bool:
+    message = str(error).lower()
+    error_name = error.__class__.__name__.lower()
+    network_markers = (
+        "clientconnectordnserror",
+        "clientconnectorerror",
+        "telegramnetworkerror",
+        "gaierror",
+        "temporary failure in name resolution",
+        "no address associated with hostname",
+        "cannot connect to host api.telegram.org",
+        "name or service not known",
+    )
+    return any(marker in error_name or marker in message for marker in network_markers)
+
+
 TOKEN = os.getenv("BOT_TOKEN")
 APP_URL = os.getenv("APP_URL") or os.getenv("RENDER_EXTERNAL_URL")
 SPACE_HOST = os.getenv("SPACE_HOST")
@@ -792,7 +808,9 @@ async def get_bot_info(request: web.Request):
         return web.json_response({"available": True, "username": me.username, "id": me.id})
     except Exception as error:
         log_event("bot_info_failed", error=str(error))
-        return web.json_response({"available": False, "username": None, "id": None})
+        error_code = "telegram_unreachable" if _is_telegram_network_error(error) else "bot_info_failed"
+        status = 503 if error_code == "telegram_unreachable" else 500
+        return web.json_response({"available": False, "username": None, "id": None, "error": error_code}, status=status)
 
 async def get_telegram_targets(request: web.Request):
     auth_error = await _require_verified_user(request)
@@ -1265,7 +1283,9 @@ async def verify_channel(request: web.Request):
                 member = await bot.get_chat_member(f"@{username}", me.id)
                 if member.status not in {"administrator", "creator", "member"}:
                     return web.json_response({"error": "bot_not_admin"}, status=403)
-            except TelegramAPIError:
+            except TelegramAPIError as error:
+                if _is_telegram_network_error(error):
+                    return web.json_response({"error": "telegram_unreachable"}, status=503)
                 return web.json_response({"error": "bot_not_admin"}, status=403)
             if async_session:
                 async with async_session() as session:
@@ -1286,7 +1306,9 @@ async def verify_channel(request: web.Request):
                 "chat_id": str(chat.id),
                 "subscribers": subscribers,
             })
-        except TelegramAPIError:
+        except TelegramAPIError as error:
+            if _is_telegram_network_error(error):
+                return web.json_response({"error": "telegram_unreachable"}, status=503)
             return web.json_response({"error": "telegram_not_found"}, status=404)
 
     if platform == "kick":

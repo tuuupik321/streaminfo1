@@ -134,6 +134,7 @@
   "integrations.errorUnknown": "Could not complete the action. Please try again.",
   "integrations.errorBotAdmin": "Add the bot to the channel or group and grant the required permissions.",
   "integrations.errorTelegramBot": "Telegram bot is not configured on the server yet.",
+  "integrations.errorTelegramUnavailable": "The server cannot reach the Telegram API right now. This is an environment issue, not a channel issue.",
   "integrations.errorSave": "Could not save the integration in settings.",
   "integrations.errorRateLimit": "Too many attempts in a row. Please wait a bit and try again.",
   "integrations.errorTelegramTarget": "Channel or group not found. Add the bot and choose a target from the list below.",
