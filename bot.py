@@ -202,6 +202,24 @@ def _allow_rate(scope: str, key: str, *, limit: int, window_seconds: int) -> boo
     return True
 
 
+async def write_audit_log(telegram_id: str, action: str, details: Optional[str] = None) -> None:
+    if not async_session:
+        log_event("audit_log_skipped", reason="db_not_configured", action=action, telegram_id=telegram_id)
+        return
+    try:
+        async with async_session() as session:
+            session.add(
+                AdminAuditLog(
+                    telegram_id=str(telegram_id),
+                    action=str(action),
+                    details=details,
+                )
+            )
+            await session.commit()
+    except Exception as error:
+        log_event("audit_log_failed", error=str(error), action=action, telegram_id=telegram_id)
+
+
 def validate_runtime_config() -> None:
     if OWNER_TELEGRAM_ID:
         try:
