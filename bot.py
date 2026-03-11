@@ -955,7 +955,7 @@ async def cache_control_middleware(request, handler):
         if path == "/" or path.endswith(".html"):
             response.headers["Cache-Control"] = "no-store, max-age=0"
         elif path.startswith("/assets/"):
-            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+            response.headers["Cache-Control"] = "no-store, max-age=0"
     return response
 
 
