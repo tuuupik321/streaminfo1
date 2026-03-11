@@ -93,8 +93,12 @@ export function ViewerChart({ loading, data }: ViewerChartProps) {
     return (
       <div className="flex h-80 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border/30 bg-secondary/30 text-center">
         <BarChart2 size={32} className="mb-4 text-muted-foreground/50" />
-        <h4 className="font-bold font-heading text-foreground">{t("chart.noDataTitle", "Нет данных для графика")}</h4>
-        <p className="text-sm text-muted-foreground">{t("chart.noDataSubtitle", "Начните стрим, чтобы собрать статистику.")}</p>
+        <h4 className="font-bold font-heading text-foreground">
+          {t("chart.noDataTitle", "Данные появятся после первого завершённого эфира")}
+        </h4>
+        <p className="text-sm text-muted-foreground">
+          {t("chart.noDataSubtitle", "Завершите хотя бы одну трансляцию, и здесь появится история онлайна и активности.")}
+        </p>
       </div>
     );
   }

@@ -5,7 +5,7 @@ import { LiveIndicator } from "@/components/dashboard/LiveIndicator";
 describe("LiveIndicator", () => {
   it("shows offline label", () => {
     render(<LiveIndicator isLive={false} />);
-    expect(screen.getByText("OFFLINE")).toBeInTheDocument();
+    expect(screen.getByText("ОФФЛАЙН")).toBeInTheDocument();
   });
 
   it("shows live label", () => {
@@ -13,4 +13,3 @@ describe("LiveIndicator", () => {
     expect(screen.getByText("LIVE")).toBeInTheDocument();
   });
 });
-

@@ -32,7 +32,16 @@ interface AccountRowProps {
   onToggleMonitor?: (platform: string, username: string, enable: boolean) => void;
 }
 
-export default function AccountRow({ account, channels, savingIntegration, onSaveEdit, onRemove, streamStatus, isMonitored, onToggleMonitor }: AccountRowProps) {
+export default function AccountRow({
+  account,
+  channels,
+  savingIntegration,
+  onSaveEdit,
+  onRemove,
+  streamStatus,
+  isMonitored,
+  onToggleMonitor,
+}: AccountRowProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState("");
 
@@ -68,8 +77,8 @@ export default function AccountRow({ account, channels, savingIntegration, onSav
 
   return (
     <motion.div layout className="mb-2">
-      <div className="flex items-center justify-between bg-background/50 rounded-lg px-3 py-2 border border-border/30 hover:border-border/60 transition-all duration-200 hover:bg-background/70 group">
-        <div className="flex items-center gap-3 flex-1 min-w-0">
+      <div className="group flex items-center justify-between rounded-lg border border-border/30 bg-background/50 px-3 py-2 transition-all duration-200 hover:border-border/60 hover:bg-background/70">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           <div className="relative flex-shrink-0">
             <motion.div whileHover={{ scale: 1.15, rotate: 5 }} transition={{ type: "spring", stiffness: 400, damping: 15 }}>
               <PlatformIcon size={18} className={info.color} />
@@ -78,12 +87,13 @@ export default function AccountRow({ account, channels, savingIntegration, onSav
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring", stiffness: 500, damping: 20, delay: 0.2 }}
-              className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-background ${
-                streamStatus?.isLive ? "bg-destructive animate-pulse" : "bg-emerald-500"
+              className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-background ${
+                streamStatus?.isLive ? "animate-pulse bg-destructive" : "bg-emerald-500"
               }`}
-              title={streamStatus?.isLive ? "LIVE" : "Offline"}
+              title={streamStatus?.isLive ? "LIVE" : "Оффлайн"}
             />
           </div>
+
           {isEditing ? (
             <motion.div
               initial={{ opacity: 0, x: -8 }}
@@ -95,34 +105,41 @@ export default function AccountRow({ account, channels, savingIntegration, onSav
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSave()}
-                className="font-mono text-sm h-7 flex-1"
+                className="h-7 flex-1 font-mono text-sm"
                 autoFocus
               />
             </motion.div>
           ) : (
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <p className="font-mono font-semibold text-sm truncate">{account.username}</p>
+                <p className="truncate font-mono text-sm font-semibold">{account.username}</p>
                 {streamStatus?.isLive && (
-                  <Badge variant="destructive" className="text-[10px] font-mono animate-pulse">
-                    LIVE{streamStatus.viewerCount ? ` • ${streamStatus.viewerCount}` : ""}
+                  <Badge variant="destructive" className="animate-pulse font-mono text-[10px]">
+                    LIVE{streamStatus.viewerCount ? ` - ${streamStatus.viewerCount}` : ""}
                   </Badge>
                 )}
               </div>
               {streamStatus?.isLive && streamStatus.title && (
-                <p className="text-[11px] text-muted-foreground truncate mt-0.5">{streamStatus.title}</p>
+                <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{streamStatus.title}</p>
               )}
-              <div className="flex gap-1 mt-0.5 flex-wrap">
-                <Badge variant="outline" className="text-[10px] font-mono">{info.label}</Badge>
+              <div className="mt-0.5 flex flex-wrap gap-1">
+                <Badge variant="outline" className="font-mono text-[10px]">
+                  {info.label}
+                </Badge>
                 {account.linkedChannels.map((chId) => {
                   const ch = channels.find((c) => c.id === chId);
-                  return <Badge key={chId} variant="secondary" className="text-[10px] font-mono">{ch?.channel_name || chId}</Badge>;
+                  return (
+                    <Badge key={chId} variant="secondary" className="font-mono text-[10px]">
+                      {ch?.channel_name || chId}
+                    </Badge>
+                  );
                 })}
               </div>
             </div>
           )}
         </div>
-        <div className="flex items-center gap-1 flex-shrink-0">
+
+        <div className="flex flex-shrink-0 items-center gap-1">
           {isEditing ? (
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
@@ -130,13 +147,21 @@ export default function AccountRow({ account, channels, savingIntegration, onSav
               transition={{ type: "spring", stiffness: 400, damping: 20 }}
               className="flex items-center gap-1"
             >
-              <Button variant="ghost" size="icon" onClick={handleSave} className="text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10" disabled={savingIntegration}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleSave}
+                className="text-emerald-500 hover:bg-emerald-500/10 hover:text-emerald-400"
+                disabled={savingIntegration}
+              >
                 {savingIntegration ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
               </Button>
-              <Button variant="ghost" size="icon" onClick={cancelEdit} className="text-muted-foreground hover:text-foreground"><X size={14} /></Button>
+              <Button variant="ghost" size="icon" onClick={cancelEdit} className="text-muted-foreground hover:text-foreground">
+                <X size={14} />
+              </Button>
             </motion.div>
           ) : (
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            <div className="flex items-center gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
               {(account.platform === "twitch" || account.platform === "youtube") && onToggleMonitor && (
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -144,29 +169,36 @@ export default function AccountRow({ account, channels, savingIntegration, onSav
                       variant="ghost"
                       size="icon"
                       onClick={() => onToggleMonitor(account.platform, account.username, !isMonitored)}
-                      className={isMonitored
-                        ? "text-primary hover:text-primary/80 hover:bg-primary/10"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                      className={
+                        isMonitored
+                          ? "text-primary hover:bg-primary/10 hover:text-primary/80"
+                          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                       }
                     >
                       {isMonitored ? <Bell size={14} /> : <BellOff size={14} />}
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    {isMonitored ? "Мониторинг включен - уведомления в Telegram" : "Включить мониторинг стрима"}
+                    {isMonitored ? "Мониторинг включен - уведомления будут приходить в Telegram" : "Включить мониторинг стрима"}
                   </TooltipContent>
                 </Tooltip>
               )}
-              <Button variant="ghost" size="icon" onClick={startEdit} className="text-muted-foreground hover:text-foreground hover:bg-muted/50"><Pencil size={14} /></Button>
+
+              <Button variant="ghost" size="icon" onClick={startEdit} className="text-muted-foreground hover:bg-muted/50 hover:text-foreground">
+                <Pencil size={14} />
+              </Button>
+
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"><Trash2 size={14} /></Button>
+                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
+                    <Trash2 size={14} />
+                  </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle>Отвязать {info.label}?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Аккаунт <span className="font-mono font-semibold">{account.username}</span> будет отвязан. Это действие можно отменить, привязав аккаунт заново.
+                      Аккаунт <span className="font-mono font-semibold">{account.username}</span> будет отвязан. При необходимости его можно будет подключить заново.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>

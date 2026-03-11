@@ -1247,7 +1247,11 @@ async def verify_channel(request: web.Request):
     except ValidationError as e:
         return web.json_response({"error": "validation_error", "details": e.errors()}, status=400)
 
-    if REQUIRE_INIT_DATA and request.get("verified_user_id") and request["verified_user_id"] != str(payload.user_id):
+    user_id = _parse_int64(payload.user_id)
+    if user_id is None:
+        return web.json_response({"error": "invalid_user_id"}, status=400)
+
+    if REQUIRE_INIT_DATA and request.get("verified_user_id") and request["verified_user_id"] != str(user_id):
         return web.json_response({"error": "user_mismatch"}, status=403)
 
     platform = payload.platform.lower().strip()
