@@ -368,6 +368,3 @@ export default function Analytics() {
     </motion.div>
   );
 }
-  if (error) {
-    return <EmptyState icon={PieChart} title={t("analytics.errorTitle", "Failed to load analytics")} description={t("analytics.errorDescription", "Check your connection and try again.")} />;
-  }
