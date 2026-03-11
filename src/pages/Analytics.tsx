@@ -1,21 +1,15 @@
 ﻿import { useMemo, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { BarChart3, CalendarDays, Clock, Download, Eye, TrendingUp, Users, PieChart, Flame, Award, DollarSign, Heart } from "lucide-react";
-import { StatsCard } from "@/shared/ui/StatsCard";
-import { DataPoint, ViewerChart } from "@/components/dashboard/ViewerChart";
-import { PredictionCard } from "@/components/dashboard/PredictionCard";
-import { StreamSeriesRail } from "@/components/dashboard/StreamSeriesRail";
-import { LiveEventsFeed } from "@/components/dashboard/LiveEventsFeed";
-import { useI18n } from "@/lib/i18n";
+import { BarChart3, CalendarDays, Download, PieChart, Sparkles, TrendingUp, Users } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useAnalyticsData } from "@/hooks/useAnalyticsData";
 import { EmptyState } from "@/shared/ui/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Bar, BarChart, Brush, Cell, Line, LineChart, Pie, PieChart as RePieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, Cell, Line, LineChart, Pie, PieChart as RePieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { makeFadeUp, makeStagger } from "@/shared/motion";
-import { cn } from "@/lib/utils";
 import { ActivityMap } from "@/components/dashboard/ActivityMap";
+import { useAnalyticsData } from "@/hooks/useAnalyticsData";
+import { useI18n } from "@/lib/i18n";
 import { useQuery } from "@tanstack/react-query";
 
 type TelegramWindow = Window & {
@@ -40,34 +34,31 @@ type TimelineItem = {
   event?: string | null;
 };
 
-function mapTimeline(timeline: TimelineItem[] | undefined): DataPoint[] {
-  if (!timeline) return [];
-  let clickTotal = 0;
-  let donationTotal = 0;
-  return timeline.map((item) => {
-    const date = new Date(item.time);
-    const hh = String(date.getHours()).padStart(2, "0");
-    const mm = String(date.getMinutes()).padStart(2, "0");
-    if (item.event === "tg") clickTotal += 1;
-    if (item.event === "donate") donationTotal += 1;
-    return {
-      time: `${hh}:${mm}`,
-      viewers: item.viewers,
-      clicks: clickTotal,
-      donations: donationTotal,
-      event: item.event || null,
-    } as DataPoint;
-  });
-}
+const periods = [
+  { value: "7d", label: "7 дней" },
+  { value: "30d", label: "30 дней" },
+  { value: "90d", label: "90 дней" },
+  { value: "all", label: "Всё время" },
+] as const;
 
-type ChartType = "clicks" | "donations" | "followers";
+function HeatmapPreview() {
+  return (
+    <div className="grid grid-cols-7 gap-2">
+      {Array.from({ length: 28 }).map((_, index) => (
+        <div
+          key={index}
+          className="aspect-square rounded-xl border border-white/8 bg-white/[0.035]"
+          style={{ opacity: 0.25 + ((index % 7) / 10) }}
+        />
+      ))}
+    </div>
+  );
+}
 
 export default function Analytics() {
   const { t } = useI18n();
-  const [period, setPeriod] = useState("today");
-  const [combinedChart, setCombinedChart] = useState(false);
-  const [activeChart, setActiveChart] = useState<ChartType>("clicks");
-
+  const navigate = useNavigate();
+  const [period, setPeriod] = useState<(typeof periods)[number]["value"]>("30d");
   const { data, isLoading, error } = useAnalyticsData(period);
   const tg = (window as TelegramWindow).Telegram?.WebApp;
   const userId = tg?.initDataUnsafe?.user?.id;
@@ -84,38 +75,55 @@ export default function Analytics() {
     refetchInterval: 60_000,
   });
 
-  const timeline = useMemo(() => mapTimeline(data?.timeline), [data?.timeline]);
-  const peak = useMemo(() => Math.max(...timeline.map((p) => p.viewers), 0), [timeline]);
+  const timeline = useMemo(
+    () =>
+      (data?.timeline || []).map((item: TimelineItem, index) => ({
+        time: new Intl.DateTimeFormat("ru-RU", { hour: "2-digit", minute: "2-digit" }).format(new Date(item.time)),
+        viewers: item.viewers,
+        growth: item.viewers + index,
+      })),
+    [data?.timeline],
+  );
+
+  const hasData = !isLoading && (data?.streams_count ?? 0) > 0 && timeline.length > 0;
+  const peak = useMemo(() => Math.max(...timeline.map((point) => point.viewers), 0), [timeline]);
+  const averageOnline = useMemo(() => {
+    if (!timeline.length) return 0;
+    return Math.round(timeline.reduce((sum, point) => sum + point.viewers, 0) / timeline.length);
+  }, [timeline]);
   const peakTime = useMemo(() => {
     if (!timeline.length) return "20:00";
-    const max = timeline.reduce((acc, cur) => (cur.viewers > acc.viewers ? cur : acc), timeline[0]);
-    return max.time;
+    return timeline.reduce((best, point) => (point.viewers > best.viewers ? point : best), timeline[0]).time;
   }, [timeline]);
 
-  const lastStreamAt = useMemo(() => (data?.last_stream_at ? new Date(data.last_stream_at) : null), [data?.last_stream_at]);
-  const daysSinceLastStream = useMemo(() => {
-    if (!lastStreamAt) return null;
-    const diffMs = Date.now() - lastStreamAt.getTime();
-    return Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  }, [lastStreamAt]);
+  const platformComparison = useMemo(
+    () =>
+      (platformStats || [])
+        .map((stat) => ({
+          name: stat.platform === "youtube" ? "YouTube" : stat.platform === "kick" ? "Kick" : stat.platform === "twitch" ? "Twitch" : stat.platform,
+          value: stat.streams > 0 ? Math.round(stat.views / stat.streams) : 0,
+        }))
+        .filter((item) => Boolean(item.name)),
+    [platformStats],
+  );
 
-  const expectedViewers = useMemo(() => {
-    const avg = data?.avg_peak ?? 0;
-    const max = data?.max_peak ?? 0;
-    if (!avg && !max) return 0;
-    return Math.max(avg, Math.round(max * 0.8));
-  }, [data?.avg_peak, data?.max_peak]);
+  const donutData = useMemo(
+    () =>
+      [
+        { name: "Twitch", value: platformStats?.find((item) => item.platform === "twitch")?.views ?? 0, color: "#9146FF" },
+        { name: "YouTube", value: platformStats?.find((item) => item.platform === "youtube")?.views ?? 0, color: "#FF0000" },
+        { name: "Kick", value: platformStats?.find((item) => item.platform === "kick")?.views ?? 0, color: "#53FC18" },
+      ].filter((item) => item.value > 0),
+    [platformStats],
+  );
 
-  const achievements = [
-    t("analytics.achievementFirstStream", "First Stream"),
-    t("analytics.achievement100", "100 viewers"),
-    t("analytics.achievement10Donations", "First 10 donations"),
-    t("analytics.achievementStreak", "7 day stream streak"),
-  ];
+  const reduceMotion = useReducedMotion();
+  const container = makeStagger(reduceMotion);
+  const item = makeFadeUp(reduceMotion);
 
   const exportCsv = () => {
-    const rows = [["time", "viewers", "clicks", "donations", "event"], ...timeline.map((p) => [p.time, String(p.viewers), String(p.clicks ?? 0), String(p.donations ?? 0), p.event || ""])];
-    const csv = rows.map((r) => r.join(",")).join("\n");
+    const rows = [["time", "viewers"], ...timeline.map((entry) => [entry.time, String(entry.viewers)])];
+    const csv = rows.map((row) => row.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -125,296 +133,247 @@ export default function Analytics() {
     URL.revokeObjectURL(url);
   };
 
-  const exportPdf = () => {
-    const rows = timeline.map((p) => `<tr><td>${p.time}</td><td>${p.viewers}</td><td>${p.clicks ?? 0}</td><td>${p.donations ?? 0}</td><td>${p.event || ""}</td></tr>`).join("");
-    const win = window.open("", "_blank", "noopener,noreferrer,width=1000,height=700");
-    if (!win) return;
-    win.document.write(`<html><head><title>${t("analytics.reportTitle", "Analytics report")} ${period}</title><style>body{font-family:Arial;padding:24px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ddd;padding:8px;font-size:12px}th{background:#f4f4f4;text-align:left}</style></head><body><h2>${t("analytics.reportTitle", "Analytics report")} (${period})</h2><p>${t("analytics.generatedAt", "Generated")}: ${new Date().toLocaleString()}</p><table><thead><tr><th>${t("analytics.tableTime", "Time")}</th><th>${t("analytics.tableViewers", "Viewers")}</th><th>${t("analytics.tableClicks", "Clicks")}</th><th>${t("analytics.tableDonations", "Donations")}</th><th>${t("analytics.tableEvent", "Event")}</th></tr></thead><tbody>${rows}</tbody></table></body></html>`);
-    win.document.close();
-    win.focus();
-    win.print();
-  };
-
-  const hasData = !isLoading && timeline.length > 0;
-  const hasRecentStreams = (data?.streams_count ?? 0) > 0 && (daysSinceLastStream === null || daysSinceLastStream <= 2);
-  const chartData = timeline.map((p, index) => ({
-    time: p.time,
-    viewers: p.viewers,
-    clicks: p.clicks ?? 0,
-    donations: p.donations ?? 0,
-    followers: Math.max(0, Math.round((p.viewers + index) / 8)),
-  }));
-
-  const platformMap = useMemo(() => {
-    const map: Record<string, PlatformStat> = {};
-    (platformStats || []).forEach((stat) => {
-      map[stat.platform] = stat;
-    });
-    return map;
-  }, [platformStats]);
-
-  const platformComparison = useMemo(() => ([
-    { name: "Twitch", value: platformMap.twitch?.followers ?? 0 },
-    { name: "YouTube", value: platformMap.youtube?.followers ?? 0 },
-    { name: "Kick", value: platformMap.kick?.followers ?? 0 },
-    { name: "Trovo", value: platformMap.trovo?.followers ?? 0 },
-  ]), [platformMap]);
-
-  const bestPlatform = useMemo(() => {
-    const top = platformComparison.reduce((currentBest, candidate) => (
-      candidate.value > currentBest.value ? candidate : currentBest
-    ), platformComparison[0] ?? { name: "--", value: 0 });
-    return top.value > 0 ? top.name : "--";
-  }, [platformComparison]);
-
-  const donutData = [
-    { name: "Twitch", value: platformMap.twitch?.views ?? 0, color: "#9146FF" },
-    { name: "YouTube", value: platformMap.youtube?.views ?? 0, color: "#FF0000" },
-    { name: "Kick", value: platformMap.kick?.views ?? 0, color: "#53FC18" },
-    { name: "Trovo", value: platformMap.trovo?.views ?? 0, color: "#00B2FF" },
-  ];
-
-  const reduceMotion = useReducedMotion();
-  const container = makeStagger(reduceMotion);
-  const item = makeFadeUp(reduceMotion);
-
-  const chartConfig: Record<ChartType, { label: string; color: string; icon: React.ReactNode }> = {
-    clicks: { label: t("analytics.clicksToStream", "Clicks to stream"), color: "#00B2FF", icon: <Eye size={14} /> },
-    donations: { label: t("analytics.donationsPerStream", "Donations per stream"), color: "#F59E0B", icon: <DollarSign size={14} /> },
-    followers: { label: t("analytics.followersPerStream", "Followers per stream"), color: "#34D399", icon: <Heart size={14} /> },
-  };
+  if (error) {
+    return <EmptyState icon={BarChart3} title={t("analytics.errorTitle", "Не удалось загрузить аналитику")} description={t("analytics.errorDescription", "Проверьте подключение и попробуйте снова.")} />;
+  }
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="mx-auto max-w-[1440px] px-2.5 py-2.5 pb-24 sm:px-3 sm:py-3 md:px-6 md:py-6 lg:px-8">
-      <motion.div variants={item} className="mb-5 flex flex-wrap items-center justify-between gap-3 sm:mb-8 sm:gap-4">
-        <h1 className="text-xl font-black font-heading md:text-2xl">{t("analytics.title")}</h1>
-        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-          <Select value={period} onValueChange={setPeriod}>
-            <SelectTrigger aria-label={t("analytics.periodSelectLabel")} className="w-full sm:w-[170px]">
-              <CalendarDays size={14} className="mr-2" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="today">{t("analytics.periodToday")}</SelectItem>
-              <SelectItem value="yesterday">{t("analytics.periodYesterday")}</SelectItem>
-              <SelectItem value="7d">{t("analytics.period7d")}</SelectItem>
-              <SelectItem value="30d">{t("analytics.period30d")}</SelectItem>
-              <SelectItem value="all">{t("analytics.periodAll")}</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline" onClick={exportCsv} className="flex-1 gap-2 sm:flex-none" aria-label={t("analytics.exportCsv")}>
-            <Download size={14} />{t("analytics.exportCsv")}
-          </Button>
-          <Button variant="outline" onClick={exportPdf} className="flex-1 gap-2 sm:flex-none" aria-label={t("analytics.exportPdf")}>
-            <Download size={14} />{t("analytics.exportPdf")}
-          </Button>
-          <Button className="w-full sm:w-auto" variant={combinedChart ? "default" : "secondary"} onClick={() => setCombinedChart((v) => !v)}>
-            {combinedChart ? t("analytics.hideCombined") : t("analytics.showCombined")}
+      <motion.div variants={item} className="mb-5 flex flex-col gap-3 sm:mb-8 md:flex-row md:items-end md:justify-between">
+        <div>
+          <div className="text-[11px] font-medium uppercase tracking-[0.28em] text-muted-foreground">Аналитика</div>
+          <h1 className="mt-2 text-xl font-black font-heading md:text-2xl">Главный экран аналитики</h1>
+          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+            Сначала короткий итог, потом лучшие часы для запуска, сравнение платформ и подсказка, что делать дальше.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {periods.map((option) => (
+            <Button
+              key={option.value}
+              size="sm"
+              variant={period === option.value ? "default" : "outline"}
+              onClick={() => setPeriod(option.value)}
+              className="gap-2"
+            >
+              <CalendarDays size={14} /> {option.label}
+            </Button>
+          ))}
+          <Button size="sm" variant="ghost" onClick={exportCsv} className="gap-2 text-muted-foreground">
+            <Download size={14} /> CSV
           </Button>
         </div>
       </motion.div>
 
-      <motion.div variants={item} className="mb-5 grid grid-cols-1 gap-3.5 sm:mb-8 sm:gap-6">
-        <div className="saas-card">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
-            <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.streamForecast", "Stream Forecast")}</p>
-              {isLoading ? (
-                <div className="mt-3 space-y-2">
-                  <Skeleton className="h-4 w-40" />
-                  <Skeleton className="h-4 w-32" />
-                </div>
-              ) : (
-                <>
-                  {hasRecentStreams ? (
-                    <>
-                      <p className="mt-3 text-sm text-white/70">{t("analytics.expectedViewers", "Expected viewers today")}: <span className="text-white font-semibold">{expectedViewers}</span></p>
-                      <p className="text-sm text-white/70">{t("analytics.peakTime", "Peak time")}: <span className="text-white font-semibold">{peakTime}</span></p>
-                    </>
-                  ) : (
-                    <p className="mt-3 text-sm text-white/60">{t("analytics.noRecentStreams", "No recent streams to build a forecast.")}</p>
-                  )}
-                </>
-              )}
-            </div>
-            <div>
-              <div className="flex items-center gap-2 text-white">
-                <Flame size={18} className="animate-[streakFlame_1.6s_ease-in-out_infinite]" />
-                <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.streamStreak", "Stream Streak")}</p>
-              </div>
-              {isLoading ? (
-                <div className="mt-3 space-y-2">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-4 w-28" />
-                </div>
-              ) : (
-                <>
-                  <p className="mt-3 text-sm text-white/70">{t("analytics.currentStreak", "Current streak")}: <span className="text-white font-semibold">{data?.current_streak_days ?? 0} {t("analytics.days", "days")}</span></p>
-                  <p className="text-sm text-white/70">{t("analytics.longestStreak", "Longest streak")}: <span className="text-white font-semibold">{data?.longest_streak_days ?? 0} {t("analytics.days", "days")}</span></p>
-                </>
-              )}
-            </div>
-            <div>
-              <div className="flex items-center gap-2 text-white">
-                <Award size={16} />
-                <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.achievements", "Achievements")}</p>
-              </div>
-              {isLoading ? (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Skeleton className="h-6 w-24 rounded-full" />
-                  <Skeleton className="h-6 w-20 rounded-full" />
-                  <Skeleton className="h-6 w-28 rounded-full" />
-                </div>
-              ) : (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {achievements.map((badge) => (
-                    <span key={badge} className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-[11px] text-white/80 shadow-[0_0_20px_rgba(145,70,255,0.35)]">
-                      {badge}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </motion.div>
-
-      {hasData ? (
-        <motion.div variants={item} className="mb-6 grid grid-cols-1 gap-3 md:mb-10 md:gap-5 md:grid-cols-5">
-          <StatsCard icon={Eye} label={t("analytics.clicks")} value={data?.clicks ?? 0} delay={0} loading={isLoading} />
-          <StatsCard icon={TrendingUp} label={t("analytics.peak")} value={data?.max_peak ?? 0} delay={0.08} loading={isLoading} />
-          <StatsCard icon={BarChart3} label={t("analytics.average")} value={data?.avg_peak ?? 0} delay={0.16} loading={isLoading} />
-          <StatsCard icon={Clock} label={t("analytics.streamHours")} value={Number(data?.hours_streamed ?? 0)} delay={0.24} loading={isLoading} />
-          <StatsCard icon={Users} label={t("analytics.viewersNow")} value={0} delay={0.32} loading={isLoading} />
+      {isLoading ? (
+        <motion.div variants={item} className="grid gap-4 md:grid-cols-3">
+          <Skeleton className="h-32 rounded-[28px]" />
+          <Skeleton className="h-32 rounded-[28px]" />
+          <Skeleton className="h-32 rounded-[28px]" />
         </motion.div>
       ) : null}
 
-      <motion.div variants={item} className="mb-5 grid grid-cols-1 gap-3.5 lg:grid-cols-3 lg:gap-6 sm:mb-8">
-        <div className="saas-card lg:col-span-2">
-          <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.viewersGrowth", "Viewers growth")}</p>
-          <div className="mt-5 h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
-                <XAxis dataKey="time" stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
-                <YAxis stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
-                <Tooltip />
-                <Line type="monotone" dataKey="viewers" stroke="#9146FF" strokeWidth={2} dot={false} />
-                <Brush dataKey="time" height={30} stroke="#9146FF" />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-        <div className="saas-card">
-          <div className="flex items-center justify-between">
-            <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.summary", "Краткий итог")}</p>
-            <BarChart3 size={14} className="text-white/60" />
-          </div>
-          <div className="mt-4 space-y-2 text-sm text-white/70">
-            {hasRecentStreams ? (
-              <>
-                <p>{t("analytics.bestTime", "Best time to stream")}: <span className="text-white font-semibold">{peakTime}</span></p>
-                <p>{t("analytics.bestPlatform", "Best platform today")}: <span className="text-white font-semibold">{bestPlatform}</span></p>
-                <p>{t("analytics.viewerPeak", "Viewer peak")}: <span className="text-white font-semibold">{peak.toLocaleString()}</span></p>
-              </>
-            ) : (
-              <p className="text-white/60">{t("analytics.noInsights", "Not enough data yet. Start a stream to get useful insights.")}</p>
-            )}
-          </div>
-        </div>
-      </motion.div>
-
-      <motion.div variants={item} className="mb-5 grid grid-cols-1 gap-3.5 sm:mb-8 sm:gap-6">
-        <div className="saas-card">
-          <div className="flex items-center justify-between">
-            <p className="text-xs uppercase tracking-[0.3em] text-white/50">{chartConfig[activeChart].label}</p>
-            <div className="flex items-center gap-2">
-              {(Object.keys(chartConfig) as ChartType[]).map((key) => (
-                <Button
-                  key={key}
-                  size="sm"
-                  variant={activeChart === key ? "secondary" : "ghost"}
-                  onClick={() => setActiveChart(key)}
-                  className={cn("gap-2", activeChart === key && "bg-white/10")}
-                >
-                  {chartConfig[key].icon}
-                  <span className="hidden md:inline">{chartConfig[key].label}</span>
-                </Button>
-              ))}
+      {!isLoading && !hasData ? (
+        <motion.div variants={item} className="space-y-5">
+          <div className="saas-card">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+              <div className="max-w-2xl">
+                <p className="text-xs uppercase tracking-[0.28em] text-white/45">Аналитика появится после первого эфира</p>
+                <h2 className="mt-3 text-2xl font-bold text-white">Подключите платформу и завершите хотя бы одну трансляцию</h2>
+                <p className="mt-3 text-sm text-white/65">
+                  После этого вы увидите средний онлайн, рост зрителей, heatmap по времени и AI-рекомендации.
+                </p>
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <Button onClick={() => navigate("/integrations")}>Подключить платформу</Button>
+                  <Button variant="outline" onClick={() => navigate("/info")}>Как это работает</Button>
+                </div>
+              </div>
+              <div className="grid min-w-[240px] gap-3 rounded-[28px] border border-white/10 bg-white/5 p-4 lg:w-[320px]">
+                <div className="rounded-2xl border border-white/8 bg-black/10 p-3 text-sm text-white/60">Средний онлайн</div>
+                <div className="rounded-2xl border border-white/8 bg-black/10 p-3 text-sm text-white/60">Рост зрителей</div>
+                <div className="rounded-2xl border border-white/8 bg-black/10 p-3 text-sm text-white/60">AI-рекомендации</div>
+              </div>
             </div>
           </div>
-          <div className="mt-5 h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              {activeChart === "followers" ? (
-                <LineChart data={chartData}>
-                  <XAxis dataKey="time" stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
-                  <YAxis stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
-                  <Tooltip />
-                  <Line type="monotone" dataKey={activeChart} stroke={chartConfig[activeChart].color} strokeWidth={2} dot={false} />
-                </LineChart>
-              ) : (
-                <BarChart data={chartData}>
-                  <XAxis dataKey="time" stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
-                  <YAxis stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
-                  <Tooltip />
-                  <Bar dataKey={activeChart} fill={chartConfig[activeChart].color} radius={[6, 6, 0, 0]} />
-                </BarChart>
-              )}
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </motion.div>
 
-      <motion.div variants={item} className="mb-5 sm:mb-8">
-        {hasData ? <ActivityMap /> : <div className="saas-card text-sm text-muted-foreground">{t("analytics.noHeatmap", "No data for heatmap yet.")}</div>}
-      </motion.div>
-
-      <motion.div variants={item} className="mb-6 grid grid-cols-1 gap-3.5 lg:grid-cols-3 lg:gap-6 sm:mb-10">
-        <div className="saas-card lg:col-span-2">
-          <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.platformComparison", "Platform comparison")}</p>
-          <div className="mt-5 h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={platformComparison}>
-                <XAxis dataKey="name" stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
-                <YAxis stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
-                <Tooltip />
-                <Bar dataKey="value" fill="#9146FF" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-        <div className="saas-card">
-          <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.donutChart", "Donut chart")}</p>
-          <div className="mt-5 h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <RePieChart>
-                <Pie data={donutData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={4}>
-                  {donutData.map((entry) => (
-                    <Cell key={entry.name} fill={entry.color} />
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div className="saas-card lg:col-span-2">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.28em] text-white/45">Preview</p>
+                  <h3 className="mt-2 text-base font-semibold">Рост зрителей</h3>
+                </div>
+                <TrendingUp size={16} className="text-white/55" />
+              </div>
+              <div className="h-72 rounded-[24px] border border-white/8 bg-white/[0.03] p-4">
+                <div className="flex h-full items-end gap-3">
+                  {Array.from({ length: 12 }).map((_, index) => (
+                    <div key={index} className="flex-1 rounded-t-full bg-white/10" style={{ height: `${30 + (index % 5) * 12}%` }} />
                   ))}
-                </Pie>
-                <Tooltip />
-              </RePieChart>
-            </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+            <div className="saas-card">
+              <p className="text-xs uppercase tracking-[0.28em] text-white/45">AI-анализ</p>
+              <h3 className="mt-2 text-base font-semibold">Пока мало данных для AI-анализа</h3>
+              <p className="mt-3 text-sm text-white/65">
+                Подключите канал и завершите 1-2 эфира - после этого появятся рекомендации по времени, удержанию и росту зрителей.
+              </p>
+              <Button className="mt-5 w-full" onClick={() => navigate("/integrations")}>Подключить платформу</Button>
+            </div>
           </div>
-        </div>
-      </motion.div>
+        </motion.div>
+      ) : null}
 
       {hasData ? (
         <>
-          <motion.div variants={item} className="mb-5 sm:mb-8"><ViewerChart loading={isLoading} data={timeline} showCombined={combinedChart} /></motion.div>
-          <motion.div variants={item} className="mb-5 sm:mb-8"><PredictionCard data={timeline} liveViewers={0} isLive={false} /></motion.div>
-          <motion.div variants={item} className="mb-5 sm:mb-8"><StreamSeriesRail data={timeline} /></motion.div>
-          <motion.div variants={item} className="mb-5 sm:mb-8"><LiveEventsFeed /></motion.div>
+          <motion.div variants={item} className="mb-5 grid grid-cols-1 gap-3 md:grid-cols-3 md:gap-5 sm:mb-8">
+            <div className="saas-card">
+              <p className="text-xs uppercase tracking-[0.28em] text-white/45">Средний онлайн</p>
+              <div className="mt-4 text-3xl font-bold text-white">{averageOnline.toLocaleString("ru-RU")}</div>
+              <p className="mt-2 text-sm text-white/60">Средний онлайн за последние {period === "7d" ? "7 дней" : period === "90d" ? "90 дней" : period === "all" ? "всё время" : "30 дней"}</p>
+            </div>
+            <div className="saas-card">
+              <p className="text-xs uppercase tracking-[0.28em] text-white/45">Пик за 30 дней</p>
+              <div className="mt-4 text-3xl font-bold text-white">{peak.toLocaleString("ru-RU")}</div>
+              <p className="mt-2 text-sm text-white/60">Максимум на последних завершённых эфирах</p>
+            </div>
+            <div className="saas-card">
+              <p className="text-xs uppercase tracking-[0.28em] text-white/45">Лучшее время для эфира</p>
+              <div className="mt-4 text-3xl font-bold text-white">{peakTime}</div>
+              <p className="mt-2 text-sm text-white/60">Чаще всего именно в это окно зрители остаются дольше</p>
+            </div>
+          </motion.div>
 
-          <motion.div variants={item} className="rounded-2xl border border-border/60 bg-card/65 py-6 text-center font-mono text-sm text-muted-foreground">
-            {t("analytics.sessions")}: {data?.streams_count ?? 0} | {t("analytics.peak")}: {peak}
+          <motion.div variants={item} className="mb-5 grid grid-cols-1 gap-3.5 lg:grid-cols-3 lg:gap-6 sm:mb-8">
+            <div className="saas-card lg:col-span-2">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.28em] text-white/45">Рост зрителей</p>
+                  <h3 className="mt-2 text-base font-semibold">Как меняется онлайн по времени</h3>
+                </div>
+                <TrendingUp size={16} className="text-white/55" />
+              </div>
+              <div className="mt-5 h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={timeline}>
+                    <XAxis dataKey="time" stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
+                    <YAxis stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="viewers" stroke="#9146FF" strokeWidth={2.5} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              <p className="mt-4 text-sm text-white/62">Самый заметный рост был по средам вечером.</p>
+            </div>
+
+            <div className="saas-card">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.28em] text-white/45">AI-инсайт</p>
+                  <h3 className="mt-2 text-base font-semibold">Короткий итог</h3>
+                </div>
+                <Sparkles size={16} className="text-white/55" />
+              </div>
+              <div className="mt-4 space-y-3 text-sm text-white/68">
+                <p>Лучшее время для запуска сейчас около <span className="font-semibold text-white">{peakTime}</span>.</p>
+                <p>Если хотите увеличить удержание, запланируйте анонс за 20-30 минут до старта.</p>
+                <p>Следующий полезный шаг: проверьте интеграции, чтобы собрать аналитику по всем площадкам.</p>
+              </div>
+              <Button variant="outline" className="mt-5 w-full" onClick={() => navigate("/integrations")}>Подключить платформу</Button>
+            </div>
+          </motion.div>
+
+          <motion.div variants={item} className="mb-5 grid grid-cols-1 gap-3.5 lg:grid-cols-3 lg:gap-6 sm:mb-8">
+            <div className="saas-card lg:col-span-2">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.28em] text-white/45">Heatmap</p>
+                  <h3 className="mt-2 text-base font-semibold">Лучшие часы для запуска</h3>
+                </div>
+                <BarChart3 size={16} className="text-white/55" />
+              </div>
+              <div className="mt-5 rounded-[24px] border border-white/8 bg-white/[0.03] p-4">
+                {(data?.streams_count ?? 0) >= 2 ? <ActivityMap /> : <HeatmapPreview />}
+              </div>
+              <p className="mt-4 text-sm text-white/60">
+                {(data?.streams_count ?? 0) >= 2
+                  ? "Карта уже показывает, в какие часы запускаться выгоднее всего."
+                  : "Здесь появится карта лучших часов для запуска, когда накопится история эфиров."}
+              </p>
+              {(data?.streams_count ?? 0) < 2 ? (
+                <Button variant="outline" className="mt-4" onClick={() => navigate("/info")}>Как собрать данные</Button>
+              ) : null}
+            </div>
+
+            <div className="saas-card">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.28em] text-white/45">Сводка</p>
+                  <h3 className="mt-2 text-base font-semibold">Что уже видно</h3>
+                </div>
+                <Users size={16} className="text-white/55" />
+              </div>
+              <div className="mt-4 space-y-3 text-sm text-white/68">
+                <p>Лучшее время для эфира: <span className="font-semibold text-white">{peakTime}</span></p>
+                <p>Пик за выбранный период: <span className="font-semibold text-white">{peak.toLocaleString("ru-RU")}</span></p>
+                <p>Следующий шаг: закрепите время старта и подготовьте анонс заранее.</p>
+              </div>
+            </div>
+          </motion.div>
+
+          <motion.div variants={item} className="grid grid-cols-1 gap-3.5 lg:grid-cols-3 lg:gap-6">
+            <div className="saas-card lg:col-span-2">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.28em] text-white/45">Сравнение платформ</p>
+                  <h3 className="mt-2 text-base font-semibold">Сравнение по среднему отклику за последние 30 дней</h3>
+                </div>
+                <BarChart3 size={16} className="text-white/55" />
+              </div>
+              <div className="mt-5 h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={platformComparison}>
+                    <XAxis dataKey="name" stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
+                    <YAxis stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
+                    <Tooltip />
+                    <Bar dataKey="value" fill="#9146FF" radius={[8, 8, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <p className="mt-4 text-sm text-white/60">Сравнение показывает, где эфиры получают лучший средний отклик по просмотрам на один запуск.</p>
+            </div>
+
+            <div className="saas-card">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.28em] text-white/45">Распределение просмотров</p>
+                  <h3 className="mt-2 text-base font-semibold">Как делится внимание</h3>
+                </div>
+                <PieChart size={16} className="text-white/55" />
+              </div>
+              <div className="mt-5 h-64">
+                {donutData.length ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RePieChart>
+                      <Pie data={donutData} dataKey="value" nameKey="name" innerRadius={52} outerRadius={82} paddingAngle={4}>
+                        {donutData.map((entry) => (
+                          <Cell key={entry.name} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </RePieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex h-full items-center justify-center rounded-[24px] border border-dashed border-white/10 bg-black/10 text-sm text-white/50">
+                    Данные по платформам появятся после подключения хотя бы одной площадки.
+                  </div>
+                )}
+              </div>
+            </div>
           </motion.div>
         </>
-      ) : (
-        <EmptyState icon={PieChart} title={t("analytics.emptyTitle")} description={t("analytics.emptyDescription")} />
-      )}
+      ) : null}
     </motion.div>
   );
 }
-
-

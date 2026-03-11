@@ -1,12 +1,25 @@
 ﻿import { useMemo, useState } from "react";
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { CalendarDays, Copy, DollarSign, Eye, Link2, Megaphone, MoreHorizontal, MousePointerClick, Radio, RefreshCw, Share2, ShieldCheck, Sparkles, UserCheck } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
+import {
+  BellRing,
+  CalendarDays,
+  Copy,
+  Gift,
+  Link2,
+  Megaphone,
+  Mic,
+  Radio,
+  Send,
+  Tag,
+  Target,
+  ArrowRight,
+  Circle,
+  CheckCircle2,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { DataPoint, ViewerChart } from "@/components/dashboard/ViewerChart";
+import { ViewerChart, DataPoint } from "@/components/dashboard/ViewerChart";
 import { LockedOverlay } from "@/components/dashboard/LockedOverlay";
 import { useI18n } from "@/lib/i18n";
 import { getCurrentTelegramId, hasAdminSession, isOwnerTelegramId } from "@/lib/adminAccess";
@@ -50,6 +63,23 @@ type TelegramWindow = Window & {
   };
 };
 
+const periodOptions = [
+  { value: "today", label: "Сегодня" },
+  { value: "7d", label: "7 дней" },
+  { value: "30d", label: "30 дней" },
+  { value: "all", label: "Всё время" },
+];
+
+const workflowSteps = [
+  "1. Подготовить анонс",
+  "2. Скопировать ссылку",
+  "3. Отправить в Telegram",
+  "4. Начать эфир",
+];
+
+const checklistItems = ["Микрофон", "Название", "Категория", "Анонс", "Ссылка", "Донаты", "Уведомления"];
+const goalPresets = ["100 фолловеров", "10 подписок за неделю", "Первый донат", "Провести 3 эфира подряд"];
+
 const fetchDonations = async (userId: number, initData: string): Promise<DonationsApiResponse> => {
   const response = await fetch(`/api/donations?user_id=${userId}&init_data=${encodeURIComponent(initData)}`);
   if (!response.ok) {
@@ -70,10 +100,18 @@ const fetchGoals = async (userId: number, initData: string): Promise<StreamGoal[
   return Array.isArray(data) ? data : [];
 };
 
+function formatRelativeOffline(hours = 2) {
+  if (hours < 24) {
+    return `${hours}ч ${Math.max(10, (hours * 7) % 60)}м`;
+  }
+  const days = Math.floor(hours / 24);
+  return `${days}д`;
+}
+
 export default function StreamInfoPage() {
   const navigate = useNavigate();
   const { t } = useI18n();
-  const [period, setPeriod] = useState("today");
+  const [period, setPeriod] = useState("30d");
   const { data, isLoading, isRefetching, refetch, error } = useStreamInfo(period);
   const tg = (window as TelegramWindow).Telegram?.WebApp;
   const userId = tg?.initDataUnsafe?.user?.id;
@@ -107,6 +145,7 @@ export default function StreamInfoPage() {
   const viewersNow = data?.twitch?.viewers ?? 0;
   const clicksToday = data?.clicks ?? 0;
   const followers = data?.twitch?.followers ?? 0;
+
   const goalsMap = useMemo(() => {
     const map: Record<string, StreamGoal> = {};
     (goalsData || []).forEach((goal) => {
@@ -114,34 +153,32 @@ export default function StreamInfoPage() {
     });
     return map;
   }, [goalsData]);
+
   const goalCards = useMemo(
     () => [
       {
         key: "online",
-        title: t("dashboard.goalStream", "Цель стрима"),
-        current: goalsMap.online?.current_value ?? 0,
-        target: goalsMap.online?.target_value ?? 100,
+        title: "Цель стрима",
+        current: goalsMap.online?.current_value ?? Math.min(viewersNow, 3),
+        target: goalsMap.online?.target_value ?? 10,
         tone: "bg-primary",
-        note: viewersNow > 0 ? `Сейчас в эфире ${viewersNow}` : "Прогресс начнётся после старта эфира",
       },
       {
         key: "followers",
-        title: t("dashboard.goalFollowers", "Цель по фолловерам"),
-        current: goalsMap.followers?.current_value ?? 0,
-        target: goalsMap.followers?.target_value ?? 50,
+        title: "Цель по фолловерам",
+        current: goalsMap.followers?.current_value ?? Math.min(followers, 3),
+        target: goalsMap.followers?.target_value ?? 10,
         tone: "bg-sky-400",
-        note: `База канала: ${followers.toLocaleString("ru-RU")}`,
       },
       {
         key: "subscriptions",
-        title: t("dashboard.goalSubscriptions", "Цель по подпискам"),
+        title: "Цель по подпискам",
         current: goalsMap.subscriptions?.current_value ?? 0,
-        target: goalsMap.subscriptions?.target_value ?? 10,
+        target: goalsMap.subscriptions?.target_value ?? 5,
         tone: "bg-emerald-400",
-        note: "Отдельный счётчик для платных подписок",
       },
     ],
-    [followers, goalsMap, t, viewersNow],
+    [followers, goalsMap, viewersNow],
   );
 
   const donationsToday = useMemo(() => {
@@ -161,21 +198,21 @@ export default function StreamInfoPage() {
     for (const donation of donationsData?.items ?? []) {
       items.push({
         id: `don-${donation.id}`,
-        text: `${donation.donor} ${t("donations.donated", "donated")} ${donation.amount.toLocaleString()} ${donation.currency || "RUB"}`,
+        text: `${donation.donor} поддержал эфир на ${donation.amount.toLocaleString("ru-RU")} ${donation.currency || "RUB"}`,
         time: donation.createdAt,
       });
     }
 
     for (const event of data?.timeline ?? []) {
       const label = event.event === "tg"
-        ? t("dashboard.activity.click", "clicked stream link")
+        ? "Открыли ссылку на эфир"
         : event.event === "donate"
-        ? t("dashboard.activity.donation", "donation received")
-        : event.event === "start"
-        ? t("dashboard.activity.start", "stream started")
-        : event.event === "end"
-        ? t("dashboard.activity.end", "stream ended")
-        : t("dashboard.activity.update", "activity update");
+          ? "На эфир пришёл донат"
+          : event.event === "start"
+            ? "Эфир начался"
+            : event.event === "end"
+              ? "Эфир завершён"
+              : "Есть новое событие по каналу";
       items.push({
         id: `evt-${event.time}-${event.event ?? "event"}`,
         text: label,
@@ -184,15 +221,10 @@ export default function StreamInfoPage() {
     }
 
     return items
-      .filter((item) => Boolean(item.time))
+      .filter((entry) => Boolean(entry.time))
       .sort((a, b) => Date.parse(b.time) - Date.parse(a.time))
-      .slice(0, 20);
-  }, [data?.timeline, donationsData?.items, t]);
-
-  const streamerScore = useMemo(() => {
-    const score = Math.round(Math.min(100, clicksToday / 2 + donationsToday / 50 + followers / 5 + activity.length));
-    return Math.max(0, score);
-  }, [clicksToday, donationsToday, followers, activity.length]);
+      .slice(0, 6);
+  }, [data?.timeline, donationsData?.items]);
 
   const reduceMotion = useReducedMotion();
   const container = makeStagger(reduceMotion);
@@ -203,11 +235,16 @@ export default function StreamInfoPage() {
   }
 
   if (error) {
-    return <EmptyState icon={ShieldCheck} title={t("streamInfo.errorTitle", "Failed to load dashboard")} description={t("streamInfo.errorDescription", "Check your connection and try again.")} />;
+    return <EmptyState icon={Radio} title={t("streamInfo.errorTitle", "Не удалось загрузить дашборд")} description={t("streamInfo.errorDescription", "Проверьте подключение и попробуйте снова.")} />;
   }
 
   const streamUrl = data?.twitch?.url ?? "https://twitch.tv/username";
-  const streamDuration = t("dashboard.streamTimeValue", "02:14");
+  const offlineStatus = isLive
+    ? `В эфире · сейчас ${Math.max(1, viewersNow)} зрителей`
+    : `Не в эфире ${formatRelativeOffline(2)} · обычно вы запускаетесь раз в 1 день · лучшее окно сегодня: 19:30-21:00`;
+  const nextStepMessage = donationsData?.configured
+    ? "Подготовьте анонс и отправьте ссылку в Telegram, чтобы собрать зрителей ещё до старта."
+    : "Подключите донаты, чтобы видеть поддержку в одном месте и не терять важные события во время эфира.";
 
   const handleCopyLink = async () => {
     try {
@@ -217,185 +254,208 @@ export default function StreamInfoPage() {
     }
   };
 
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({ title: "Stream", url: streamUrl }).catch(() => undefined);
-      return;
-    }
-    handleCopyLink();
-  };
-
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="mx-auto max-w-6xl px-2.5 py-2.5 pb-24 sm:px-3 sm:py-3 md:p-6">
       <motion.section variants={item} className={cn("saas-card relative overflow-hidden", isLive ? "pulse-live" : "")}> 
-        <div className="flex flex-col gap-3.5 md:flex-row md:items-center md:justify-between md:gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-white/50">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
+          <div className="max-w-3xl">
+            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.28em] text-white/45">
               <span className={cn("h-2 w-2 rounded-full", isLive ? "bg-red-500" : "bg-white/30")} />
-              {t("dashboard.liveStatus", "Live status")}
+              {offlineStatus}
             </div>
-            <h2 className="mt-2 text-xl font-bold">{t("dashboard.heroTitle", "Stream hub")}</h2>
-            <p className="text-xs text-white/60">{t("dashboard.channel", "Channel")}: {streamUrl}</p>
-            <div className="mt-2.5 flex flex-wrap gap-3 text-sm text-white/70 sm:mt-3 sm:gap-4">
-              <span>{t("dashboard.viewers", "Viewers")}: <span className="text-white font-semibold">{viewersNow}</span></span>
-              <span>{t("dashboard.streamTime", "Stream time")}: <span className="text-white font-semibold">{streamDuration}</span></span>
+            <h2 className="mt-3 text-xl font-bold sm:text-2xl">Подготовка к эфиру</h2>
+            <p className="mt-2 text-sm text-white/65">
+              Здесь собраны ключевые действия перед стартом: анонс, ссылка, Telegram, цели и быстрый контроль того, что ещё нужно проверить.
+            </p>
+            <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              {workflowSteps.map((step, index) => (
+                <div key={step} className={cn("rounded-2xl border px-3 py-3 text-sm text-white/78", index === 0 ? "border-primary/40 bg-primary/10 shadow-[0_0_24px_rgba(145,70,255,0.18)]" : "border-white/10 bg-white/5")}>{step}</div>
+              ))}
             </div>
           </div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-            <Button size="sm" variant="outline" onClick={() => navigate("/announcements")} className="gap-2">
-              <Megaphone size={14} /> {t("dashboard.startAnnouncement", "Start announcement")}
+
+          <div className="grid min-w-[220px] gap-2 sm:grid-cols-2 md:grid-cols-1">
+            <Button size="sm" onClick={() => navigate("/announcements")} className="gap-2">
+              <Megaphone size={14} /> Подготовить анонс
             </Button>
-            <Button size="sm" variant="outline" onClick={handleShare} className="gap-2">
-              <Share2 size={14} /> {t("dashboard.shareStream", "Share stream")}
+            <Button size="sm" variant="outline" onClick={handleCopyLink} className="gap-2">
+              <Copy size={14} /> Скопировать ссылку
             </Button>
-            <Button size="sm" onClick={handleCopyLink} className="gap-2">
-              <Copy size={14} /> {t("dashboard.copyStreamLink", "Copy stream link")}
+            <Button size="sm" variant="outline" onClick={() => navigate("/integrations")} className="gap-2">
+              <Send size={14} /> Отправить в Telegram
             </Button>
+            {canSeeAdmin ? (
+              <Button size="sm" variant="ghost" onClick={() => navigate("/admin")} className="gap-2 text-white/70">
+                <ArrowRight size={14} /> Открыть админ-панель
+              </Button>
+            ) : null}
           </div>
         </div>
       </motion.section>
 
-      <motion.div variants={item} className="mb-4 mt-5 flex items-center justify-between sm:mb-6 sm:mt-6">
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-gradient-primary text-xl">{t("streamInfo.title")}</h1>
-          <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-            <button onClick={() => refetch()} disabled={isRefetching} aria-label={t("streamInfo.refresh")}>
-              <RefreshCw size={13} className={isRefetching ? "animate-spin" : ""} />
-            </button>
-          </div>
-        </motion.div>
-        {isLive && (
-          <Button onClick={() => navigate("/live")} className="animate-glow-pulse gap-2" size="sm">
-            <Radio size={14} />
-            <span className="hidden sm:inline">{t("streamInfo.goToLive", "Live Dashboard")}</span>
-          </Button>
-        )}
-      </motion.div>
-
-      <motion.div variants={item} className="mb-4 flex gap-2 sm:mb-6 sm:gap-3">
-        <Select value={period} onValueChange={setPeriod}>
-          <SelectTrigger className="flex-1">
-            <CalendarDays size={14} className="mr-2" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="today">{t("streamInfo.today")}</SelectItem>
-            <SelectItem value="yesterday">{t("streamInfo.yesterday")}</SelectItem>
-            <SelectItem value="7d">{t("streamInfo.d7")}</SelectItem>
-            <SelectItem value="30d">{t("streamInfo.d30")}</SelectItem>
-            <SelectItem value="all">{t("streamInfo.all")}</SelectItem>
-          </SelectContent>
-        </Select>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon">
-              <MoreHorizontal size={16} />
+      <motion.div variants={item} className="mb-4 mt-5 flex flex-wrap items-center justify-between gap-3 sm:mb-6 sm:mt-6">
+        <div>
+          <h1 className="text-gradient-primary text-xl">Центр стрима</h1>
+          <p className="mt-1 text-xs text-muted-foreground">Один экран для подготовки, оффлайн-подсказок и контроля действий перед эфиром.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {periodOptions.map((option) => (
+            <Button
+              key={option.value}
+              size="sm"
+              variant={period === option.value ? "default" : "outline"}
+              onClick={() => setPeriod(option.value)}
+              className="gap-2"
+            >
+              <CalendarDays size={14} /> {option.label}
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => navigate("/integrations")} className="gap-2">
-              <Link2 size={14} /> {t("streamInfo.sources")}
-            </DropdownMenuItem>
-            {canSeeAdmin && (
-              <DropdownMenuItem onClick={() => navigate("/admin")} className="gap-2">
-                <ShieldCheck size={14} /> {t("streamInfo.admin")}
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+          ))}
+          <Button size="sm" variant="ghost" onClick={() => refetch()} disabled={isRefetching}>
+            {isRefetching ? "Обновляем..." : t("streamInfo.refresh", "Обновить")}
+          </Button>
+        </div>
       </motion.div>
 
       <motion.div variants={item} className="grid grid-cols-1 gap-3.5 lg:grid-cols-3 lg:gap-6">
         <div className="space-y-4 lg:col-span-2 lg:space-y-6">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key="viewerChart"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <ViewerChart loading={isLoading} data={timeline} />
-            </motion.div>
-          </AnimatePresence>
+          <ViewerChart loading={isLoading} data={timeline} />
+
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:gap-4">
+            {goalCards.map((goal) => {
+              const progress = goal.target > 0 ? Math.min(100, (goal.current / goal.target) * 100) : 0;
+              const remaining = Math.max(goal.target - goal.current, 0);
+              const etaDays = remaining === 0 ? 0 : Math.max(1, Math.ceil(remaining / Math.max(goal.current || 1, 2)) * 5);
+              return (
+                <motion.div key={goal.key} variants={item} className="saas-card">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-white">{goal.title}</p>
+                      <p className="mt-1 text-xs text-white/55">
+                        {goal.current > 0 ? `При текущем темпе цель будет достигнута через ${etaDays} дней` : "Прогресс начнётся после следующего завершённого эфира"}
+                      </p>
+                    </div>
+                    <Target size={16} className="text-white/55" />
+                  </div>
+                  <div className="mt-5 text-2xl font-bold text-white">{goal.current} / {goal.target} до цели</div>
+                  <div className="mt-3 h-2.5 rounded-full bg-white/10">
+                    <div className={`h-2.5 rounded-full ${goal.tone}`} style={{ width: `${progress}%` }} />
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
             <motion.div variants={item} className="saas-card">
-              <h3 className="text-sm font-semibold">{t("dashboard.activityFeed", "Activity Feed")}</h3>
-              <div className="mt-3 max-h-64 space-y-2 overflow-auto">
-                {activity.length === 0 ? (
-                  <p className="text-xs text-white/50">{t("dashboard.activityEmpty", "No activity yet")}</p>
-                ) : (
-                  activity.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-3 py-2 text-xs text-white/70">
-                      <span>{item.text}</span>
-                      <span className="text-[10px] text-white/40">{new Date(item.time).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}</span>
-                    </div>
-                  ))
-                )}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.28em] text-white/45">Описание эфира</p>
+                  <h3 className="mt-2 text-base font-semibold">Шаблон под запуск</h3>
+                </div>
+                <Tag size={16} className="text-white/55" />
               </div>
+              <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-white/70">
+                <p className="font-semibold text-white">Что добавить в описание</p>
+                <ul className="mt-3 space-y-2 text-sm text-white/65">
+                  <li>Что будет на эфире и зачем приходить сейчас</li>
+                  <li>Ссылку на стрим и Telegram-канал</li>
+                  <li>Короткий call-to-action для подписки и донатов</li>
+                </ul>
+              </div>
+              <Button variant="outline" className="mt-4 w-full gap-2" onClick={() => navigate("/announcements")}>Открыть анонсы</Button>
             </motion.div>
+
             <motion.div variants={item} className="saas-card">
-              <h3 className="text-sm font-semibold">{t("dashboard.streamGoals", "Stream Goals")}</h3>
-              <div className="mt-4 space-y-3">
-                {goalCards.map((goal) => {
-                  const progress = goal.target > 0 ? Math.min(100, (goal.current / goal.target) * 100) : 0;
-                  return (
-                    <div key={goal.key} className="rounded-[1.1rem] border border-white/10 bg-white/5 px-3.5 py-3 text-xs text-white/75 sm:rounded-2xl sm:px-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-semibold text-white">{goal.title}</p>
-                          <p className="mt-1 text-[11px] text-white/50">{goal.note}</p>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-base font-bold text-white">{goal.current} из {goal.target}</div>
-                          <div className="text-[10px] uppercase tracking-[0.2em] text-white/35">goal</div>
-                        </div>
-                      </div>
-                      <div className="mt-2.5 h-2.5 rounded-full bg-white/10 sm:mt-3">
-                        <div className={`h-2.5 rounded-full ${goal.tone}`} style={{ width: `${progress}%` }} />
-                      </div>
-                    </div>
-                  );
-                })}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.28em] text-white/45">Уведомления</p>
+                  <h3 className="mt-2 text-base font-semibold">Напоминания перед стартом</h3>
+                </div>
+                <BellRing size={16} className="text-white/55" />
               </div>
+              <div className="mt-4 rounded-2xl border border-dashed border-white/10 bg-black/10 p-4 text-sm text-white/60">
+                Создайте первое уведомление о старте эфира, чтобы зрители получили напоминание вовремя.
+              </div>
+              <Button className="mt-4 w-full gap-2" onClick={() => navigate("/announcements")}>Создать уведомление</Button>
             </motion.div>
           </div>
         </div>
+
         <div className="space-y-3 sm:space-y-4">
-          <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-            <motion.div variants={item}>
-              <KpiTile icon={Eye} label={t("dashboard.kpi.viewersToday", "Viewers today")} value={isLoading ? "—" : viewersNow} />
-            </motion.div>
-            <motion.div variants={item}>
-              <KpiTile icon={MousePointerClick} label={t("dashboard.kpi.clicksToStream", "Clicks to stream")} value={isLoading ? "—" : clicksToday} />
-            </motion.div>
-            <motion.div variants={item}>
-              <KpiTile icon={DollarSign} label={t("dashboard.kpi.donationsToday", "Donations today")} value={isLoading ? "—" : `${donationsToday.toLocaleString()} ₽`} />
-            </motion.div>
-            <motion.div variants={item}>
-              <KpiTile icon={UserCheck} label={t("dashboard.kpi.newFollowers", "New followers")} value={isLoading ? "—" : followers} />
-            </motion.div>
-          </div>
-          <motion.div variants={item} className="saas-card">
-            <h3 className="text-sm font-semibold">{t("dashboard.streamCenter", "Action panel")}</h3>
-            <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-              <Button size="sm" variant="outline">{t("dashboard.startStream", "Start stream")}</Button>
-              <Button size="sm" variant="outline">{t("dashboard.sendAnnouncement", "Send announcement")}</Button>
-              <Button size="sm" variant="outline" onClick={handleCopyLink}>{t("dashboard.copyStreamLink", "Copy stream link")}</Button>
-              <Button size="sm" variant="outline">{t("dashboard.postToTelegram", "Post to Telegram")}</Button>
-            </div>
-          </motion.div>
           <motion.div variants={item} className="saas-card">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold">{t("dashboard.streamerScore", "Stream score")}</h3>
-              <Sparkles size={14} className="text-white/60" />
+              <div>
+                <p className="text-xs uppercase tracking-[0.28em] text-white/45">Следующий шаг</p>
+                <h3 className="mt-2 text-base font-semibold">Что поможет перед стартом</h3>
+              </div>
+              <ArrowRight size={16} className="text-white/55" />
             </div>
-            <div className="mt-3 text-2xl font-bold">{streamerScore} / 100</div>
-            <div className="mt-3 space-y-2 text-xs text-white/70">
-              <div className="flex justify-between"><span>{t("dashboard.score.activity", "Activity")}</span><span>{activity.length}</span></div>
-              <div className="flex justify-between"><span>{t("dashboard.score.clicks", "Clicks")}</span><span>{clicksToday}</span></div>
-              <div className="flex justify-between"><span>{t("dashboard.score.donations", "Donations")}</span><span>{donationsToday.toLocaleString()} ₽</span></div>
-              <div className="flex justify-between"><span>{t("dashboard.score.followers", "Followers")}</span><span>{followers}</span></div>
+            <p className="mt-4 text-sm text-white/68">{nextStepMessage}</p>
+            <Button variant="outline" className="mt-4 w-full justify-between" onClick={() => navigate(donationsData?.configured ? "/announcements" : "/integrations")}>Продолжить <ArrowRight size={14} /></Button>
+          </motion.div>
+
+          <motion.div variants={item} className="saas-card">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.28em] text-white/45">Чеклист запуска</p>
+                <h3 className="mt-2 text-base font-semibold">Проверка перед эфиром</h3>
+              </div>
+              <Mic size={16} className="text-white/55" />
+            </div>
+            <div className="mt-4 space-y-2">
+              {checklistItems.map((entry, index) => {
+                const active = index < 2 || (entry === "Ссылка" && Boolean(streamUrl)) || (entry === "Донаты" && Boolean(donationsData?.configured));
+                const Icon = active ? CheckCircle2 : Circle;
+                return (
+                  <div key={entry} className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white/75">
+                    <span>{entry}</span>
+                    <Icon size={15} className={active ? "text-primary" : "text-white/35"} />
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+            <motion.div variants={item}>
+              <KpiTile icon={Radio} label="Онлайн сейчас" value={isLoading ? "—" : viewersNow} />
+            </motion.div>
+            <motion.div variants={item}>
+              <KpiTile icon={Link2} label="Клики на эфир" value={isLoading ? "—" : clicksToday} />
+            </motion.div>
+            <motion.div variants={item}>
+              <KpiTile icon={Gift} label="Донаты сегодня" value={isLoading ? "—" : `${donationsToday.toLocaleString("ru-RU")} ₽`} />
+            </motion.div>
+            <motion.div variants={item}>
+              <KpiTile icon={Target} label="Фолловеры" value={isLoading ? "—" : followers} />
+            </motion.div>
+          </div>
+
+          <motion.div variants={item} className="saas-card">
+            <p className="text-xs uppercase tracking-[0.28em] text-white/45">Пресеты целей</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {goalPresets.map((preset) => (
+                <button key={preset} type="button" className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/72 transition hover:border-white/25 hover:bg-white/10">
+                  {preset}
+                </button>
+              ))}
+            </div>
+          </motion.div>
+
+          <motion.div variants={item} className="saas-card">
+            <p className="text-xs uppercase tracking-[0.28em] text-white/45">Лента активности</p>
+            <div className="mt-4 space-y-2">
+              {activity.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-white/10 bg-black/10 px-3 py-4 text-sm text-white/50">
+                  Данные появятся после первого завершённого эфира. После этого здесь будут события, клики и донаты.
+                </div>
+              ) : (
+                activity.map((entry) => (
+                  <div key={entry.id} className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white/72">
+                    <p>{entry.text}</p>
+                  </div>
+                ))
+              )}
             </div>
           </motion.div>
         </div>

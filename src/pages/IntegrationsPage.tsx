@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Twitch, Youtube, Send, Heart, Sparkles, Flame } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
@@ -99,11 +99,51 @@ type TelegramWindow = Window & {
 };
 
 const platforms: PlatformConfig[] = [
-  { key: "twitch", label: "Twitch", color: "#9146FF", placeholder: "https://twitch.tv/username", icon: Twitch },
-  { key: "youtube", label: "YouTube", color: "#FF0000", placeholder: "https://youtube.com/@channel", icon: Youtube },
-  { key: "telegram", label: "Telegram", color: "#00B2FF", placeholder: "@channel, @group или chat_id", icon: Send },
-  { key: "donatealerts", label: "DonateAlerts", color: "#F57B20", placeholder: "https://donationalerts.com/r/username", icon: Heart },
-  { key: "kick", label: "Kick", color: "#53FC18", placeholder: "https://kick.com/username", icon: Flame },
+  {
+    key: "twitch",
+    label: "Twitch",
+    color: "#9146FF",
+    placeholder: "https://twitch.tv/username",
+    description: "Импортирует статус эфира, аналитику и историю трансляций.",
+    category: "platforms",
+    icon: Twitch,
+  },
+  {
+    key: "youtube",
+    label: "YouTube",
+    color: "#FF0000",
+    placeholder: "https://youtube.com/@channel",
+    description: "Добавляет аналитику, архивы эфиров и общую картину по площадкам.",
+    category: "platforms",
+    icon: Youtube,
+  },
+  {
+    key: "telegram",
+    label: "Telegram",
+    color: "#00B2FF",
+    placeholder: "@channel, @group или chat_id",
+    description: "Помогает отправлять анонсы, публиковать ссылку и выбирать канал или чат.",
+    category: "notifications",
+    icon: Send,
+  },
+  {
+    key: "donatealerts",
+    label: "DonateAlerts",
+    color: "#F57B20",
+    placeholder: "https://donationalerts.com/r/username",
+    description: "Собирает поддержку, историю донатов и топ донатеров в одном месте.",
+    category: "donations",
+    icon: Heart,
+  },
+  {
+    key: "kick",
+    label: "Kick",
+    color: "#53FC18",
+    placeholder: "https://kick.com/username",
+    description: "Подтягивает статус эфира и помогает сравнивать площадки в аналитике.",
+    category: "platforms",
+    icon: Flame,
+  },
 ];
 
 const buildChannelStats = (platform: Platform, data: VerifyResult, t: (key: string, fallback?: string) => string) => {
@@ -176,13 +216,13 @@ function mapIntegrationError(
     return t("integrations.errorSave", "Не удалось сохранить подключение в настройках.");
   }
   if (errorCode === "rate_limited") {
-    return t("integrations.errorRateLimit", "Слишком много попыток подряд. Подожди немного и повтори.");
+    return t("integrations.errorRateLimit", "Слишком много попыток подряд. Подождите немного и повторите.");
   }
   if (errorCode === "user_mismatch") {
-    return t("integrations.errorTelegram", "Открой приложение через Telegram, чтобы привязка прошла корректно.");
+    return t("integrations.errorTelegram", "Откройте приложение через Telegram для проверки.");
   }
   if (platform === "telegram" && errorCode === "telegram_not_found") {
-    return t("integrations.errorTelegramTarget", "Не нашли канал или группу. Добавь бота и выбери цель из списка ниже.");
+    return t("integrations.errorTelegramTarget", "Не нашли канал или группу. Добавьте бота и выберите цель из списка ниже.");
   }
   if (platform === "twitch" && errorCode === "twitch_validation_not_configured") {
     return t("integrations.errorTwitchConfig", "Проверка Twitch ещё не настроена на сервере.");
@@ -198,17 +238,23 @@ function mapIntegrationError(
 
 function IntegrationCard({
   label,
+  description,
   color,
   icon: Icon,
   onOpen,
   connected,
+  statusText,
+  actionLabel,
   connectedLabel,
 }: {
   label: string;
+  description: string;
   color: string;
   icon: typeof Twitch;
   onOpen: () => void;
   connected?: boolean;
+  statusText: string;
+  actionLabel: string;
   connectedLabel: string;
 }) {
   const [ripples, setRipples] = useState<Ripple[]>([]);
@@ -231,10 +277,10 @@ function IntegrationCard({
         handleRipple(event);
         onOpen();
       }}
-      whileHover={{ y: -4, scale: 1.04 }}
-      whileTap={{ scale: 0.96 }}
+      whileHover={{ y: -4, scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
-      className="group relative flex h-56 w-full items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-[#0b0b0f] shadow-[0_18px_50px_rgba(0,0,0,0.35)] hover-lift"
+      className="group relative flex h-[15.5rem] w-full items-start justify-between overflow-hidden rounded-3xl border border-white/10 bg-[#0b0b0f] p-5 text-left shadow-[0_18px_50px_rgba(0,0,0,0.35)] hover-lift"
     >
       <motion.div
         className="absolute -inset-8 opacity-70 blur-3xl"
@@ -253,19 +299,34 @@ function IntegrationCard({
         transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
       />
 
-      <motion.div
-        className="relative z-10 flex h-20 w-20 items-center justify-center rounded-2xl"
-        animate={{ x: [0, 1.5, 0, -1.5, 0], y: [0, -1.5, 0, 1.5, 0] }}
-        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-      >
-        <Icon size={54} color="#ffffff" />
-      </motion.div>
-
-      {connected && (
-        <div className="absolute top-4 right-4 rounded-full bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/80 shadow-[0_0_18px_rgba(0,178,255,0.5)]">
-          {connectedLabel}
+      <div className="relative z-10 flex w-full flex-col justify-between gap-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/6 shadow-[0_0_28px_rgba(0,0,0,0.24)]">
+            <motion.div
+              animate={{ x: [0, 1.5, 0, -1.5, 0], y: [0, -1.5, 0, 1.5, 0] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <Icon size={34} color="#ffffff" />
+            </motion.div>
+          </div>
+          <span className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${connected ? "bg-white/10 text-white/80 shadow-[0_0_18px_rgba(0,178,255,0.35)]" : "border border-white/10 bg-black/20 text-white/55"}`}>
+            {statusText}
+          </span>
         </div>
-      )}
+
+        <div>
+          <p className="text-lg font-semibold text-white">{label}</p>
+          <p className="mt-2 max-w-[16rem] text-sm leading-6 text-white/62">{description}</p>
+        </div>
+
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-xs uppercase tracking-[0.24em] text-white/42">{connected ? connectedLabel : "Не подключено"}</span>
+          <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/72">
+            {actionLabel}
+            <ArrowRight size={12} />
+          </span>
+        </div>
+      </div>
 
       <div className="pointer-events-none absolute inset-0">
         {ripples.map((ripple) => (
@@ -285,10 +346,6 @@ function IntegrationCard({
         ))}
       </div>
 
-      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 rounded-full border border-white/10 bg-white/5 px-4 py-1 text-xs font-mono uppercase tracking-[0.3em] text-white/70">
-        {label}
-      </div>
-
       <div
         className="absolute inset-0 rounded-3xl opacity-0 transition-opacity duration-300 group-hover:opacity-100"
         style={{ boxShadow: `0 0 60px ${color}55` }}
@@ -296,6 +353,21 @@ function IntegrationCard({
     </motion.button>
   );
 }
+
+const integrationCategoryMeta = {
+  platforms: {
+    title: "Платформы",
+    description: "Подключите Twitch, YouTube и Kick, чтобы открыть аналитику, историю эфиров и AI-рекомендации.",
+  },
+  donations: {
+    title: "Донаты",
+    description: "Подключите сервис поддержки, чтобы видеть историю, среднюю сумму и топ донатеров в одном месте.",
+  },
+  notifications: {
+    title: "Уведомления",
+    description: "Подключите Telegram, чтобы отправлять анонсы и выбирать, куда публиковать ссылку на эфир.",
+  },
+} as const;
 
 export default function IntegrationsPage() {
   const { t } = useI18n();
@@ -481,6 +553,17 @@ export default function IntegrationsPage() {
     loadSaved();
   }, [userId, initData, hydrateConnection, fetchTelegramTargetsList]);
 
+  const openPlatform = useCallback((platform: PlatformConfig, presetValue = "") => {
+    setActivePlatform(platform);
+    setStatus("idle");
+    setResult(null);
+    setInputValue(presetValue);
+    setErrorMessage(null);
+    if (platform.key === "telegram") {
+      void fetchTelegramTargetsList();
+    }
+  }, [fetchTelegramTargetsList]);
+
   const verify = async () => {
     if (!inputValue.trim()) {
       setStatus("error");
@@ -594,51 +677,97 @@ export default function IntegrationsPage() {
     closeModal();
   };
 
-  return (
-    <motion.div variants={container} initial="hidden" animate="show" className="relative mx-auto flex min-h-[70dvh] max-w-5xl flex-col items-center justify-center px-3 py-6 md:py-10">
-      <motion.h1
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-8 text-center text-xl font-black font-heading md:text-2xl"
-      >
-        {t("integrations.title", "Integrations")}
-      </motion.h1>
+  const groupedPlatforms = useMemo(
+    () =>
+      (Object.keys(integrationCategoryMeta) as Array<keyof typeof integrationCategoryMeta>).map((key) => ({
+        key,
+        ...integrationCategoryMeta[key],
+        items: platforms.filter((platform) => platform.category === key),
+      })),
+    [],
+  );
 
-      <motion.div variants={item} className="grid w-full max-w-4xl grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {platforms.map((platform) => (
-          <IntegrationCard
-            key={platform.key}
-            label={platform.label}
-            color={platform.color}
-            icon={platform.icon}
-            connected={Boolean(connected[platform.key])}
-            connectedLabel={t("integrations.connected", "Connected")}
-            onOpen={() => {
-              setActivePlatform(platform);
-              setStatus("idle");
-              setResult(null);
-              setInputValue("");
-              setErrorMessage(null);
-              if (platform.key === "telegram") {
-                void fetchTelegramTargetsList();
-              }
-            }}
-          />
+  const primaryPlatform = useMemo(
+    () => platforms.find((platform) => platform.category === "platforms" && !connected[platform.key]) ?? platforms.find((platform) => !connected[platform.key]) ?? platforms[0],
+    [connected],
+  );
+
+  const primaryNextStep = connected.twitch || connected.youtube || connected.kick
+    ? "Подключите ещё одну площадку, чтобы видеть общую аналитику по платформам."
+    : "Подключите платформу, чтобы открыть аналитику, историю эфиров и AI-рекомендации.";
+
+  return (
+    <motion.div variants={container} initial="hidden" animate="show" className="relative mx-auto flex min-h-[70dvh] max-w-6xl flex-col px-3 py-6 md:py-10">
+      <motion.section variants={item} className="saas-card mb-6 overflow-hidden">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="max-w-2xl">
+            <div className="text-[11px] font-medium uppercase tracking-[0.28em] text-white/45">Интеграции</div>
+            <h1 className="mt-3 text-2xl font-black text-white md:text-3xl">Подключения, которые открывают весь mini app</h1>
+            <p className="mt-3 text-sm leading-6 text-white/65">
+              Подключите платформы, чтобы открыть аналитику, историю эфиров и AI-рекомендации. Donates и Telegram добавят поддержку, анонсы и быстрые публикации в одном месте.
+            </p>
+            <div className="mt-5 rounded-[24px] border border-white/10 bg-white/5 px-4 py-4 text-sm text-white/72">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 text-white/80">
+                  <Link2 size={18} />
+                </div>
+                <div>
+                  <p className="font-semibold text-white">Следующий шаг</p>
+                  <p className="mt-1 text-white/60">{primaryNextStep}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex min-w-[220px] flex-col gap-3">
+            <Button onClick={() => openPlatform(primaryPlatform)} className="gap-2">
+              Подключить платформу
+              <ArrowRight size={14} />
+            </Button>
+            <Button variant="outline" onClick={() => openPlatform(platforms.find((platform) => platform.key === "telegram") || platforms[0])} className="gap-2">
+              Подключить Telegram
+            </Button>
+            {loadingSaved ? <p className="text-xs text-white/50">{t("integrations.loadingSaved", "Загружаем сохранённые подключения...")}</p> : null}
+          </div>
+        </div>
+      </motion.section>
+
+      <motion.div variants={item} className="space-y-6">
+        {groupedPlatforms.map((group) => (
+          <section key={group.key} className="space-y-4">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h2 className="text-base font-semibold text-white">{group.title}</h2>
+                <p className="mt-1 text-sm text-white/55">{group.description}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {group.items.map((platform) => {
+                const isConnected = Boolean(connected[platform.key]);
+                const statusText = isConnected ? "Подключено" : botInfoError && platform.key === "telegram" ? "Проверить" : "Не подключено";
+                const actionLabel = isConnected ? "Управлять" : "Подключить";
+                return (
+                  <IntegrationCard
+                    key={platform.key}
+                    label={platform.label}
+                    description={platform.description}
+                    color={platform.color}
+                    icon={platform.icon}
+                    connected={isConnected}
+                    statusText={statusText}
+                    actionLabel={actionLabel}
+                    connectedLabel={t("integrations.connected", "Connected")}
+                    onOpen={() => openPlatform(platform)}
+                  />
+                );
+              })}
+            </div>
+          </section>
         ))}
       </motion.div>
 
-      <motion.p variants={item} className="mt-8 max-w-xl text-center text-sm text-muted-foreground">
-        {t(
-          "integrations.description",
-          "Connect channels in one tap. Premium cards with liquid glow and floating motion.",
-        )}
-      </motion.p>
-      {loadingSaved && (
-        <p className="mt-2 text-xs text-white/50">{t("integrations.loadingSaved", "Loading saved connections...")}</p>
-      )}
-
       {Object.values(connected).some(Boolean) && (
-        <motion.div variants={item} className="mt-10 grid w-full max-w-4xl grid-cols-1 gap-4 md:grid-cols-2">
+        <motion.div variants={item} className="mt-10 grid w-full grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {Object.entries(connected).map(([key, value]) =>
             value ? (
               <div key={key} className="rounded-3xl border border-white/10 bg-white/5 p-4 text-sm text-white/80 shadow-[0_0_40px_rgba(0,0,0,0.35)]">
@@ -651,36 +780,25 @@ export default function IntegrationsPage() {
                     )}
                   </div>
                   <div>
-                    <p className="text-sm font-semibold">{t("integrations.connected", "Connected")} | {platformLabels[value.platform]}</p>
+                    <p className="text-sm font-semibold">Подключено · {platformLabels[value.platform]}</p>
                     <p className="text-xs text-white/60">{value.channel || value.name}</p>
                   </div>
                 </div>
-                {buildChannelStats(value.platform, value, t).map((stat) => (
-                  <p key={stat.label} className="mt-2 text-xs text-white/60">{stat.label}: {stat.value ?? "--"}</p>
-                ))}
-                {value.platform === "twitch" && (
-                  <p className="mt-2 text-xs text-white/50">{t("integrations.lastStream", "Last stream")}: 2h ago</p>
-                )}
-                {value.platform === "youtube" && (
-                  <p className="mt-2 text-xs text-white/50">{t("integrations.lastVideo", "Last video")}: 1 day ago</p>
-                )}
-                {value.platform === "telegram" && (
-                  <p className="mt-2 text-xs text-white/50">{t("integrations.members", "Members")}: {value.subscribers ?? "--"}</p>
-                )}
-                <div className="mt-3 flex justify-end">
+                <div className="mt-4 grid grid-cols-3 gap-2 text-xs text-white/60">
+                  {buildChannelStats(value.platform, value, t).map((stat) => (
+                    <div key={stat.label} className="rounded-xl border border-white/10 bg-white/5 p-2 text-center">
+                      <p className="text-[10px] uppercase">{stat.label}</p>
+                      <p className="text-sm text-white">{stat.value ?? "--"}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 flex justify-end">
                   <button
                     type="button"
                     onClick={() => {
-                      const config = platforms.find((p) => p.key === value.platform);
+                      const config = platforms.find((platform) => platform.key === value.platform);
                       if (!config) return;
-                      setActivePlatform(config);
-                      setInputValue(value.chat_id || value.url || value.channel || value.name);
-                      setStatus("idle");
-                      setResult(null);
-                      setErrorMessage(null);
-                      if (value.platform === "telegram") {
-                        void fetchTelegramTargetsList();
-                      }
+                      openPlatform(config, value.chat_id || value.url || value.channel || value.name);
                     }}
                     className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/70 transition hover:border-white/30 hover:bg-white/10"
                   >
@@ -730,9 +848,7 @@ export default function IntegrationsPage() {
       )}
     </motion.div>
   );
-}
-
-function IntegrationModal({
+}function IntegrationModal({
   platform,
   inputValue,
   setInputValue,
@@ -808,7 +924,7 @@ function IntegrationModal({
               </div>
               <div>
                 <h3 className="text-lg font-bold">{t("integrations.connectTitle", "Connect your channel")}: {label}</h3>
-                <p className="text-xs text-white/60">{t("integrations.connectSubtitle", "Secure verification with premium effects.")}</p>
+                <p className="text-xs text-white/60">{t("integrations.connectSubtitle", "Проверьте канал и сохраните подключение в пару шагов.")}</p>
               </div>
             </div>
 
@@ -844,7 +960,7 @@ function IntegrationModal({
                     <p className="text-[11px] uppercase tracking-[0.2em] text-white/40">
                       {t("integrations.telegramAvailableTargets", "Available targets")}
                     </p>
-                    {loadingTelegramTargets ? <span className="text-[10px] text-white/40">{t("integrations.loadingSaved", "Loading saved connections...")}</span> : null}
+                    {loadingTelegramTargets ? <span className="text-[10px] text-white/40">{t("integrations.loadingSaved", "Загружаем сохранённые подключения...")}</span> : null}
                   </div>
                   {telegramTargets.length ? (
                     telegramTargets.map((target) => (
@@ -927,7 +1043,7 @@ function IntegrationModal({
                   animate={{ opacity: 1, y: 0 }}
                   className="rounded-2xl border border-white/10 bg-white/5 p-4"
                 >
-                  <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("integrations.channelFound", "Channel Found")}</p>
+                  <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("integrations.channelFound", "Канал найден")}</p>
                   <div className="mt-3 flex items-center gap-3">
                     <div className="h-12 w-12 overflow-hidden rounded-full bg-white/10">
                       {result.avatar ? (
@@ -1045,3 +1161,5 @@ function SuccessModal({
     </AnimatePresence>
   );
 }
+
+

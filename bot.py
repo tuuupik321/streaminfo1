@@ -2167,6 +2167,8 @@ async def get_analytics(request: web.Request):
             start = now - timedelta(days=7)
         elif period == "30d":
             start = now - timedelta(days=30)
+        elif period == "90d":
+            start = now - timedelta(days=90)
 
         base_query = select(StreamSession).where(StreamSession.user_id == int(uid))
         if start:
