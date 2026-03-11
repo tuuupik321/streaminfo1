@@ -118,7 +118,7 @@ def _is_telegram_network_error(error: Exception) -> bool:
 
 
 TOKEN = os.getenv("BOT_TOKEN")
-APP_URL = os.getenv("APP_URL") or os.getenv("RENDER_EXTERNAL_URL")
+APP_URL = os.getenv("RENDER_EXTERNAL_URL") or os.getenv("APP_URL")
 SPACE_HOST = os.getenv("SPACE_HOST")
 RAW_DB_URL = os.getenv("DATABASE_URL")
 TWITCH_ID = os.getenv("TWITCH_CLIENT_ID")
