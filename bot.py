@@ -902,7 +902,11 @@ async def save_settings(request: web.Request):
     if twitch_name:
         if not all([TWITCH_ID, TWITCH_SECRET]):
             return web.json_response({"error": "twitch_validation_not_configured"}, status=500)
-        resolved_twitch = await resolve_twitch_login(twitch_name)
+        try:
+            resolved_twitch = await resolve_twitch_login(twitch_name)
+        except Exception as error:
+            log_event("twitch_resolve_failed", error=str(error))
+            return web.json_response({"error": "twitch_resolve_failed"}, status=502)
         if not resolved_twitch:
             return web.json_response({"error": "twitch_not_found"}, status=400)
         twitch_name = resolved_twitch
@@ -910,7 +914,11 @@ async def save_settings(request: web.Request):
     if yt_channel_id:
         if not YT_KEY:
             return web.json_response({"error": "youtube_validation_not_configured"}, status=500)
-        resolved_youtube = await resolve_youtube_channel_id(yt_channel_id)
+        try:
+            resolved_youtube = await resolve_youtube_channel_id(yt_channel_id)
+        except Exception as error:
+            log_event("youtube_resolve_failed", error=str(error))
+            return web.json_response({"error": "youtube_resolve_failed"}, status=502)
         if not resolved_youtube:
             return web.json_response({"error": "youtube_not_found"}, status=400)
         yt_channel_id = resolved_youtube
@@ -920,16 +928,20 @@ async def save_settings(request: web.Request):
             return web.json_response({"error": "donatealerts_not_configured"}, status=500)
         donationalerts_name = _extract_username(donationalerts_name)
 
-    async with async_session() as session:
-        user = await session.get(User, payload.user_id)
-        if not user:
-            user = User(user_id=payload.user_id)
-            session.add(user)
+    try:
+        async with async_session() as session:
+            user = await session.get(User, payload.user_id)
+            if not user:
+                user = User(user_id=payload.user_id)
+                session.add(user)
 
-        user.twitch_name = twitch_name
-        user.yt_channel_id = yt_channel_id
-        user.donationalerts_name = donationalerts_name
-        await session.commit()
+            user.twitch_name = twitch_name
+            user.yt_channel_id = yt_channel_id
+            user.donationalerts_name = donationalerts_name
+            await session.commit()
+    except Exception as error:
+        log_event("save_settings_failed", error=str(error))
+        return web.json_response({"error": "save_settings_failed"}, status=500)
 
     await write_audit_log(
         str(payload.user_id),
