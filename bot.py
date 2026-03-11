@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import time
+import mimetypes
 from collections import defaultdict, deque
 from datetime import datetime, timezone
 from typing import Any, Optional
@@ -955,12 +956,21 @@ async def cache_control_middleware(request, handler):
         response.headers["Cache-Control"] = "no-store, max-age=0"
         response.headers["Pragma"] = "no-cache"
         response.headers["Expires"] = "0"
+        if path == "/" or path.endswith(".html"):
+            response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
         if path.startswith("/assets/"):
             response.headers["X-Content-Type-Options"] = "nosniff"
+            content_type, _ = mimetypes.guess_type(path)
+            if content_type:
+                response.content_type = content_type
     return response
 
 
 def build_app():
+    mimetypes.add_type("text/css", ".css")
+    mimetypes.add_type("application/javascript", ".js")
+    mimetypes.add_type("application/javascript", ".mjs")
+    mimetypes.add_type("application/json", ".map")
     app = web.Application(middlewares=[cache_control_middleware])
     
     # Health check for cron-job

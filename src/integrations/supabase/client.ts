@@ -11,7 +11,9 @@ const SUPABASE_PUBLISHABLE_KEY =
   import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || DEFAULT_SUPABASE_PUBLISHABLE_KEY;
 
 if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY) {
-  console.warn("Supabase env is missing, fallback config is used.");
+  if (import.meta.env.DEV) {
+    console.warn("Supabase env is missing, fallback config is used.");
+  }
 }
 
 
