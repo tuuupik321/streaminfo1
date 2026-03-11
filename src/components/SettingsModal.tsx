@@ -33,9 +33,9 @@ const containerVariants = {
 };
 
 const panelVariants = {
-  hidden: { opacity: 0, y: -20, scale: 0.96 },
+  hidden: { opacity: 0, y: 12, scale: 0.96 },
   visible: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", damping: 18, stiffness: 220 } },
-  exit: { opacity: 0, y: -12, scale: 0.98 },
+  exit: { opacity: 0, y: 8, scale: 0.98 },
 };
 
 export function SettingsModal({ open, anchorRect, onClose }: SettingsModalProps) {
@@ -49,18 +49,19 @@ export function SettingsModal({ open, anchorRect, onClose }: SettingsModalProps)
     if (!isAnchored || !anchorRect || typeof window === "undefined") return undefined;
     const padding = 12;
     const panelWidth = Math.min(window.innerWidth * 0.92, 420);
-    const alignLeft = anchorRect.left < window.innerWidth / 2;
-    const left = alignLeft
-      ? Math.min(window.innerWidth - padding - panelWidth, Math.max(padding, anchorRect.left))
-      : Math.max(padding, anchorRect.right - panelWidth);
-    const top = Math.min(
-      window.innerHeight - padding - 24,
-      Math.max(padding, anchorRect.top),
+    const anchorCenter = anchorRect.left + anchorRect.width / 2;
+    const left = Math.min(
+      window.innerWidth - padding - panelWidth,
+      Math.max(padding, anchorCenter - panelWidth + 28),
     );
-    return { left, top };
+    const bottom = Math.max(
+      padding,
+      window.innerHeight - anchorRect.top + 10,
+    );
+    return { left, bottom };
   })();
   const panelClass = isAnchored
-    ? "fixed w-[min(92vw,420px)] max-h-[75vh] -translate-y-3 overflow-y-auto rounded-[22px] border border-white/10 bg-[#0c0c12] shadow-[0_30px_80px_rgba(0,0,0,0.45)]"
+    ? "fixed w-[min(92vw,420px)] max-h-[75vh] origin-bottom-right overflow-y-auto rounded-[22px] border border-white/10 bg-[#0c0c12] shadow-[0_30px_80px_rgba(0,0,0,0.45)]"
     : "w-full max-w-4xl overflow-hidden rounded-[22px] border border-white/10 bg-[#0c0c12] shadow-[0_30px_80px_rgba(0,0,0,0.45)]";
   const containerClass = isAnchored
     ? "fixed inset-0 z-[90] bg-black/60"
