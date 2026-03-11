@@ -238,14 +238,14 @@
   "sidebar.systemTheme": "System",
   "sidebar.adminCenter": "Admin Center",
   "sidebar.settings": "Settings",
-  "sidebar.support": "Support",
+  "sidebar.support": "Support",`n  "sidebar.dashboard": "Dashboard",
   "sidebar.info": "Info",
   "sidebar.analytics": "Analytics",
   "sidebar.donations": "Donations",
   "sidebar.announcements": "Announcements",
   "sidebar.integrations": "Integrations",
 
-  "bottomNav.info": "Info",
+  "bottomNav.dashboard": "Dashboard",`n  "bottomNav.info": "Info",
   "bottomNav.analytics": "Analytics",
   "bottomNav.donations": "Donations",
   "bottomNav.announcements": "Announcements",
@@ -263,3 +263,4 @@
   "actions.close": "Close",
   "actions.continue": "Continue"
 }
+

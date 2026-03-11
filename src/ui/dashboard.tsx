@@ -41,6 +41,7 @@ export function Dashboard({
   notifications,
   streamSeries,
   onReconnect,
+  showSidebar = true,
 }: {
   theme: PlatformTheme;
   profile: UserProfile;
@@ -50,6 +51,7 @@ export function Dashboard({
   notifications: NotificationItem[];
   streamSeries: Array<{ date: string; count: number }>;
   onReconnect: () => void;
+  showSidebar?: boolean;
 }) {
   const viewers = stats?.viewers ?? 0;
   const followers = stats?.followers ?? 0;
@@ -58,8 +60,9 @@ export function Dashboard({
   const maxCount = Math.max(1, ...streamSeries.map((item) => item.count));
 
   return (
-    <div className="dashboard">
-      <aside className="sidebar">
+    <div className={`dashboard${showSidebar ? "" : " embedded"}`}>
+      {showSidebar ? (
+        <aside className="sidebar">
         <div className="brand">
           <div className="brand-mark" />
           <div className="brand-text">
@@ -81,6 +84,7 @@ export function Dashboard({
           <GhostButton onClick={onReconnect}>Переподключить канал</GhostButton>
         </div>
       </aside>
+      ) : null}
       <main className="content">
         <header className="content-header">
           <div>

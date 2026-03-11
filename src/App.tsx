@@ -1,4 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from "react";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "./App.css";
 import { detectPlatform, extractChannelName } from "./utils/detectPlatform";
 import {
@@ -10,13 +12,24 @@ import {
 } from "./database/users";
 import { getThemeByPlatform } from "./ui/themes";
 import { ConnectScreen } from "./ui/connect";
-import {
-  Dashboard,
-  type ClipItem,
-  type DashboardStats,
-  type NotificationItem,
-  type StreamItem,
-} from "./ui/dashboard";
+import { type ClipItem, type DashboardStats, type NotificationItem, type StreamItem } from "./ui/dashboard";
+import { AppLayout } from "./app/AppLayout";
+import { ThemeProvider } from "./components/ThemeProvider";
+import { I18nProvider } from "./lib/i18n";
+import AdminPage from "./pages/AdminPage";
+import Analytics from "./pages/Analytics";
+import AnnouncementsPage from "./pages/AnnouncementsPage";
+import BridgeTransferPage from "./pages/BridgeTransferPage";
+import DesignAgentPage from "./pages/DesignAgentPage";
+import DonationsPage from "./pages/DonationsPage";
+import Index from "./pages/Index";
+import IntegrationsPage from "./pages/IntegrationsPage";
+import LiveDashboardPage from "./pages/LiveDashboardPage";
+import NotFound from "./pages/NotFound";
+import SettingsPage from "./pages/SettingsPage";
+import StreamInfoPage from "./pages/StreamInfoPage";
+import SupportPage from "./pages/SupportPage";
+import { NewDashboardPage } from "./pages/NewDashboardPage";
 
 const App = () => {
   const [profile, setProfile] = useState<UserProfile | null>(() => getUserProfile());
@@ -27,6 +40,7 @@ const App = () => {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [streamSeries, setStreamSeries] = useState<Array<{ date: string; count: number }>>([]);
   const userId = useMemo(() => getOrCreateUserId(), []);
+  const queryClient = useMemo(() => new QueryClient(), []);
 
   const theme = useMemo(() => (profile ? getThemeByPlatform(profile.platform) : null), [profile]);
 
@@ -139,33 +153,57 @@ const App = () => {
     setStreamSeries([]);
   };
 
-  if (!profile) {
-    return (
-      <div className="app-shell">
-        <ConnectScreen onConnect={handleConnect} />
-        {error ? <div className="global-error">{error}</div> : null}
-      </div>
-    );
-  }
-
   return (
-    <div className="app-shell">
-      {theme ? (
-        <Dashboard
-          theme={theme}
-          profile={profile}
-          stats={stats}
-          streams={streams}
-          clips={clips}
-          notifications={notifications}
-          streamSeries={streamSeries}
-          onReconnect={handleReconnect}
-        />
-      ) : null}
-      {error ? <div className="global-error">{error}</div> : null}
-    </div>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <I18nProvider>
+          {!profile ? (
+            <div className="app-shell">
+              <ConnectScreen onConnect={handleConnect} />
+              {error ? <div className="global-error">{error}</div> : null}
+            </div>
+          ) : (
+            <BrowserRouter>
+              <AppLayout>
+                <Routes>
+                  <Route
+                    path="/"
+                    element={
+                      theme ? (
+                        <NewDashboardPage
+                          theme={theme}
+                          profile={profile}
+                          stats={stats}
+                          streams={streams}
+                          clips={clips}
+                          notifications={notifications}
+                          streamSeries={streamSeries}
+                          onReconnect={handleReconnect}
+                        />
+                      ) : null
+                    }
+                  />
+                  <Route path="/info" element={<StreamInfoPage />} />
+                  <Route path="/analytics" element={<Analytics />} />
+                  <Route path="/donations" element={<DonationsPage />} />
+                  <Route path="/announcements" element={<AnnouncementsPage />} />
+                  <Route path="/integrations" element={<IntegrationsPage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="/support" element={<SupportPage />} />
+                  <Route path="/admin" element={<AdminPage />} />
+                  <Route path="/live" element={<LiveDashboardPage />} />
+                  <Route path="/bridge" element={<BridgeTransferPage />} />
+                  <Route path="/design-agent" element={<DesignAgentPage />} />
+                  <Route path="/legacy" element={<Index />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </AppLayout>
+            </BrowserRouter>
+          )}
+        </I18nProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 };
 
 export default App;
-

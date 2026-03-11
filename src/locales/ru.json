@@ -238,14 +238,14 @@
   "sidebar.systemTheme": "Системная",
   "sidebar.adminCenter": "Админ-центр",
   "sidebar.settings": "Настройки",
-  "sidebar.support": "Поддержка",
+  "sidebar.support": "Поддержка",`n  "sidebar.dashboard": "Дашборд",
   "sidebar.info": "Информация",
   "sidebar.analytics": "Аналитика",
   "sidebar.donations": "Донаты",
   "sidebar.announcements": "Анонсы",
   "sidebar.integrations": "Интеграции",
 
-  "bottomNav.info": "Инфо",
+  "bottomNav.dashboard": "Дашборд",`n  "bottomNav.info": "Инфо",
   "bottomNav.analytics": "Аналитика",
   "bottomNav.donations": "Донаты",
   "bottomNav.announcements": "Анонсы",
@@ -263,3 +263,4 @@
   "actions.close": "Закрыть",
   "actions.continue": "Продолжить"
 }
+

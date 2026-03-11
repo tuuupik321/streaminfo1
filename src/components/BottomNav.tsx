@@ -1,13 +1,13 @@
-import { BarChart3, Info, Settings, Star, Megaphone } from "lucide-react";
+import { Activity, BarChart3, Info, Settings, Star, Megaphone } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 
 const mainTabs = [
-  { icon: Info, key: "info", path: "/" },
+  { icon: Activity, key: "dashboard", path: "/" },
+  { icon: Info, key: "info", path: "/info" },
   { icon: BarChart3, key: "analytics", path: "/analytics" },
   { icon: Star, key: "donations", path: "/donations" },
-  { icon: Megaphone, key: "announcements", path: "/announcements" },
 ];
 
 import { useRef } from "react";

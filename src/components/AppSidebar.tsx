@@ -38,7 +38,8 @@ import { useTheme } from "./ThemeProvider";
 type UiTheme = "light" | "dark" | "system";
 
 const mainItems = [
-  { key: "info", url: "/", icon: Info, fallback: "Info" },
+  { key: "dashboard", url: "/", icon: Activity, fallback: "Dashboard" },
+  { key: "info", url: "/info", icon: Info, fallback: "Info" },
   { key: "analytics", url: "/analytics", icon: BarChart3, fallback: "Analytics" },
   { key: "donations", url: "/donations", icon: Star, fallback: "Donations" },
   { key: "announcements", url: "/announcements", icon: Megaphone, fallback: "Announcements" },
