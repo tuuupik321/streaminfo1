@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Twitch, Youtube, Send, Heart, Sparkles } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
+import { makeFadeUp, makeStagger } from "@/shared/motion";
 
 type Ripple = { id: number; x: number; y: number };
 type Platform = "twitch" | "youtube" | "telegram" | "donatealerts";
@@ -215,6 +216,10 @@ export default function IntegrationsPage() {
   }, []);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successData, setSuccessData] = useState<VerifyResult | null>(null);
+
+  const reduceMotion = useReducedMotion();
+  const container = makeStagger(reduceMotion);
+  const item = makeFadeUp(reduceMotion);
 
   const tg = (window as TelegramWindow).Telegram?.WebApp;
   const userId = tg?.initDataUnsafe?.user?.id;
@@ -435,7 +440,7 @@ export default function IntegrationsPage() {
   };
 
   return (
-    <div className="relative mx-auto flex min-h-[70dvh] max-w-5xl flex-col items-center justify-center px-3 py-6 md:py-10">
+    <motion.div variants={container} initial="hidden" animate="show" className="relative mx-auto flex min-h-[70dvh] max-w-5xl flex-col items-center justify-center px-3 py-6 md:py-10">
       <motion.h1
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -444,7 +449,7 @@ export default function IntegrationsPage() {
         {t("integrations.title", "Integrations")}
       </motion.h1>
 
-      <div className="grid w-full max-w-4xl grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <motion.div variants={item} className="grid w-full max-w-4xl grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
         {platforms.map((platform) => (
           <IntegrationCard
             key={platform.key}
@@ -462,20 +467,20 @@ export default function IntegrationsPage() {
             }}
           />
         ))}
-      </div>
+      </motion.div>
 
-      <p className="mt-8 max-w-xl text-center text-sm text-muted-foreground">
+      <motion.p variants={item} className="mt-8 max-w-xl text-center text-sm text-muted-foreground">
         {t(
           "integrations.description",
           "Connect channels in one tap. Premium cards with liquid glow and floating motion.",
         )}
-      </p>
+      </motion.p>
       {loadingSaved && (
         <p className="mt-2 text-xs text-white/50">{t("integrations.loadingSaved", "Loading saved connections...")}</p>
       )}
 
       {Object.values(connected).some(Boolean) && (
-        <div className="mt-10 grid w-full max-w-4xl grid-cols-1 gap-4 md:grid-cols-2">
+        <motion.div variants={item} className="mt-10 grid w-full max-w-4xl grid-cols-1 gap-4 md:grid-cols-2">
           {Object.entries(connected).map(([key, value]) =>
             value ? (
               <div key={key} className="rounded-3xl border border-white/10 bg-white/5 p-4 text-sm text-white/80 shadow-[0_0_40px_rgba(0,0,0,0.35)]">
@@ -524,7 +529,7 @@ export default function IntegrationsPage() {
               </div>
             ) : null,
           )}
-        </div>
+        </motion.div>
       )}
 
       {activePlatform && (
@@ -554,7 +559,7 @@ export default function IntegrationsPage() {
           actionLabel={t("actions.continue", "Continue")}
         />
       )}
-    </div>
+    </motion.div>
   );
 }
 

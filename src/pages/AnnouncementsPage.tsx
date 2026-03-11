@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Megaphone, Trash2, Plus, Send, Sparkles, Link as LinkIcon } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import Confetti from "react-confetti";
 import { useWindowSize } from "react-use";
+import { CardShell } from "@/shared/ui/CardShell";
+import { makeFadeUp, makeStagger } from "@/shared/motion";
 
 type AnnouncementButton = {
   id: number;
@@ -55,7 +57,7 @@ function TelegramPreview({ message, buttons }: { message: string; buttons: Annou
           </a>
         ))}
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -66,6 +68,9 @@ export default function AnnouncementsPage() {
   const [sending, setSending] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const { width, height } = useWindowSize();
+  const reduceMotion = useReducedMotion();
+  const container = makeStagger(reduceMotion);
+  const item = makeFadeUp(reduceMotion);
 
   const addButtonClicked = () => {
     if (buttons.length >= 3) {
@@ -97,14 +102,9 @@ export default function AnnouncementsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl px-3 py-4 sm:p-4 md:p-8">
+    <motion.div variants={container} initial="hidden" animate="show" className="mx-auto max-w-4xl px-3 py-4 sm:p-4 md:p-8">
       {showConfetti && <Confetti width={width} height={height} recycle={false} onConfettiComplete={() => setShowConfetti(false)} />}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="mb-8 text-center"
-      >
+      <motion.div variants={item} className="mb-8 text-center">
         <h1 className="text-gradient-primary inline-flex items-center gap-3 text-4xl md:text-5xl">
           <Megaphone />
           {t("announcements.title", "Центр Анонсов")}
@@ -115,21 +115,16 @@ export default function AnnouncementsPage() {
       </motion.div>
 
       <div className="grid grid-cols-1 gap-12">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-          className="space-y-8"
-        >
+        <motion.div variants={item} className="space-y-8">
           {/* Editor */}
-          <div className="space-y-3">
+          <CardShell className="space-y-3">
             <Label htmlFor="message" className="text-lg font-medium">{t("announcements.message", "Ваше сообщение")}</Label>
             <Textarea id="message" value={message} onChange={(e) => setMessage(e.target.value)} placeholder={t("announcements.placeholder", "Что нового, стример?")} rows={5} className="text-base"/>
             <p className="text-xs text-muted-foreground">{t("announcements.markdownHint", "Поддерживается Markdown: **жирный** и *курсив*.")}</p>
-          </div>
+          </CardShell>
 
           {/* Buttons */}
-          <div>
+          <CardShell>
             <h3 className="text-lg font-medium mb-4">{t("announcements.buttons", "Призыв к действию")}</h3>
             <div className="space-y-4">
               <AnimatePresence>
@@ -167,13 +162,13 @@ export default function AnnouncementsPage() {
                 </Button>
               )}
             </div>
-          </div>
+          </CardShell>
 
           {/* Preview */}
-          <div className="space-y-3">
+          <CardShell className="space-y-3">
              <h3 className="text-lg font-medium text-center">{t("announcements.preview", "Живое превью")}</h3>
              <TelegramPreview message={message} buttons={buttons} />
-          </div>
+          </CardShell>
 
           {/* Send Button */}
           <div className="pt-4">
@@ -193,6 +188,12 @@ export default function AnnouncementsPage() {
           </div>
         </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 }
+
+
+
+
+
+

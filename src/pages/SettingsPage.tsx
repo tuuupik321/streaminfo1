@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { Sparkles, Bell, Shield, User } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { UiLanguage } from "@/lib/language";
 import { useTheme } from "@/components/ThemeProvider";
 import { Link } from "react-router-dom";
 import { Switch } from "@/components/ui/switch";
+import { makeFadeUp, makeStagger } from "@/shared/motion";
 
 function Section({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
   return (
@@ -89,14 +90,17 @@ function ThemeSettings() {
 
 export default function SettingsPage() {
   const { t } = useI18n();
+  const reduceMotion = useReducedMotion();
+  const container = makeStagger(reduceMotion);
+  const item = makeFadeUp(reduceMotion);
 
   return (
-    <div className="mx-auto max-w-3xl px-3 py-3 pb-24 md:p-6">
-      <motion.h1 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-5 text-gradient-primary sm:mb-8">
+    <motion.div variants={container} initial="hidden" animate="show" className="mx-auto max-w-3xl px-3 py-3 pb-24 md:p-6">
+      <motion.h1 variants={item} className="mb-5 text-gradient-primary sm:mb-8">
         {t("settings.title", "Settings")}
       </motion.h1>
       <div className="space-y-6">
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+        <motion.div variants={item}>
           <Section title={t("settings.account", "Account")} description={t("settings.accountDesc", "Manage your profile and access.")}>
             <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-secondary/40 p-4">
               <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center"><User size={16} /></div>
@@ -108,13 +112,13 @@ export default function SettingsPage() {
           </Section>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+        <motion.div variants={item}>
           <Section title={t("settings.appearance", "Appearance")} description={t("settings.appearanceDesc", "Customize your theme and glow style.")}>
             <ThemeSettings />
           </Section>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+        <motion.div variants={item}>
           <Section title={t("settings.notifications", "Notifications")} description={t("settings.notificationsDesc", "Choose what you want to be notified about.")}>
             <div className="space-y-3">
               <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-secondary/40 p-3">
@@ -137,13 +141,13 @@ export default function SettingsPage() {
           </Section>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+        <motion.div variants={item}>
           <Section title={t("settings.language", "Language")} description={t("settings.languageDesc", "Switch the interface language instantly across the app.")}>
             <LanguageSettings />
           </Section>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+        <motion.div variants={item}>
           <Section title={t("settings.security", "Security")} description={t("settings.securityDesc", "Control access and protection.")}>
             <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-secondary/40 p-4">
               <div className="flex items-center gap-2 text-sm">
@@ -154,7 +158,7 @@ export default function SettingsPage() {
           </Section>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+        <motion.div variants={item}>
           <Section title={t("settings.support", "Support")} description={t("support.contactSupport", "Contact support")}>
             <div className="rounded-2xl border border-border/60 bg-secondary/40 p-4">
               <p className="text-sm font-semibold">{t("support.needHelp", "Need help?")}</p>
@@ -166,6 +170,6 @@ export default function SettingsPage() {
           </Section>
         </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 }

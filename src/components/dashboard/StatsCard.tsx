@@ -68,10 +68,13 @@ export function StatsCard({ icon: Icon, label, value, delay = 0, change, loading
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.4 }}
       whileHover={{ scale: 1.03, transition: { duration: 0.2 } }}
-      className="card-glow group relative overflow-hidden rounded-2xl border border-border/10 bg-background/60 p-3 backdrop-blur-lg sm:p-6"
+      className="card-glow group relative overflow-hidden rounded-2xl border border-border/20 bg-background/60 p-3 backdrop-blur-lg sm:p-6"
     >
       <div className="absolute right-2 top-2 opacity-[0.07] transition-opacity group-hover:opacity-[0.12] sm:right-3 sm:top-3">
         <Icon size={40} className="sm:h-14 sm:w-14" />
+      </div>
+      <div className="pointer-events-none absolute -inset-6 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+        <div className="h-full w-full rounded-[28px] bg-[radial-gradient(circle_at_top,hsl(var(--primary)/0.18),transparent_55%)]" />
       </div>
       <Icon className="mb-2 text-primary sm:mb-3" size={18} />
       <p className="text-[10px] font-mono font-semibold uppercase leading-tight tracking-wider text-muted-foreground sm:text-xs">{label}</p>

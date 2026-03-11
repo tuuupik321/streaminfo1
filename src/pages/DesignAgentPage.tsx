@@ -1,4 +1,6 @@
+﻿import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, Brush, Code2, Layers, Rocket, Sparkles, Timer, WandSparkles } from "lucide-react";
+import { makeFadeUp, makeStagger } from "@/shared/motion";
 
 const features = [
   { icon: Brush, title: "Сильный стиль", text: "Не шаблон, а фирменная визуальная система под твою нишу." },
@@ -13,11 +15,15 @@ const process = [
 ];
 
 export default function DesignAgentPage() {
+  const reduceMotion = useReducedMotion();
+  const container = makeStagger(reduceMotion);
+  const item = makeFadeUp(reduceMotion);
+
   return (
-    <div className="min-h-full bg-[#08111f] text-white">
+    <motion.div variants={container} initial="hidden" animate="show" className="min-h-full bg-[#08111f] text-white">
       <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_8%_10%,rgba(14,165,233,0.25),transparent_28%),radial-gradient(circle_at_92%_16%,rgba(249,115,22,0.2),transparent_24%),radial-gradient(circle_at_65%_88%,rgba(16,185,129,0.17),transparent_30%)]" />
 
-      <section className="mx-auto max-w-6xl px-4 pb-16 pt-14 md:px-8 md:pt-20">
+      <motion.section variants={item} className="mx-auto max-w-6xl px-4 pb-16 pt-14 md:px-8 md:pt-20">
         <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-cyan-200/30 bg-cyan-300/10 px-4 py-1 text-xs font-bold uppercase tracking-[0.18em] text-cyan-100">
           <Sparkles className="h-3.5 w-3.5" />
           Web Design Agent
@@ -61,9 +67,9 @@ export default function DesignAgentPage() {
             </div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
-      <section className="mx-auto max-w-6xl px-4 pb-6 md:px-8">
+      <motion.section variants={item} className="mx-auto max-w-6xl px-4 pb-6 md:px-8">
         <div className="grid gap-4 md:grid-cols-3">
           {features.map(({ icon: Icon, title, text }) => (
             <article key={title} className="rounded-2xl border border-white/15 bg-white/5 p-5 backdrop-blur-sm">
@@ -73,9 +79,9 @@ export default function DesignAgentPage() {
             </article>
           ))}
         </div>
-      </section>
+      </motion.section>
 
-      <section className="mx-auto max-w-6xl px-4 pb-6 md:px-8">
+      <motion.section variants={item} className="mx-auto max-w-6xl px-4 pb-6 md:px-8">
         <div className="grid gap-4 md:grid-cols-2">
           <article className="rounded-2xl border border-white/15 bg-[#0f1d34] p-6">
             <p className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-amber-200">
@@ -83,9 +89,9 @@ export default function DesignAgentPage() {
               Процесс
             </p>
             <ol className="space-y-3 text-sm text-slate-100/90">
-              {process.map((item) => (
-                <li key={item} className="rounded-lg border border-white/10 bg-white/5 p-3">
-                  {item}
+              {process.map((itemText) => (
+                <li key={itemText} className="rounded-lg border border-white/10 bg-white/5 p-3">
+                  {itemText}
                 </li>
               ))}
             </ol>
@@ -106,9 +112,9 @@ export default function DesignAgentPage() {
             </button>
           </article>
         </div>
-      </section>
+      </motion.section>
 
-      <section className="mx-auto max-w-6xl px-4 pb-16 md:px-8">
+      <motion.section variants={item} className="mx-auto max-w-6xl px-4 pb-16 md:px-8">
         <div className="rounded-3xl border border-cyan-100/20 bg-gradient-to-r from-cyan-300/15 via-slate-200/5 to-amber-300/10 p-7 md:p-9">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-100/90">FAQ</p>
           <div className="mt-4 grid gap-3 md:grid-cols-3">
@@ -126,7 +132,7 @@ export default function DesignAgentPage() {
             </div>
           </div>
         </div>
-      </section>
-    </div>
+      </motion.section>
+    </motion.div>
   );
 }

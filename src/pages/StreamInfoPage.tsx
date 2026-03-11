@@ -1,5 +1,5 @@
 ﻿import { useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { CalendarDays, Copy, DollarSign, Eye, Link2, Megaphone, MoreHorizontal, MousePointerClick, Radio, RefreshCw, Share2, ShieldCheck, Sparkles, UserCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -13,6 +13,8 @@ import { getCurrentTelegramId, hasAdminSession, isOwnerTelegramId } from "@/lib/
 import { useStreamInfo } from "@/hooks/useStreamInfo";
 import { EmptyState } from "@/shared/ui/EmptyState";
 import { cn } from "@/lib/utils";
+import { KpiTile } from "@/shared/ui/KpiTile";
+import { makeFadeUp, makeStagger } from "@/shared/motion";
 
 type Donation = {
   id: string;
@@ -144,9 +146,13 @@ export default function StreamInfoPage() {
     handleCopyLink();
   };
 
+  const reduceMotion = useReducedMotion();
+  const container = makeStagger(reduceMotion);
+  const item = makeFadeUp(reduceMotion);
+
   return (
-    <div className="mx-auto max-w-6xl px-3 py-3 md:p-6">
-      <section className={cn("saas-card relative overflow-hidden", isLive ? "pulse-live" : "")}> 
+    <motion.div variants={container} initial="hidden" animate="show" className="mx-auto max-w-6xl px-3 py-3 md:p-6">
+      <motion.section variants={item} className={cn("saas-card relative overflow-hidden", isLive ? "pulse-live" : "")}> 
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-white/50">
@@ -174,7 +180,9 @@ export default function StreamInfoPage() {
         </div>
       </section>
 
-      <div className="mb-4 mt-6 flex items-center justify-between sm:mb-6">
+      </motion.section>
+
+      <motion.div variants={item} className="mb-4 mt-6 flex items-center justify-between sm:mb-6">
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-gradient-primary text-xl">{t("streamInfo.title")}</h1>
           <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
@@ -189,9 +197,9 @@ export default function StreamInfoPage() {
             <span className="hidden sm:inline">{t("streamInfo.goToLive", "Live Dashboard")}</span>
           </Button>
         )}
-      </div>
+      </motion.div>
 
-      <div className="mb-5 flex gap-2.5 sm:mb-6 sm:gap-3">
+      <motion.div variants={item} className="mb-5 flex gap-2.5 sm:mb-6 sm:gap-3">
         <Select value={period} onValueChange={setPeriod}>
           <SelectTrigger className="flex-1">
             <CalendarDays size={14} className="mr-2" />
@@ -222,9 +230,9 @@ export default function StreamInfoPage() {
             )}
           </DropdownMenuContent>
         </DropdownMenu>
-      </div>
+      </motion.div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
+      <motion.div variants={item} className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
         <div className="lg:col-span-2 space-y-6">
           <AnimatePresence mode="wait">
             <motion.div
@@ -238,7 +246,7 @@ export default function StreamInfoPage() {
             </motion.div>
           </AnimatePresence>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="saas-card">
+            <motion.div variants={item} className="saas-card">
               <h3 className="text-sm font-semibold">{t("dashboard.activityFeed", "Activity Feed")}</h3>
               <div className="mt-3 max-h-64 space-y-2 overflow-auto">
                 {activity.length === 0 ? (
@@ -252,8 +260,8 @@ export default function StreamInfoPage() {
                   ))
                 )}
               </div>
-            </div>
-            <div className="saas-card">
+            </motion.div>
+            <motion.div variants={item} className="saas-card">
               <h3 className="text-sm font-semibold">{t("dashboard.streamGoals", "Stream Goals")}</h3>
               <div className="mt-4 space-y-3 text-xs text-white/70">
                 <div>
@@ -275,29 +283,25 @@ export default function StreamInfoPage() {
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </div>
         </div>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <div className="saas-card text-xs">
-              <div className="flex items-center gap-2 text-white/60"><Eye size={14} /> {t("dashboard.kpi.viewersToday", "Viewers today")}</div>
-              <div className="mt-2 text-lg font-semibold">{isLoading ? "—" : viewersNow}</div>
-            </div>
-            <div className="saas-card text-xs">
-              <div className="flex items-center gap-2 text-white/60"><MousePointerClick size={14} /> {t("dashboard.kpi.clicksToStream", "Clicks to stream")}</div>
-              <div className="mt-2 text-lg font-semibold">{isLoading ? "—" : clicksToday}</div>
-            </div>
-            <div className="saas-card text-xs">
-              <div className="flex items-center gap-2 text-white/60"><DollarSign size={14} /> {t("dashboard.kpi.donationsToday", "Donations today")}</div>
-              <div className="mt-2 text-lg font-semibold">{isLoading ? "—" : `${donationsToday.toLocaleString()} ₽`}</div>
-            </div>
-            <div className="saas-card text-xs">
-              <div className="flex items-center gap-2 text-white/60"><UserCheck size={14} /> {t("dashboard.kpi.newFollowers", "New followers")}</div>
-              <div className="mt-2 text-lg font-semibold">{isLoading ? "—" : followers}</div>
-            </div>
+            <motion.div variants={item}>
+              <KpiTile icon={Eye} label={t("dashboard.kpi.viewersToday", "Viewers today")} value={isLoading ? "—" : viewersNow} />
+            </motion.div>
+            <motion.div variants={item}>
+              <KpiTile icon={MousePointerClick} label={t("dashboard.kpi.clicksToStream", "Clicks to stream")} value={isLoading ? "—" : clicksToday} />
+            </motion.div>
+            <motion.div variants={item}>
+              <KpiTile icon={DollarSign} label={t("dashboard.kpi.donationsToday", "Donations today")} value={isLoading ? "—" : `${donationsToday.toLocaleString()} ₽`} />
+            </motion.div>
+            <motion.div variants={item}>
+              <KpiTile icon={UserCheck} label={t("dashboard.kpi.newFollowers", "New followers")} value={isLoading ? "—" : followers} />
+            </motion.div>
           </div>
-          <div className="saas-card">
+          <motion.div variants={item} className="saas-card">
             <h3 className="text-sm font-semibold">{t("dashboard.streamCenter", "STREAM CENTER")}</h3>
             <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
               <Button size="sm" variant="outline">{t("dashboard.startStream", "Start stream")}</Button>
@@ -305,8 +309,8 @@ export default function StreamInfoPage() {
               <Button size="sm" variant="outline" onClick={handleCopyLink}>{t("dashboard.copyStreamLink", "Copy stream link")}</Button>
               <Button size="sm" variant="outline">{t("dashboard.postToTelegram", "Post to Telegram")}</Button>
             </div>
-          </div>
-          <div className="saas-card">
+          </motion.div>
+          <motion.div variants={item} className="saas-card">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold">{t("dashboard.streamerScore", "STREAMER SCORE")}</h3>
               <Sparkles size={14} className="text-white/60" />
@@ -318,9 +322,9 @@ export default function StreamInfoPage() {
               <div className="flex justify-between"><span>{t("dashboard.score.donations", "Donations")}</span><span>{donationsToday.toLocaleString()} ₽</span></div>
               <div className="flex justify-between"><span>{t("dashboard.score.followers", "Followers")}</span><span>{followers}</span></div>
             </div>
-          </div>
+          </motion.div>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

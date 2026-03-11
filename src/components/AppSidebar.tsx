@@ -192,10 +192,10 @@ export function AppSidebar() {
   }, [currentTelegramId]);
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-border/50">
+    <Sidebar collapsible="icon" className="border-r border-border/60">
       <SidebarContent className="flex flex-col pt-4">
         <div className="mb-6 flex items-center gap-2.5 px-4">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 glow-primary">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 glow-primary">
             <Activity size={18} className="text-primary" />
           </div>
           {!collapsed && (
@@ -217,8 +217,8 @@ export function AppSidebar() {
                     <NavLink
                       to={item.url}
                       end={item.url === "/"}
-                      className="rounded-lg transition-all duration-200 hover:bg-primary/5 active:scale-[0.98]"
-                      activeClassName="bg-primary/10 text-primary font-semibold"
+                      className="rounded-xl transition-all duration-200 hover:-translate-y-0.5 hover:bg-primary/5 active:scale-[0.98]"
+                      activeClassName="bg-primary/12 text-primary font-semibold shadow-[0_8px_22px_rgba(34,197,94,0.18)]"
                     >
                       <item.icon className="mr-2 h-4 w-4" />
                       {!collapsed && <span>{t(`sidebar.${item.key}`, item.fallback)}</span>}

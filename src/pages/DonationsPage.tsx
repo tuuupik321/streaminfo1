@@ -1,10 +1,12 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useI18n } from "@/lib/i18n";
 import { EmptyState } from "@/shared/ui/EmptyState";
 import { DollarSign, Gift, UserCheck } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { makeFadeUp, makeStagger } from "@/shared/motion";
 
 type Donation = {
   id: string;
@@ -102,13 +104,17 @@ export default function DonationsPage() {
     return <EmptyState icon={Gift} title={t("donations.notConfiguredTitle")} description={t("donations.notConfiguredDescription")} />;
   }
 
+  const reduceMotion = useReducedMotion();
+  const container = makeStagger(reduceMotion);
+  const item = makeFadeUp(reduceMotion);
+
   return (
-    <div className="mx-auto max-w-3xl px-3 py-3 md:p-6">
-      <motion.h1 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-5 text-xl font-black font-heading md:text-2xl">
+    <motion.div variants={container} initial="hidden" animate="show" className="mx-auto max-w-3xl px-3 py-3 md:p-6">
+      <motion.h1 variants={item} className="mb-5 text-xl font-black font-heading md:text-2xl">
         {t("donations.title")}
       </motion.h1>
 
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="saas-card">
+      <motion.div variants={item} className="saas-card">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("donations.recent", "Recent Activity")}</p>
@@ -126,7 +132,7 @@ export default function DonationsPage() {
         </div>
       </motion.div>
 
-      <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+      <motion.div variants={item} className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
         <div className="saas-card">
           <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("donations.topSupporters", "Top supporters")}</p>
           <div className="mt-4 space-y-3 text-sm text-white/70">
@@ -158,7 +164,7 @@ export default function DonationsPage() {
           <Button size="sm" variant="outline" className="mt-3 w-full">{t("donations.obsCopyButton", "Copy widget link")}</Button>
           <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-white/60">{t("donations.obsPreview", "Preview widget")}</div>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

@@ -208,6 +208,34 @@
     @apply rounded-2xl border border-border/40 bg-card/70 backdrop-blur-xl;
   }
 
+  .hero-orb {
+    position: absolute;
+    border-radius: 999px;
+    filter: blur(60px);
+    opacity: 0.35;
+    mix-blend-mode: screen;
+  }
+
+  .hero-grid {
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(hsl(var(--border) / 0.18) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--border) / 0.18) 1px, transparent 1px);
+    background-size: 120px 120px;
+    mask-image: radial-gradient(circle at 30% 10%, #000 0%, transparent 60%);
+    opacity: 0.25;
+  }
+
+  .linear-card {
+    border: 1px solid hsl(var(--border) / 0.55);
+    background:
+      linear-gradient(180deg, hsl(var(--card) / 0.85), hsl(var(--card) / 0.65)),
+      radial-gradient(120% 120% at 0% 0%, hsl(var(--primary) / 0.08), transparent 60%);
+    border-radius: 18px;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.28);
+    backdrop-filter: blur(18px);
+  }
+
   /* Premium card hover effect */
   .card-glow {
     position: relative;
@@ -299,15 +327,32 @@
   }
 
   .saas-card {
-    border: 1px solid rgba(255,255,255,0.08);
-    background: #0f0f12;
-    border-radius: 16px;
-    padding: 16px;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid hsl(var(--border) / 0.65);
+    background:
+      linear-gradient(160deg, hsl(var(--card) / 0.9), hsl(var(--card) / 0.6)),
+      radial-gradient(140% 140% at 100% 0%, hsl(var(--primary) / 0.12), transparent 55%);
+    border-radius: 20px;
+    padding: 18px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  }
+  .saas-card::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    background: radial-gradient(220px 140px at 25% 0%, hsl(var(--primary) / 0.18), transparent 65%);
+    pointer-events: none;
   }
   .saas-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 0 24px rgba(145,70,255,0.18), 0 18px 40px rgba(0,0,0,0.35);
+    border-color: hsl(var(--primary) / 0.45);
+    box-shadow: 0 0 28px hsl(var(--primary) / 0.2), 0 22px 46px rgba(0,0,0,0.35);
+  }
+  .saas-card:hover::before {
+    opacity: 1;
   }
 
   .glow-hover {
@@ -338,6 +383,28 @@
   .ripple-surface {
     position: relative;
     overflow: hidden;
+  }
+
+  .focus-ring {
+    outline: none;
+    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.5), 0 0 0 6px hsl(var(--primary) / 0.12);
+  }
+
+  .spotlight-hover {
+    position: relative;
+    overflow: hidden;
+  }
+  .spotlight-hover::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    background: radial-gradient(220px 140px at 25% 0%, hsl(var(--primary) / 0.2), transparent 65%);
+    pointer-events: none;
+  }
+  .spotlight-hover:hover::before {
+    opacity: 1;
   }
 
   .tap-highlight:active {
@@ -376,5 +443,9 @@
   [role="button"],
   .tap-highlight {
     min-height: 44px;
+  }
+
+  .saas-card {
+    padding: 14px;
   }
 }

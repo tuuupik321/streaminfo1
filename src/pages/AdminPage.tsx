@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import { Shield, Users, Radio, Server, Lock, Crown, Image, Megaphone, HeadphonesIcon, Activity, ShieldBan, UserCog, AlertTriangle, BotMessageSquare, Users2, Cog } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
+import { Users, Radio, Server, Lock, Crown, BotMessageSquare, Users2, Cog } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,6 +19,9 @@ import { MonitoringSection } from "@/components/admin/MonitoringSection";
 import { AntiSpamSection } from "@/components/admin/AntiSpamSection";
 import { AuditLogSection } from "@/components/admin/AuditLogSection";
 import { getCurrentTelegramId, setLocalOwnerTelegramId } from "@/lib/adminAccess";
+import { makeFadeUp, makeStagger } from "@/shared/motion";
+import { CardShell } from "@/shared/ui/CardShell";
+import { SectionHeader } from "@/shared/ui/SectionHeader";
 
 type AdminRole = "owner" | "moderator" | "analyst" | null;
 type AdminOverviewResponse = { users?: number; active_streams?: number; backend_status?: "ok" | "degraded"; ping_ms?: number; error?: string };
@@ -27,6 +30,9 @@ type TelegramWindow = Window & { Telegram?: { WebApp?: { initData?: string } } }
 
 export default function AdminPage() {
   const currentTelegramId = getCurrentTelegramId();
+  const reduceMotion = useReducedMotion();
+  const container = makeStagger(reduceMotion);
+  const item = makeFadeUp(reduceMotion);
   const [authed, setAuthed] = useState(() => sessionStorage.getItem("admin_auth") === "true" && Boolean(sessionStorage.getItem("admin_token")));
   const [role, setRole] = useState<AdminRole>(() => (sessionStorage.getItem("admin_role") as AdminRole) || null);
   const [stats, setStats] = useState<AdminStatsState>({ users: 0, activeStreams: 0, backendStatus: "ok", ping: "0ms", cpu: "n/a" });
@@ -110,8 +116,8 @@ export default function AdminPage() {
   if (!authed) return <PasswordGate onAuth={handleAuth} />;
 
   return (
-    <div className="p-3 sm:p-4 md:p-8 max-w-5xl mx-auto space-y-4 sm:space-y-6">
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3">
+    <motion.div variants={container} initial="hidden" animate="show" className="p-3 sm:p-4 md:p-8 max-w-5xl mx-auto space-y-4 sm:space-y-6">
+      <motion.div variants={item} className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center glow-primary">
           <Crown size={22} className="text-yellow-500" />
         </div>
@@ -124,7 +130,7 @@ export default function AdminPage() {
         </Badge>
       </motion.div>
 
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+      <motion.div variants={item}>
         <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-4">
           <StatCard icon={Users} label="Всего пользователей" value={stats.users} />
           <StatCard icon={Radio} label="Активные стримы" value={stats.activeStreams} />
@@ -133,7 +139,7 @@ export default function AdminPage() {
         </div>
       </motion.div>
 
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+      <motion.div variants={item}>
         <Tabs defaultValue="content" className="w-full">
           <TabsList className="w-full grid grid-cols-3 h-auto gap-1 bg-secondary/30 p-1 sm:p-1.5 rounded-xl">
             <TabsTrigger value="content" className="gap-1.5 text-xs font-mono data-[state=active]:bg-background"><BotMessageSquare size={12} /> Контент</TabsTrigger>
@@ -142,39 +148,59 @@ export default function AdminPage() {
           </TabsList>
 
           <TabsContent value="content" className="mt-6 space-y-6">
-            <h2 className="font-heading font-bold text-lg flex items-center gap-2"><Image size={16} /> Реклама</h2>
-            <AdsSection saveSetting={saveSetting} settings={settings} />
+            <SectionHeader title="Реклама" subtitle="Контент" />
+            <CardShell>
+              <AdsSection saveSetting={saveSetting} settings={settings} />
+            </CardShell>
             <Separator className="border-border/30" />
-            <h2 className="font-heading font-bold text-lg flex items-center gap-2"><Megaphone size={16} /> Рассылка</h2>
-            <BroadcastSection />
+            <SectionHeader title="Рассылка" subtitle="Контент" />
+            <CardShell>
+              <BroadcastSection />
+            </CardShell>
           </TabsContent>
 
           <TabsContent value="community" className="mt-6 space-y-6">
-            <h2 className="font-heading font-bold text-lg flex items-center gap-2"><HeadphonesIcon size={16} /> Поддержка</h2>
-            <SupportSection />
+            <SectionHeader title="Поддержка" subtitle="Сообщество" />
+            <CardShell>
+              <SupportSection />
+            </CardShell>
             <Separator className="border-border/30" />
-            <h2 className="font-heading font-bold text-lg flex items-center gap-2"><UserCog size={16} /> Пользователи</h2>
-            {canManageUsers ? <UserManagementSection /> : <p className="text-sm text-muted-foreground">Недостаточно прав</p>}
+            <SectionHeader title="Пользователи" subtitle="Сообщество" />
+            <CardShell>
+              {canManageUsers ? <UserManagementSection /> : <p className="text-sm text-muted-foreground">Недостаточно прав</p>}
+            </CardShell>
             <Separator className="border-border/30" />
-            <h2 className="font-heading font-bold text-lg flex items-center gap-2"><ShieldBan size={16} /> Антиспам</h2>
-            <AntiSpamSection saveSetting={saveSetting} settings={settings} />
+            <SectionHeader title="Антиспам" subtitle="Сообщество" />
+            <CardShell>
+              <AntiSpamSection saveSetting={saveSetting} settings={settings} />
+            </CardShell>
           </TabsContent>
 
           <TabsContent value="system" className="mt-6 space-y-6">
-            <h2 className="font-heading font-bold text-lg flex items-center gap-2"><Activity size={16} /> Мониторинг</h2>
-            <MonitoringSection />
+            <SectionHeader title="Мониторинг" subtitle="Система" />
+            <CardShell>
+              <MonitoringSection />
+            </CardShell>
             <Separator className="border-border/30" />
-            <h2 className="font-heading font-bold text-lg flex items-center gap-2"><AlertTriangle size={16} /> Обслуживание</h2>
-            {canManageSystem ? <MaintenanceSection maintenanceMode={maintenanceMode} setMaintenanceMode={setMaintenanceMode} saveSetting={saveSetting} /> : <p className="text-sm text-muted-foreground">Недостаточно прав</p>}
+            <SectionHeader title="Обслуживание" subtitle="Система" />
+            <CardShell>
+              {canManageSystem ? <MaintenanceSection maintenanceMode={maintenanceMode} setMaintenanceMode={setMaintenanceMode} saveSetting={saveSetting} /> : <p className="text-sm text-muted-foreground">Недостаточно прав</p>}
+            </CardShell>
             <Separator className="border-border/30" />
-            <h2 className="font-heading font-bold text-lg flex items-center gap-2"><Server size={16} /> Статус сервера</h2>
-            <ServerStatusSection />
+            <SectionHeader title="Статус сервера" subtitle="Система" />
+            <CardShell>
+              <ServerStatusSection />
+            </CardShell>
             <Separator className="border-border/30" />
-            <h2 className="font-heading font-bold text-lg flex items-center gap-2"><Shield size={16} /> Команда</h2>
-            {canManageTeam ? <TeamManagementSection /> : <p className="text-sm text-muted-foreground">Недостаточно прав</p>}
+            <SectionHeader title="Команда" subtitle="Система" />
+            <CardShell>
+              {canManageTeam ? <TeamManagementSection /> : <p className="text-sm text-muted-foreground">Недостаточно прав</p>}
+            </CardShell>
             <Separator className="border-border/30" />
-            <h2 className="font-heading font-bold text-lg flex items-center gap-2"><Activity size={16} /> Аудит</h2>
-            <AuditLogSection />
+            <SectionHeader title="Аудит" subtitle="Система" />
+            <CardShell>
+              <AuditLogSection />
+            </CardShell>
           </TabsContent>
         </Tabs>
       </motion.div>
@@ -191,6 +217,6 @@ export default function AdminPage() {
           <Lock size={12} /> Выйти из админки
         </Button>
       </div>
-    </div>
+    </motion.div>
   );
 }

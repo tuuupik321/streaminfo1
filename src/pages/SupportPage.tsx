@@ -1,5 +1,5 @@
 ﻿import { useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { CheckCircle2, HeadphonesIcon, MessageSquare, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
+import { makeFadeUp, makeStagger } from "@/shared/motion";
 
 type TelegramWebAppUser = {
   id?: number;
@@ -111,6 +112,9 @@ export default function SupportPage() {
   const autoUsername = tgUser?.username || tgUser?.first_name || "User";
 
   const profileSkin = useMemo(() => getProfileSkin(`${telegramId}:${autoUsername}`), [telegramId, autoUsername]);
+  const reduceMotion = useReducedMotion();
+  const container = makeStagger(reduceMotion);
+  const item = makeFadeUp(reduceMotion);
 
   const handleSubmit = async () => {
     if (!message.trim()) {
@@ -141,12 +145,12 @@ export default function SupportPage() {
 
   if (sent) {
     return (
-      <div className="mx-auto flex min-h-[60dvh] max-w-lg flex-col items-center justify-center gap-4 px-3 py-4 sm:p-4 md:p-8">
-        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+      <motion.div variants={container} initial="hidden" animate="show" className="mx-auto flex min-h-[60dvh] max-w-lg flex-col items-center justify-center gap-4 px-3 py-4 sm:p-4 md:p-8">
+        <motion.div variants={item} className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
           <CheckCircle2 size={32} className="text-primary" />
         </motion.div>
-        <h2 className="text-xl font-bold font-heading">{t.requestSent}</h2>
-        <p className="text-center text-sm font-mono text-muted-foreground">{t.sameAccount}</p>
+        <motion.h2 variants={item} className="text-xl font-bold font-heading">{t.requestSent}</motion.h2>
+        <motion.p variants={item} className="text-center text-sm font-mono text-muted-foreground">{t.sameAccount}</motion.p>
         <Button
           variant="outline"
           className="mt-4 text-xs font-mono"
@@ -157,13 +161,13 @@ export default function SupportPage() {
         >
           <MessageSquare size={14} className="mr-2" /> {t.newMessage}
         </Button>
-      </div>
+      </motion.div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-lg px-3 py-4 pb-20 sm:p-4 md:p-8">
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 flex items-center gap-3">
+    <motion.div variants={container} initial="hidden" animate="show" className="mx-auto max-w-lg px-3 py-4 pb-20 sm:p-4 md:p-8">
+      <motion.div variants={item} className="mb-6 flex items-center gap-3">
         <div className="glow-primary flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
           <HeadphonesIcon size={22} className="text-primary" />
         </div>
@@ -173,8 +177,8 @@ export default function SupportPage() {
         </div>
       </motion.div>
 
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-        <Card className="border-border/30 bg-card/50">
+      <motion.div variants={item}>
+        <Card className="border-border/30 bg-card/50 spotlight-hover">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-mono text-muted-foreground">{t.directRequest}</CardTitle>
           </CardHeader>
@@ -194,15 +198,15 @@ export default function SupportPage() {
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               rows={5}
-              className="resize-none border-border/30 bg-secondary/30 font-mono text-sm"
+              className="resize-none border-border/30 bg-secondary/30 font-mono text-sm focus-visible:ring-2 focus-visible:ring-primary/40"
             />
 
-            <Button onClick={handleSubmit} disabled={loading} className="w-full gap-2 font-mono">
+            <Button onClick={handleSubmit} disabled={loading} className="w-full gap-2 font-mono focus-visible:ring-2 focus-visible:ring-primary/40">
               <Send size={14} /> {loading ? t.sending : t.send}
             </Button>
           </CardContent>
         </Card>
       </motion.div>
-    </div>
+    </motion.div>
   );
 }

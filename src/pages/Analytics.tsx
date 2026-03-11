@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { BarChart3, CalendarDays, Clock, Download, Eye, TrendingUp, Users, PieChart, Flame, Award, Sparkles } from "lucide-react";
 import { StatsCard } from "@/shared/ui/StatsCard";
 import { DataPoint, ViewerChart } from "@/components/dashboard/ViewerChart";
@@ -13,6 +13,7 @@ import { useAnalyticsData } from "@/hooks/useAnalyticsData";
 import { EmptyState } from "@/shared/ui/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Bar, BarChart, Cell, Line, LineChart, Pie, PieChart as RePieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { makeFadeUp, makeStagger } from "@/shared/motion";
 
 type TimelineItem = {
   time: string;
@@ -116,14 +117,18 @@ export default function Analytics() {
     return <EmptyState icon={PieChart} title={t("analytics.errorTitle", "Failed to load analytics")} description={t("analytics.errorDescription", "Check your connection and try again.")} />;
   }
 
+  const reduceMotion = useReducedMotion();
+  const container = makeStagger(reduceMotion);
+  const item = makeFadeUp(reduceMotion);
+
   return (
-    <div className="mx-auto max-w-5xl px-3 py-3 md:p-6">
-      <motion.h1 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-5 text-xl font-black font-heading md:text-2xl">
+    <motion.div variants={container} initial="hidden" animate="show" className="mx-auto max-w-5xl px-3 py-3 md:p-6">
+      <motion.h1 variants={item} className="mb-5 text-xl font-black font-heading md:text-2xl">
         {t("analytics.title")}
       </motion.h1>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-[24px] border border-white/10 bg-white/5 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
+      <motion.div variants={item} className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <motion.div variants={item} className="saas-card">
           <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.streamForecast", "Stream Forecast")}</p>
           {isLoading ? (
             <div className="mt-3 space-y-2">
@@ -137,7 +142,7 @@ export default function Analytics() {
             </>
           )}
         </motion.div>
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="rounded-[24px] border border-white/10 bg-white/5 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
+        <motion.div variants={item} className="saas-card">
           <div className="flex items-center gap-2 text-white">
             <Flame size={18} className="animate-[streakFlame_1.6s_ease-in-out_infinite]" />
             <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.streamStreak", "Stream Streak")}</p>
@@ -154,7 +159,7 @@ export default function Analytics() {
             </>
           )}
         </motion.div>
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-[24px] border border-white/10 bg-white/5 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
+        <motion.div variants={item} className="saas-card">
           <div className="flex items-center gap-2 text-white">
             <Award size={16} />
             <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.achievements", "Achievements")}</p>
@@ -175,9 +180,9 @@ export default function Analytics() {
             </div>
           )}
         </motion.div>
-      </div>
+      </motion.div>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <motion.div variants={item} className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="saas-card lg:col-span-2">
           <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.viewersGrowth", "Viewers growth")}</p>
           <div className="mt-4 h-64">
@@ -202,9 +207,9 @@ export default function Analytics() {
             <p>{t("analytics.viewerPeak", "Viewer peak")}: <span className="text-white font-semibold">21:30</span></p>
           </div>
         </div>
-      </div>
+      </motion.div>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <motion.div variants={item} className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="saas-card">
           <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.clicksToStream", "Clicks to stream")}</p>
           <div className="mt-4 h-56">
@@ -244,9 +249,9 @@ export default function Analytics() {
             </ResponsiveContainer>
           </div>
         </div>
-      </div>
+      </motion.div>
 
-      <div className="mb-8 grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <motion.div variants={item} className="mb-8 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="saas-card lg:col-span-2">
           <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.platformComparison", "Platform comparison")}</p>
           <div className="mt-4 h-56">
@@ -275,9 +280,9 @@ export default function Analytics() {
             </ResponsiveContainer>
           </div>
         </div>
-      </div>
+      </motion.div>
 
-      <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-4">
+      <motion.div variants={item} className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-4">
         <Select value={period} onValueChange={setPeriod}>
           <SelectTrigger aria-label={t("analytics.periodSelectLabel")}><CalendarDays size={14} className="mr-2" /><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -293,30 +298,30 @@ export default function Analytics() {
         <Button variant={combinedChart ? "default" : "secondary"} onClick={() => setCombinedChart((v) => !v)}>
           {combinedChart ? t("analytics.hideCombined") : t("analytics.showCombined")}
         </Button>
-      </div>
+      </motion.div>
 
       {hasData ? (
         <>
-          <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-5">
+          <motion.div variants={item} className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-5">
             <StatsCard icon={Eye} label={t("analytics.clicks")} value={data?.clicks ?? 0} delay={0} loading={isLoading} />
             <StatsCard icon={TrendingUp} label={t("analytics.peak")} value={data?.max_peak ?? 0} delay={0.08} loading={isLoading} />
             <StatsCard icon={BarChart3} label={t("analytics.average")} value={data?.avg_peak ?? 0} delay={0.16} loading={isLoading} />
             <StatsCard icon={Clock} label={t("analytics.streamHours")} value={Number(data?.hours_streamed ?? 0)} delay={0.24} loading={isLoading} />
             <StatsCard icon={Users} label={t("analytics.viewersNow")} value={0} delay={0.32} loading={isLoading} />
-          </div>
+          </motion.div>
 
-          <div className="mb-8"><ViewerChart loading={isLoading} data={timeline} showCombined={combinedChart} /></div>
-          <div className="mb-8"><PredictionCard data={timeline} liveViewers={0} isLive={false} /></div>
-          <div className="mb-8"><StreamSeriesRail data={timeline} /></div>
-          <div className="mb-8"><LiveEventsFeed /></div>
+          <motion.div variants={item} className="mb-8"><ViewerChart loading={isLoading} data={timeline} showCombined={combinedChart} /></motion.div>
+          <motion.div variants={item} className="mb-8"><PredictionCard data={timeline} liveViewers={0} isLive={false} /></motion.div>
+          <motion.div variants={item} className="mb-8"><StreamSeriesRail data={timeline} /></motion.div>
+          <motion.div variants={item} className="mb-8"><LiveEventsFeed /></motion.div>
 
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="rounded-2xl border border-border/60 bg-card/65 py-6 text-center font-mono text-sm text-muted-foreground">
+          <motion.div variants={item} className="rounded-2xl border border-border/60 bg-card/65 py-6 text-center font-mono text-sm text-muted-foreground">
             {t("analytics.sessions")}: {data?.streams_count ?? 0} | {t("analytics.peak")}: {peak}
           </motion.div>
         </>
       ) : (
         <EmptyState icon={PieChart} title={t("analytics.emptyTitle")} description={t("analytics.emptyDescription")} />
       )}
-    </div>
+    </motion.div>
   );
 }

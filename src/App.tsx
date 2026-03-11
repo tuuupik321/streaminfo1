@@ -146,13 +146,28 @@ function AppShellWithOverlays() {
   return (
     <>
       <div className="flex min-h-[100dvh] w-full app-shell grain-bg">
-                <aside className={cn("hidden md:block", "glass-strong")}>
+                <div className="pointer-events-none absolute inset-0">
+                  <div className="hero-grid" />
+                  <div className="hero-orb left-[-120px] top-[-140px] h-[320px] w-[320px] bg-emerald-400/60" />
+                  <div className="hero-orb right-[-80px] top-[10%] h-[260px] w-[260px] bg-violet-500/50" />
+                  <div className="hero-orb left-[20%] bottom-[-160px] h-[360px] w-[360px] bg-cyan-400/40" />
+                </div>
+                <aside className={cn("relative z-10 hidden md:block", "glass-strong")}>
                   <AppSidebar />
                 </aside>
-                <div className="flex w-full flex-col min-w-0">
-                  <header className={cn("sticky top-0 z-40 h-12 border-b", "glass")}>
-                    <div className="mx-auto flex h-full w-full max-w-6xl items-center px-3 sm:px-4">
+                <div className="relative z-10 flex w-full flex-col min-w-0">
+                  <header className={cn("sticky top-0 z-40 h-12 border-b border-white/10", "glass")}>
+                    <div className="mx-auto flex h-full w-full max-w-6xl items-center justify-between px-3 sm:px-4">
                       <span className="text-sm font-bold font-heading text-gradient-primary">StreamInfo</span>
+                      <button
+                        type="button"
+                        onClick={() => setSettingsOpen(true)}
+                        className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-white/70 transition hover:border-white/30 hover:bg-white/10 md:flex"
+                        aria-label="Open settings"
+                      >
+                        <Cog size={14} />
+                        Settings
+                      </button>
                     </div>
                   </header>
                   <GlobalStatusBar />

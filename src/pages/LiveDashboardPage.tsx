@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+﻿import { motion, useReducedMotion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { EventFeed } from "@/features/live-dashboard/components/EventFeed";
@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Link2, Megaphone, Settings, ShieldCheck } from "lucide-react";
 import { getCurrentTelegramId, hasAdminSession, isOwnerTelegramId } from "@/lib/adminAccess";
+import { makeFadeUp, makeStagger } from "@/shared/motion";
+import { CardShell } from "@/shared/ui/CardShell";
+import { SectionHeader } from "@/shared/ui/SectionHeader";
 
 type ChatHighlight = {
   id: string;
@@ -28,6 +31,9 @@ export default function LiveDashboardPage() {
   const [highlights, setHighlights] = useState<ChatHighlight[]>([]);
   const currentTelegramId = getCurrentTelegramId();
   const canSeeAdmin = isOwnerTelegramId(currentTelegramId) || hasAdminSession(currentTelegramId);
+  const reduceMotion = useReducedMotion();
+  const container = makeStagger(reduceMotion);
+  const item = makeFadeUp(reduceMotion);
 
   useEffect(() => {
     let alive = true;
@@ -63,33 +69,28 @@ export default function LiveDashboardPage() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-7xl p-4 md:p-8">
-      <motion.h1
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-6 text-2xl font-black font-heading md:text-3xl text-gradient-primary"
-      >
+    <motion.div variants={container} initial="hidden" animate="show" className="mx-auto max-w-7xl p-4 md:p-8">
+      <motion.h1 variants={item} className="mb-6 text-2xl font-black font-heading md:text-3xl text-gradient-primary">
         {t("liveDashboard.title", "Live Dashboard")}
       </motion.h1>
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="mb-8"
-      >
-        <ChatPulseCharts />
+      <motion.div variants={item} className="mb-8">
+        <CardShell>
+          <ChatPulseCharts />
+        </CardShell>
       </motion.div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <h2 className="text-xl font-bold font-heading mb-4">{t("liveDashboard.liveFeed", "Лента событий")}</h2>
-          <EventFeed events={events} />
+          <SectionHeader title={t("liveDashboard.liveFeed", "Лента событий")} subtitle={t("liveDashboard.title", "Live Dashboard")} />
+          <CardShell className="mt-4">
+            <EventFeed events={events} />
+          </CardShell>
         </div>
         <div className="space-y-6">
           <div>
-            <h2 className="text-xl font-bold font-heading mb-4">{t("liveDashboard.chatHighlights", "Вопросы из чата")}</h2>
-            <div className="card-glass min-h-[16rem] rounded-xl p-4">
+            <SectionHeader title={t("liveDashboard.chatHighlights", "Вопросы из чата")} subtitle={t("liveDashboard.title", "Live Dashboard")} />
+            <CardShell className="mt-4 min-h-[16rem]">
               {highlights.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center mt-8">Пока нет сообщений</p>
               ) : (
@@ -102,11 +103,11 @@ export default function LiveDashboardPage() {
                   ))}
                 </div>
               )}
-            </div>
+            </CardShell>
           </div>
           <div>
-            <h2 className="text-xl font-bold font-heading mb-4">{t("liveDashboard.quickActions", "Быстрые действия")}</h2>
-            <div className="card-glass rounded-xl p-4">
+            <SectionHeader title={t("liveDashboard.quickActions", "Быстрые действия")} subtitle={t("liveDashboard.title", "Live Dashboard")} />
+            <CardShell className="mt-4">
               <div className="grid grid-cols-1 gap-3">
                 <Button className="w-full justify-start gap-2" variant="outline" onClick={() => navigate("/integrations")}>
                   <Link2 size={16} /> Подключить источники
@@ -123,10 +124,10 @@ export default function LiveDashboardPage() {
                   </Button>
                 )}
               </div>
-            </div>
+            </CardShell>
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

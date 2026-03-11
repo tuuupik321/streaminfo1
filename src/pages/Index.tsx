@@ -1,11 +1,14 @@
-import { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Users, TrendingUp, BarChart3, Search, Twitch, Activity } from "lucide-react";
+﻿import { useState, useMemo } from "react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { Users, TrendingUp, BarChart3, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { ChannelCard } from "@/components/dashboard/ChannelCard";
 import { ViewerChart } from "@/components/dashboard/ViewerChart";
 import { AddChannelDialog } from "@/components/dashboard/AddChannelDialog";
+import { makeFadeUp, makeStagger } from "@/shared/motion";
+import { CardShell } from "@/shared/ui/CardShell";
+import { SectionHeader } from "@/shared/ui/SectionHeader";
 
 const initialChannels: { name: string; platform: string; live: boolean; viewers: number }[] = [
   { name: "xQc", platform: "twitch", live: true, viewers: 45200 },
@@ -18,6 +21,9 @@ const initialChannels: { name: string; platform: string; live: boolean; viewers:
 export default function Index() {
   const [channels, setChannels] = useState<typeof initialChannels>(initialChannels);
   const [search, setSearch] = useState("");
+  const reduceMotion = useReducedMotion();
+  const container = makeStagger(reduceMotion);
+  const item = makeFadeUp(reduceMotion);
 
   const filtered = useMemo(
     () => channels.filter((c) => c.name.toLowerCase().includes(search.toLowerCase())),
@@ -41,28 +47,22 @@ export default function Index() {
   };
 
   return (
-    <div className="bg-background p-4 md:p-8 max-w-7xl mx-auto">
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+    <motion.div variants={container} initial="hidden" animate="show" className="bg-background p-4 md:p-8 max-w-7xl mx-auto">
+      <motion.div variants={item} className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <StatsCard icon={Users} label="Live сейчас" value={stats.live_viewers} delay={0} />
         <StatsCard icon={TrendingUp} label="Всего кликов" value={stats.total_clicks} delay={0.1} />
         <StatsCard icon={BarChart3} label="Пик онлайна" value={stats.peak_viewers} delay={0.2} />
-      </div>
+      </motion.div>
 
-      {/* Chart */}
-      <div className="mb-8">
-        <ViewerChart />
-      </div>
+      <motion.div variants={item} className="mb-8">
+        <CardShell>
+          <ViewerChart />
+        </CardShell>
+      </motion.div>
 
-      {/* Channels */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.4 }}
-      >
+      <motion.div variants={item}>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-          <h3 className="text-xl font-bold font-heading">Мои стримеры</h3>
+          <SectionHeader title="Мои стримеры" subtitle="Dashboard" />
           <div className="flex items-center gap-3 w-full sm:w-auto">
             <div className="relative flex-1 sm:flex-initial">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -91,6 +91,6 @@ export default function Index() {
           </div>
         )}
       </motion.div>
-    </div>
+    </motion.div>
   );
 }
