@@ -10,10 +10,13 @@ const mainTabs = [
   { icon: Megaphone, key: "announcements", path: "/announcements" },
 ];
 
-export function BottomNav({ onOpenSettings }: { onOpenSettings?: () => void }) {
+import { useRef } from "react";
+
+export function BottomNav({ onOpenSettings }: { onOpenSettings?: (anchor: DOMRect | null) => void }) {
   const location = useLocation();
   const { t } = useI18n();
   const currentPath = location.pathname;
+  const settingsRef = useRef<HTMLButtonElement | null>(null);
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 pb-[calc(var(--safe-bottom)_+_0.75rem)] md:hidden">
@@ -40,7 +43,8 @@ export function BottomNav({ onOpenSettings }: { onOpenSettings?: () => void }) {
 
         <button
           type="button"
-          onClick={() => onOpenSettings?.()}
+          ref={settingsRef}
+          onClick={() => onOpenSettings?.(settingsRef.current?.getBoundingClientRect() ?? null)}
           className="group mx-1 flex h-12 flex-col items-center justify-center gap-1 rounded-xl text-muted-foreground transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/5 hover:text-white hover:shadow-[0_0_22px_rgba(145,70,255,0.5)] active:scale-95"
           aria-label={t("bottomNav.more")}
         >

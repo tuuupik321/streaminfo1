@@ -119,6 +119,7 @@ const App = () => (
 function AppShellWithOverlays() {
   const [showSplash, setShowSplash] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsAnchor, setSettingsAnchor] = useState<DOMRect | null>(null);
   const [showVpnWarning, setShowVpnWarning] = useState(false);
 
   useEffect(() => {
@@ -176,7 +177,12 @@ function AppShellWithOverlays() {
                       <AnimatedRoutes />
                     </Suspense>
                   </main>
-                  <BottomNav onOpenSettings={() => setSettingsOpen(true)} />
+                  <BottomNav
+                    onOpenSettings={(anchor) => {
+                      setSettingsAnchor(anchor ?? null);
+                      setSettingsOpen(true);
+                    }}
+                  />
                 </div>
               </div>
       {showVpnWarning && (
@@ -190,7 +196,14 @@ function AppShellWithOverlays() {
           <button className="ml-3 text-yellow-100/70" onClick={() => setShowVpnWarning(false)}>Close</button>
         </motion.div>
       )}
-      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <SettingsModal
+        open={settingsOpen}
+        anchorRect={settingsAnchor}
+        onClose={() => {
+          setSettingsOpen(false);
+          setSettingsAnchor(null);
+        }}
+      />
       <SplashScreen show={showSplash} />
     </>
   );

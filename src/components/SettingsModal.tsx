@@ -11,6 +11,7 @@ import { Link } from "react-router-dom";
 
 type SettingsModalProps = {
   open: boolean;
+  anchorRect?: DOMRect | null;
   onClose: () => void;
 };
 
@@ -28,12 +29,20 @@ const panelVariants = {
   exit: { opacity: 0, y: -12, scale: 0.98 },
 };
 
-export function SettingsModal({ open, onClose }: SettingsModalProps) {
+export function SettingsModal({ open, anchorRect, onClose }: SettingsModalProps) {
   const { language, t } = useI18n();
   const activeLanguage = language === "ru" ? "ru" : "en";
   const { theme, setTheme } = useTheme();
   const { glowIntensity, setGlowIntensity, setLanguage } = useSettingsStore();
   const [ripples, setRipples] = useState<Ripple[]>([]);
+  const isAnchored = Boolean(anchorRect && typeof window !== "undefined" && window.innerWidth < 768);
+  const panelStyle = isAnchored && anchorRect ? { left: anchorRect.right, top: anchorRect.top } : undefined;
+  const panelClass = isAnchored
+    ? "fixed w-[min(92vw,420px)] -translate-x-full -translate-y-3 origin-bottom-right overflow-hidden rounded-[22px] border border-white/10 bg-[#0c0c12] shadow-[0_30px_80px_rgba(0,0,0,0.45)]"
+    : "w-full max-w-4xl overflow-hidden rounded-[22px] border border-white/10 bg-[#0c0c12] shadow-[0_30px_80px_rgba(0,0,0,0.45)]";
+  const containerClass = isAnchored
+    ? "fixed inset-0 z-[90] bg-black/60"
+    : "fixed inset-0 z-[90] flex items-start justify-center bg-black/60 px-3 pt-16 sm:px-4 sm:pt-20";
 
   const handleRipple = (event: React.MouseEvent<HTMLButtonElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -50,7 +59,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-[90] flex items-start justify-center bg-black/60 px-3 pt-16 sm:px-4 sm:pt-20"
+          className={containerClass}
           variants={containerVariants}
           initial="hidden"
           animate="visible"
@@ -58,8 +67,8 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
           onClick={onClose}
         >
           <motion.div
-            className="w-full max-w-4xl overflow-hidden rounded-[22px] border border-white/10 bg-[#0c0c12] shadow-[0_30px_80px_rgba(0,0,0,0.45)]"
-            style={{ boxShadow: "0 0 70px rgba(145,70,255,0.35)" }}
+            className={panelClass}
+            style={{ ...panelStyle, boxShadow: "0 0 70px rgba(145,70,255,0.35)" }}
             variants={panelVariants}
             onClick={(event) => event.stopPropagation()}
           >
