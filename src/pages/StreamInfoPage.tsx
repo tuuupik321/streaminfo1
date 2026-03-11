@@ -119,6 +119,10 @@ export default function StreamInfoPage() {
     return Math.max(0, score);
   }, [clicksToday, donationsToday, followers, activity.length]);
 
+  const reduceMotion = useReducedMotion();
+  const container = makeStagger(reduceMotion);
+  const item = makeFadeUp(reduceMotion);
+
   if (data?.is_linked === false && !isLoading) {
     return <LockedOverlay />;
   }
@@ -145,10 +149,6 @@ export default function StreamInfoPage() {
     }
     handleCopyLink();
   };
-
-  const reduceMotion = useReducedMotion();
-  const container = makeStagger(reduceMotion);
-  const item = makeFadeUp(reduceMotion);
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="mx-auto max-w-6xl px-3 py-3 md:p-6">

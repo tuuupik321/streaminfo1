@@ -81,6 +81,10 @@ export default function DonationsPage() {
     }));
   }, [data?.items, t]);
 
+  const reduceMotion = useReducedMotion();
+  const container = makeStagger(reduceMotion);
+  const item = makeFadeUp(reduceMotion);
+
   if (isLoading) {
     return (
       <div className="mx-auto max-w-3xl p-4 md:p-8">
@@ -103,10 +107,6 @@ export default function DonationsPage() {
   if (!data?.configured) {
     return <EmptyState icon={Gift} title={t("donations.notConfiguredTitle")} description={t("donations.notConfiguredDescription")} />;
   }
-
-  const reduceMotion = useReducedMotion();
-  const container = makeStagger(reduceMotion);
-  const item = makeFadeUp(reduceMotion);
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="mx-auto max-w-3xl px-3 py-3 md:p-6">
