@@ -10,15 +10,43 @@ export type DashboardStats = {
   subscribers?: number;
 };
 
+export type StreamItem = {
+  title?: string;
+  url?: string;
+  published_at?: string;
+  view_count?: number;
+  duration?: string;
+};
+
+export type ClipItem = {
+  title?: string;
+  url?: string;
+  creator?: string;
+  view_count?: number;
+  created_at?: string;
+};
+
+export type NotificationItem = {
+  title: string;
+  body?: string;
+  created_at: string;
+};
+
 export function Dashboard({
   theme,
   profile,
   stats,
+  streams,
+  clips,
+  notifications,
   onReconnect,
 }: {
   theme: PlatformTheme;
   profile: UserProfile;
   stats: DashboardStats | null;
+  streams: StreamItem[];
+  clips: ClipItem[];
+  notifications: NotificationItem[];
   onReconnect: () => void;
 }) {
   const viewers = stats?.viewers ?? 0;
@@ -77,15 +105,40 @@ export function Dashboard({
           )}
         </section>
         <section className="sections">
-          {theme.sections.map((section) => (
-            <SectionCard key={section} title={section}>
-              <ul className="section-list">
-                <li>Шаблон поста и расписание трансляций</li>
-                <li>Быстрые метрики и целевые значения</li>
-                <li>Автоматические уведомления аудитории</li>
-              </ul>
-            </SectionCard>
-          ))}
+          <SectionCard title="Мои стримы">
+            <ul className="section-list">
+              {streams.length === 0 ? <li>Нет данных по стримам</li> : null}
+              {streams.map((stream) => (
+                <li key={stream.url}>
+                  <a className="link" href={stream.url} target="_blank" rel="noreferrer">
+                    {stream.title || "Стрим"}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </SectionCard>
+          <SectionCard title="Последние клипы">
+            <ul className="section-list">
+              {clips.length === 0 ? <li>Клипов пока нет</li> : null}
+              {clips.map((clip) => (
+                <li key={clip.url}>
+                  <a className="link" href={clip.url} target="_blank" rel="noreferrer">
+                    {clip.title || "Клип"}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </SectionCard>
+          <SectionCard title="Уведомления">
+            <ul className="section-list">
+              {notifications.length === 0 ? <li>Нет новых уведомлений</li> : null}
+              {notifications.map((note) => (
+                <li key={note.created_at}>
+                  {note.title} {note.body ? `— ${note.body}` : ""}
+                </li>
+              ))}
+            </ul>
+          </SectionCard>
         </section>
       </main>
     </div>

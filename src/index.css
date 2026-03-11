@@ -217,6 +217,15 @@ button, input {
   font-size: 13px;
 }
 
+.link {
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
 .btn {
   border: none;
   border-radius: 14px;

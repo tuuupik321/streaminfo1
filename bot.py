@@ -240,6 +240,14 @@ class PartnerBannerMetric(Base):
     value = Column(Integer, nullable=False, default=0)
     updated_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
 
+class Notification(Base):
+    __tablename__ = "notifications"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(BigInteger, nullable=False, index=True)
+    title = Column(String(120), nullable=False)
+    body = Column(String(255), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+
 engine = create_async_engine(
     DB_URL,
     pool_pre_ping=True,
@@ -625,6 +633,100 @@ async def fetch_twitch_profile(login: Optional[str]) -> dict[str, Any]:
     _twitch_profile_cache[login] = (time.time(), payload)
     return payload
 
+async def fetch_twitch_videos(login: Optional[str], limit: int = 5) -> list[dict[str, Any]]:
+    if not login:
+        return []
+    token = await _get_twitch_app_token()
+    if not token or not TWITCH_ID:
+        return []
+    details = await fetch_twitch_channel_details(login)
+    if not details or not details.get("id"):
+        return []
+    try:
+        url = f"https://api.twitch.tv/helix/videos?user_id={quote_plus(details['id'])}&first={limit}&sort=time"
+        headers = {"Client-ID": TWITCH_ID, "Authorization": f"Bearer {token}"}
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers, timeout=12) as resp:
+                data = await resp.json()
+                if resp.status != 200:
+                    log_event("twitch_videos_failed", status=resp.status, body=str(data)[:200])
+                    return []
+                items = data.get("data") or []
+                return [
+                    {
+                        "title": item.get("title"),
+                        "url": item.get("url"),
+                        "published_at": item.get("published_at"),
+                        "view_count": item.get("view_count"),
+                        "duration": item.get("duration"),
+                    }
+                    for item in items
+                ]
+    except Exception as error:
+        log_event("twitch_videos_error", error=str(error))
+        return []
+
+async def fetch_twitch_clips(login: Optional[str], limit: int = 5) -> list[dict[str, Any]]:
+    if not login:
+        return []
+    token = await _get_twitch_app_token()
+    if not token or not TWITCH_ID:
+        return []
+    details = await fetch_twitch_channel_details(login)
+    if not details or not details.get("id"):
+        return []
+    try:
+        url = f"https://api.twitch.tv/helix/clips?broadcaster_id={quote_plus(details['id'])}&first={limit}"
+        headers = {"Client-ID": TWITCH_ID, "Authorization": f"Bearer {token}"}
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers, timeout=12) as resp:
+                data = await resp.json()
+                if resp.status != 200:
+                    log_event("twitch_clips_failed", status=resp.status, body=str(data)[:200])
+                    return []
+                items = data.get("data") or []
+                return [
+                    {
+                        "title": item.get("title"),
+                        "url": item.get("url"),
+                        "creator": item.get("creator_name"),
+                        "view_count": item.get("view_count"),
+                        "created_at": item.get("created_at"),
+                    }
+                    for item in items
+                ]
+    except Exception as error:
+        log_event("twitch_clips_error", error=str(error))
+        return []
+
+async def fetch_youtube_streams(channel_id: Optional[str], limit: int = 5) -> list[dict[str, Any]]:
+    if not channel_id or not YT_KEY:
+        return []
+    try:
+        url = (
+            "https://www.googleapis.com/youtube/v3/search"
+            f"?part=snippet&channelId={quote_plus(channel_id)}&type=video"
+            f"&eventType=completed&order=date&maxResults={limit}&key={quote_plus(YT_KEY)}"
+        )
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, timeout=12) as resp:
+                data = await resp.json()
+                if resp.status != 200:
+                    log_event("youtube_streams_failed", status=resp.status, body=str(data)[:200])
+                    return []
+                items = data.get("items") or []
+                return [
+                    {
+                        "title": item.get("snippet", {}).get("title"),
+                        "url": f"https://youtube.com/watch?v={item.get('id', {}).get('videoId')}",
+                        "published_at": item.get("snippet", {}).get("publishedAt"),
+                    }
+                    for item in items
+                ]
+    except Exception as error:
+        log_event("youtube_streams_error", error=str(error))
+        return []
+
 async def update_stream_history(session: AsyncSession, user_id: int, is_live: bool, viewers: int) -> None:
     query = select(StreamSession).where(
         StreamSession.user_id == user_id,
@@ -703,6 +805,7 @@ async def setup_database():
         "users",
         "streamers",
         "channel_connections",
+        "notifications",
         "stream_goals",
         "donations",
         "visual_settings",
@@ -887,7 +990,7 @@ def _detect_platform_from_url(url: str) -> str:
         return "twitch"
     if "youtube.com" in lowered or "youtu.be" in lowered:
         return "youtube"
-    raise ValueError("Не удалось определить платформу")
+    raise ValueError("Platform not detected")
 
 async def verify_channel(request: web.Request):
     auth_error = await _require_verified_user(request)
@@ -1139,7 +1242,72 @@ async def get_dashboard_stats(request: web.Request):
             stats.update({
                 "subscribers": int(yt_data.get("subscribers") or 0),
             })
+                note_title = "Stream live" if stats.get("online") else "Stream offline"
+        existing = await session.execute(
+            select(Notification)
+            .where(Notification.user_id == int(user_id), Notification.title == note_title)
+            .order_by(desc(Notification.created_at))
+            .limit(1)
+        )
+        last_note = existing.scalars().first()
+        if not last_note or (datetime.now(timezone.utc) - last_note.created_at).total_seconds() > 600:
+            notification = Notification(user_id=int(user_id), title=note_title, body=f"Platform: {platform}")
+            session.add(notification)
+            await session.commit()
         return web.json_response(stats)
+
+async def get_streams(request: web.Request):
+    user_id = request.query.get("user_id")
+    if not user_id:
+        return web.json_response({"error": "no_uid"}, status=400)
+    if not async_session:
+        return web.json_response({"error": "db_not_configured"}, status=500)
+    async with async_session() as session:
+        connection = await session.get(ChannelConnection, int(user_id))
+        if not connection or not connection.connected:
+            return web.json_response({"connected": False}, status=404)
+        user = await session.get(User, int(user_id))
+        platform = connection.platform
+        if platform == "twitch":
+            items = await fetch_twitch_videos(user.twitch_name if user else None)
+        else:
+            items = await fetch_youtube_streams(user.yt_channel_id if user else None)
+        return web.json_response({"platform": platform, "items": items})
+
+async def get_clips(request: web.Request):
+    user_id = request.query.get("user_id")
+    if not user_id:
+        return web.json_response({"error": "no_uid"}, status=400)
+    if not async_session:
+        return web.json_response({"error": "db_not_configured"}, status=500)
+    async with async_session() as session:
+        connection = await session.get(ChannelConnection, int(user_id))
+        if not connection or not connection.connected:
+            return web.json_response({"connected": False}, status=404)
+        user = await session.get(User, int(user_id))
+        if connection.platform != "twitch":
+            return web.json_response({"platform": connection.platform, "items": []})
+        items = await fetch_twitch_clips(user.twitch_name if user else None)
+        return web.json_response({"platform": "twitch", "items": items})
+
+async def get_notifications(request: web.Request):
+    user_id = request.query.get("user_id")
+    if not user_id:
+        return web.json_response({"error": "no_uid"}, status=400)
+    if not async_session:
+        return web.json_response({"error": "db_not_configured"}, status=500)
+    async with async_session() as session:
+        query = select(Notification).where(Notification.user_id == int(user_id)).order_by(desc(Notification.created_at)).limit(10)
+        result = await session.execute(query)
+        items = result.scalars().all()
+        return web.json_response([
+            {
+                "title": item.title,
+                "body": item.body,
+                "created_at": item.created_at.isoformat(),
+            }
+            for item in items
+        ])
 
 def _normalize_donation_payload(payload: dict[str, Any]) -> Optional[dict[str, Any]]:
     donor = payload.get("donor") or payload.get("username") or payload.get("name")
@@ -1535,6 +1703,9 @@ def build_app():
     app.router.add_post("/api/channel/connect", connect_channel)
     app.router.add_get("/api/channel", get_channel)
     app.router.add_get("/api/dashboard_stats", get_dashboard_stats)
+    app.router.add_get("/api/streams", get_streams)
+    app.router.add_get("/api/clips", get_clips)
+    app.router.add_get("/api/notifications", get_notifications)
     app.router.add_post("/api/save_settings", save_settings)
     app.router.add_post("/api/donations/webhook", donations_webhook)
     app.router.add_get("/api/donations/live", get_donations_live)
@@ -1792,3 +1963,6 @@ if __name__ == "__main__":
         print(f"!!! Startup error: {error}")
 
 # Force update
+
+
+

@@ -10,12 +10,21 @@ import {
 } from "./database/users";
 import { getThemeByPlatform } from "./ui/themes";
 import { ConnectScreen } from "./ui/connect";
-import { Dashboard, type DashboardStats } from "./ui/dashboard";
+import {
+  Dashboard,
+  type ClipItem,
+  type DashboardStats,
+  type NotificationItem,
+  type StreamItem,
+} from "./ui/dashboard";
 
 const App = () => {
   const [profile, setProfile] = useState<UserProfile | null>(() => getUserProfile());
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [streams, setStreams] = useState<StreamItem[]>([]);
+  const [clips, setClips] = useState<ClipItem[]>([]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const userId = useMemo(() => getOrCreateUserId(), []);
 
   const theme = useMemo(() => (profile ? getThemeByPlatform(profile.platform) : null), [profile]);
@@ -50,9 +59,25 @@ const App = () => {
     const loadStats = async () => {
       try {
         const res = await fetch(`/api/dashboard_stats?user_id=${userId}`);
-        if (!res.ok) return;
-        const data = (await res.json()) as DashboardStats;
-        if (active) setStats(data);
+        if (res.ok) {
+          const data = (await res.json()) as DashboardStats;
+          if (active) setStats(data);
+        }
+        const streamsRes = await fetch(`/api/streams?user_id=${userId}`);
+        if (streamsRes.ok) {
+          const payload = (await streamsRes.json()) as { items?: StreamItem[] };
+          if (active && payload.items) setStreams(payload.items);
+        }
+        const clipsRes = await fetch(`/api/clips?user_id=${userId}`);
+        if (clipsRes.ok) {
+          const payload = (await clipsRes.json()) as { items?: ClipItem[] };
+          if (active && payload.items) setClips(payload.items);
+        }
+        const notesRes = await fetch(`/api/notifications?user_id=${userId}`);
+        if (notesRes.ok) {
+          const payload = (await notesRes.json()) as NotificationItem[];
+          if (active) setNotifications(payload);
+        }
       } catch {
         // ignore
       }
@@ -102,6 +127,9 @@ const App = () => {
     clearUserProfile();
     setProfile(null);
     setStats(null);
+    setStreams([]);
+    setClips([]);
+    setNotifications([]);
   };
 
   if (!profile) {
@@ -115,7 +143,17 @@ const App = () => {
 
   return (
     <div className="app-shell">
-      {theme ? <Dashboard theme={theme} profile={profile} stats={stats} onReconnect={handleReconnect} /> : null}
+      {theme ? (
+        <Dashboard
+          theme={theme}
+          profile={profile}
+          stats={stats}
+          streams={streams}
+          clips={clips}
+          notifications={notifications}
+          onReconnect={handleReconnect}
+        />
+      ) : null}
       {error ? <div className="global-error">{error}</div> : null}
     </div>
   );
