@@ -45,6 +45,9 @@ function RouteLoadingState() {
   );
 }
 
+type TelegramWebAppUser = { id?: number };
+type TelegramWebApp = { initDataUnsafe?: { user?: TelegramWebAppUser } };
+
 const App = () => {
   const [profile, setProfile] = useState<UserProfile | null>(() => getUserProfile());
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +56,11 @@ const App = () => {
   const [clips, setClips] = useState<ClipItem[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [streamSeries, setStreamSeries] = useState<Array<{ date: string; count: number }>>([]);
-  const userId = useMemo(() => getOrCreateUserId(), []);
+  const telegramUserId = useMemo(
+    () => (window as Window & { Telegram?: { WebApp?: TelegramWebApp } }).Telegram?.WebApp?.initDataUnsafe?.user?.id,
+    [],
+  );
+  const userId = useMemo(() => getOrCreateUserId(telegramUserId), [telegramUserId]);
   const queryClient = useMemo(() => new QueryClient(), []);
 
   const theme = useMemo(() => (profile ? getThemeByPlatform(profile.platform) : null), [profile]);

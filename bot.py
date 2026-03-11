@@ -119,6 +119,8 @@ def _is_telegram_network_error(error: Exception) -> bool:
 
 TOKEN = os.getenv("BOT_TOKEN")
 APP_URL = os.getenv("RENDER_EXTERNAL_URL") or os.getenv("APP_URL")
+INT64_MIN = -(1 << 63)
+INT64_MAX = (1 << 63) - 1
 SPACE_HOST = os.getenv("SPACE_HOST")
 RAW_DB_URL = os.getenv("DATABASE_URL")
 TWITCH_ID = os.getenv("TWITCH_CLIENT_ID")
@@ -817,11 +819,9 @@ async def get_telegram_targets(request: web.Request):
     if auth_error:
         return auth_error
 
-    uid = request.query.get("user_id")
-    if not uid:
-        return web.json_response({"error": "no_uid"}, status=400)
-    if REQUIRE_INIT_DATA and request.get("verified_user_id") and request["verified_user_id"] != str(uid):
-        return web.json_response({"error": "user_mismatch"}, status=403)
+    user_id, user_error = _resolve_user_id(request, allow_verified_fallback=True)
+    if user_error:
+        return user_error
     if not async_session:
         return web.json_response({"error": "db_not_configured"}, status=500)
 
@@ -830,7 +830,7 @@ async def get_telegram_targets(request: web.Request):
             await session.execute(
                 select(TelegramChannel)
                 .where(
-                    TelegramChannel.owner_user_id == int(uid),
+                    TelegramChannel.owner_user_id == user_id,
                     TelegramChannel.is_verified == True,  # noqa: E712
                 )
                 .order_by(desc(TelegramChannel.updated_at), desc(TelegramChannel.created_at))
@@ -865,6 +865,48 @@ async def _require_verified_user(request: web.Request):
     request["verified_user_id"] = str(verified["user_id"])
     request["verified_user"] = verified.get("user") or {}
     return None
+
+
+def _parse_int64(value: Any) -> Optional[int]:
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        parsed = int(str(value).strip())
+    except (TypeError, ValueError):
+        return None
+    if parsed < INT64_MIN or parsed > INT64_MAX:
+        return None
+    return parsed
+
+
+def _resolve_user_id(
+    request: web.Request,
+    *,
+    source: str = "query",
+    payload: Optional[dict[str, Any]] = None,
+    allow_verified_fallback: bool = False,
+) -> tuple[Optional[int], Optional[web.Response]]:
+    raw_user_id: Any
+    if source == "body":
+        raw_user_id = (payload or {}).get("user_id")
+    else:
+        raw_user_id = request.query.get("user_id")
+
+    verified_user_id = _parse_int64(request.get("verified_user_id"))
+    if raw_user_id is None or not str(raw_user_id).strip():
+        if allow_verified_fallback and verified_user_id is not None:
+            return verified_user_id, None
+        return None, web.json_response({"error": "no_uid"}, status=400)
+
+    user_id = _parse_int64(raw_user_id)
+    if user_id is None:
+        if allow_verified_fallback and verified_user_id is not None:
+            return verified_user_id, None
+        return None, web.json_response({"error": "invalid_user_id"}, status=400)
+
+    if REQUIRE_INIT_DATA and verified_user_id is not None and user_id != verified_user_id:
+        return None, web.json_response({"error": "user_mismatch"}, status=403)
+    return user_id, None
 
 
 async def setup_database():
@@ -1156,15 +1198,15 @@ async def set_live_banner(request: web.Request):
         return web.json_response({"status": "ok"})
 
 async def get_live_banner(request: web.Request):
-    user_id = request.query.get("user_id")
-    if not user_id:
-        return web.json_response({"error": "no_uid"}, status=400)
+    user_id, user_error = _resolve_user_id(request)
+    if user_error:
+        return user_error
 
     if not async_session:
         return web.json_response({"error": "db_not_configured"}, status=500)
 
     async with async_session() as session:
-        query = select(LiveBanner).where(LiveBanner.user_id == int(user_id)).order_by(desc(LiveBanner.created_at))
+        query = select(LiveBanner).where(LiveBanner.user_id == user_id).order_by(desc(LiveBanner.created_at))
         result = await session.execute(query)
         banner = result.scalar_one_or_none()
         if not banner:
@@ -1341,10 +1383,13 @@ async def verify_channel(request: web.Request):
 async def connect_channel(request: web.Request):
     try:
         payload = await request.json()
-        user_id = int(payload.get("user_id"))
         channel_url = str(payload.get("channel_url") or "").strip()
     except Exception:
         return web.json_response({"error": "bad_request"}, status=400)
+
+    user_id, user_error = _resolve_user_id(request, source="body", payload=payload)
+    if user_error:
+        return user_error
 
     if not channel_url:
         return web.json_response({"error": "bad_request"}, status=400)
@@ -1431,13 +1476,13 @@ async def connect_channel(request: web.Request):
     return web.json_response(profile_data)
 
 async def get_channel(request: web.Request):
-    user_id = request.query.get("user_id")
-    if not user_id:
-        return web.json_response({"error": "no_uid"}, status=400)
+    user_id, user_error = _resolve_user_id(request)
+    if user_error:
+        return user_error
     if not async_session:
         return web.json_response({"error": "db_not_configured"}, status=500)
     async with async_session() as session:
-        connection = await session.get(ChannelConnection, int(user_id))
+        connection = await session.get(ChannelConnection, user_id)
         if not connection or not connection.connected:
             return web.json_response({"connected": False})
         return web.json_response({
@@ -1448,21 +1493,21 @@ async def get_channel(request: web.Request):
         })
 
 async def get_dashboard_stats(request: web.Request):
-    user_id = request.query.get("user_id")
-    if not user_id:
-        return web.json_response({"error": "no_uid"}, status=400)
+    user_id, user_error = _resolve_user_id(request)
+    if user_error:
+        return user_error
     if not async_session:
         return web.json_response({"error": "db_not_configured"}, status=500)
     async with async_session() as session:
-        connection = await session.get(ChannelConnection, int(user_id))
+        connection = await session.get(ChannelConnection, user_id)
         if not connection or not connection.connected:
             return web.json_response({"connected": False})
-        user = await session.get(User, int(user_id))
+        user = await session.get(User, user_id)
         platform = connection.platform
         stats: dict[str, Any] = {"platform": platform}
         had_open = False
         if platform == "twitch":
-            open_query = select(StreamSession).where(StreamSession.user_id == int(user_id), StreamSession.ended_at == None).order_by(desc(StreamSession.started_at)).limit(1)
+            open_query = select(StreamSession).where(StreamSession.user_id == user_id, StreamSession.ended_at == None).order_by(desc(StreamSession.started_at)).limit(1)
             open_session = (await session.execute(open_query)).scalars().first()
             had_open = bool(open_session)
             twitch_data = await fetch_twitch(user.twitch_name if user else None)
@@ -1473,32 +1518,32 @@ async def get_dashboard_stats(request: web.Request):
                 "followers": int(profile.get("followers") or 0) if profile else 0,
                 "views": int(profile.get("views") or 0) if profile else 0,
             })
-            await update_stream_history(session, int(user_id), bool(stats.get("online")), int(stats.get("viewers", 0)))
+            await update_stream_history(session, user_id, bool(stats.get("online")), int(stats.get("viewers", 0)))
         if platform == "youtube":
             yt_data = await fetch_youtube(user.yt_channel_id if user else None)
             stats.update({
                 "subscribers": int(yt_data.get("subscribers") or 0),
             })
         if platform == "twitch":
-            open_query = select(StreamSession).where(StreamSession.user_id == int(user_id), StreamSession.ended_at == None).order_by(desc(StreamSession.started_at)).limit(1)
+            open_query = select(StreamSession).where(StreamSession.user_id == user_id, StreamSession.ended_at == None).order_by(desc(StreamSession.started_at)).limit(1)
             open_session = (await session.execute(open_query)).scalars().first()
             has_open = bool(open_session)
             if had_open != has_open:
                 note_title = "Stream started" if has_open else "Stream ended"
-                notification = Notification(user_id=int(user_id), title=note_title, body=f"Platform: {platform}")
+                notification = Notification(user_id=user_id, title=note_title, body=f"Platform: {platform}")
                 session.add(notification)
         await session.commit()
         return web.json_response(stats)
 
 async def get_stream_history(request: web.Request):
-    user_id = request.query.get("user_id")
-    if not user_id:
-        return web.json_response({"error": "no_uid"}, status=400)
+    user_id, user_error = _resolve_user_id(request)
+    if user_error:
+        return user_error
     if not async_session:
         return web.json_response({"error": "db_not_configured"}, status=500)
     async with async_session() as session:
         cutoff = datetime.now(timezone.utc) - timedelta(days=7)
-        query = select(StreamSession).where(StreamSession.user_id == int(user_id), StreamSession.started_at >= cutoff)
+        query = select(StreamSession).where(StreamSession.user_id == user_id, StreamSession.started_at >= cutoff)
         rows = (await session.execute(query)).scalars().all()
         buckets: dict[str, int] = {}
         for item in rows:
@@ -1510,16 +1555,16 @@ async def get_stream_history(request: web.Request):
         return web.json_response({"series": series})
 
 async def get_streams(request: web.Request):
-    user_id = request.query.get("user_id")
-    if not user_id:
-        return web.json_response({"error": "no_uid"}, status=400)
+    user_id, user_error = _resolve_user_id(request)
+    if user_error:
+        return user_error
     if not async_session:
         return web.json_response({"error": "db_not_configured"}, status=500)
     async with async_session() as session:
-        connection = await session.get(ChannelConnection, int(user_id))
+        connection = await session.get(ChannelConnection, user_id)
         if not connection or not connection.connected:
             return web.json_response({"connected": False})
-        user = await session.get(User, int(user_id))
+        user = await session.get(User, user_id)
         platform = connection.platform
         if platform == "twitch":
             items = await fetch_twitch_videos(user.twitch_name if user else None)
@@ -1528,29 +1573,29 @@ async def get_streams(request: web.Request):
         return web.json_response({"platform": platform, "items": items})
 
 async def get_clips(request: web.Request):
-    user_id = request.query.get("user_id")
-    if not user_id:
-        return web.json_response({"error": "no_uid"}, status=400)
+    user_id, user_error = _resolve_user_id(request)
+    if user_error:
+        return user_error
     if not async_session:
         return web.json_response({"error": "db_not_configured"}, status=500)
     async with async_session() as session:
-        connection = await session.get(ChannelConnection, int(user_id))
+        connection = await session.get(ChannelConnection, user_id)
         if not connection or not connection.connected:
             return web.json_response({"connected": False})
-        user = await session.get(User, int(user_id))
+        user = await session.get(User, user_id)
         if connection.platform != "twitch":
             return web.json_response({"platform": connection.platform, "items": []})
         items = await fetch_twitch_clips(user.twitch_name if user else None)
         return web.json_response({"platform": "twitch", "items": items})
 
 async def get_notifications(request: web.Request):
-    user_id = request.query.get("user_id")
-    if not user_id:
-        return web.json_response({"error": "no_uid"}, status=400)
+    user_id, user_error = _resolve_user_id(request)
+    if user_error:
+        return user_error
     if not async_session:
         return web.json_response({"error": "db_not_configured"}, status=500)
     async with async_session() as session:
-        query = select(Notification).where(Notification.user_id == int(user_id)).order_by(desc(Notification.created_at)).limit(10)
+        query = select(Notification).where(Notification.user_id == user_id).order_by(desc(Notification.created_at)).limit(10)
         result = await session.execute(query)
         items = result.scalars().all()
         return web.json_response([
@@ -1656,16 +1701,14 @@ async def get_donations(request: web.Request):
     auth_error = await _require_verified_user(request)
     if auth_error:
         return auth_error
-    uid = request.query.get("user_id")
-    if not uid:
-        return web.json_response({"error": "no_uid"}, status=400)
-    if REQUIRE_INIT_DATA and request.get("verified_user_id") and request["verified_user_id"] != str(uid):
-        return web.json_response({"error": "user_mismatch"}, status=403)
+    user_id, user_error = _resolve_user_id(request, allow_verified_fallback=True)
+    if user_error:
+        return user_error
     if not async_session:
         return web.json_response({"error": "db_not_configured"}, status=500)
     items: list[dict[str, Any]] = []
     async with async_session() as session:
-        query = select(Donation).where(Donation.streamer_id == int(uid)).order_by(desc(Donation.timestamp)).limit(50)
+        query = select(Donation).where(Donation.streamer_id == user_id).order_by(desc(Donation.timestamp)).limit(50)
         rows = (await session.execute(query)).scalars().all()
         items = [
             {
@@ -1686,15 +1729,13 @@ async def get_stream_goals(request: web.Request):
     auth_error = await _require_verified_user(request)
     if auth_error:
         return auth_error
-    uid = request.query.get("user_id")
-    if not uid:
-        return web.json_response({"error": "no_uid"}, status=400)
-    if REQUIRE_INIT_DATA and request.get("verified_user_id") and request["verified_user_id"] != str(uid):
-        return web.json_response({"error": "user_mismatch"}, status=403)
+    user_id, user_error = _resolve_user_id(request, allow_verified_fallback=True)
+    if user_error:
+        return user_error
     if not async_session:
         return web.json_response({"error": "db_not_configured"}, status=500)
     async with async_session() as session:
-        goals = (await session.execute(select(StreamGoal).where(StreamGoal.streamer_id == int(uid)))).scalars().all()
+        goals = (await session.execute(select(StreamGoal).where(StreamGoal.streamer_id == user_id))).scalars().all()
         return web.json_response([
             {
                 "id": g.id,
@@ -1710,17 +1751,15 @@ async def generate_stream_goals(request: web.Request):
     auth_error = await _require_verified_user(request)
     if auth_error:
         return auth_error
-    uid = request.query.get("user_id")
-    if not uid:
+    payload = request.get("_json")
+    if not isinstance(payload, dict):
         try:
             payload = await request.json()
-            uid = str(payload.get("user_id") or "")
         except Exception:
-            uid = ""
-    if not uid:
-        return web.json_response({"error": "no_uid"}, status=400)
-    if REQUIRE_INIT_DATA and request.get("verified_user_id") and request["verified_user_id"] != str(uid):
-        return web.json_response({"error": "user_mismatch"}, status=403)
+            payload = {}
+    user_id, user_error = _resolve_user_id(request, source="body", payload=payload, allow_verified_fallback=True)
+    if user_error:
+        return user_error
     if not async_session:
         return web.json_response({"error": "db_not_configured"}, status=500)
     defaults = {
@@ -1729,11 +1768,11 @@ async def generate_stream_goals(request: web.Request):
         "subscriptions": 10,
     }
     async with async_session() as session:
-        existing = (await session.execute(select(StreamGoal).where(StreamGoal.streamer_id == int(uid)))).scalars().all()
+        existing = (await session.execute(select(StreamGoal).where(StreamGoal.streamer_id == user_id))).scalars().all()
         if existing:
             return web.json_response({"status": "ok"})
         for goal_type, target in defaults.items():
-            session.add(StreamGoal(streamer_id=int(uid), goal_type=goal_type, current_value=0, target_value=target))
+            session.add(StreamGoal(streamer_id=user_id, goal_type=goal_type, current_value=0, target_value=target))
         await session.commit()
     return web.json_response({"status": "ok"})
 
@@ -1742,16 +1781,14 @@ async def get_preferences(request: web.Request):
     auth_error = await _require_verified_user(request)
     if auth_error:
         return auth_error
-    uid = request.query.get("user_id")
-    if not uid:
-        return web.json_response({"error": "no_uid"}, status=400)
-    if REQUIRE_INIT_DATA and request.get("verified_user_id") and request["verified_user_id"] != str(uid):
-        return web.json_response({"error": "user_mismatch"}, status=403)
+    user_id, user_error = _resolve_user_id(request, allow_verified_fallback=True)
+    if user_error:
+        return user_error
     if not async_session:
         return web.json_response({"error": "db_not_configured"}, status=500)
     async with async_session() as session:
-        streamer = await ensure_streamer(session, int(uid), (request.get("verified_user") or {}).get("username"))
-        visual = (await session.execute(select(VisualSetting).where(VisualSetting.streamer_id == int(uid)))).scalars().first()
+        streamer = await ensure_streamer(session, user_id, (request.get("verified_user") or {}).get("username"))
+        visual = (await session.execute(select(VisualSetting).where(VisualSetting.streamer_id == user_id))).scalars().first()
         return web.json_response({
             "language": streamer.language,
             "liquid_glow": visual.liquid_glow if visual else 50,
@@ -1766,22 +1803,20 @@ async def save_preferences(request: web.Request):
         payload = await request.json()
     except Exception:
         return web.json_response({"error": "bad_request"}, status=400)
-    uid = payload.get("user_id")
-    if not uid:
-        return web.json_response({"error": "no_uid"}, status=400)
-    if REQUIRE_INIT_DATA and request.get("verified_user_id") and request["verified_user_id"] != str(uid):
-        return web.json_response({"error": "user_mismatch"}, status=403)
+    user_id, user_error = _resolve_user_id(request, source="body", payload=payload, allow_verified_fallback=True)
+    if user_error:
+        return user_error
     if not async_session:
         return web.json_response({"error": "db_not_configured"}, status=500)
     language = payload.get("language")
     liquid_glow = payload.get("liquid_glow")
     async with async_session() as session:
-        streamer = await ensure_streamer(session, int(uid), (request.get("verified_user") or {}).get("username"))
+        streamer = await ensure_streamer(session, user_id, (request.get("verified_user") or {}).get("username"))
         if language:
             streamer.language = str(language)
-        visual = (await session.execute(select(VisualSetting).where(VisualSetting.streamer_id == int(uid)))).scalars().first()
+        visual = (await session.execute(select(VisualSetting).where(VisualSetting.streamer_id == user_id))).scalars().first()
         if not visual:
-            visual = VisualSetting(streamer_id=int(uid), liquid_glow=int(liquid_glow or 50))
+            visual = VisualSetting(streamer_id=user_id, liquid_glow=int(liquid_glow or 50))
             session.add(visual)
         else:
             if liquid_glow is not None:
@@ -1794,15 +1829,13 @@ async def get_platforms(request: web.Request):
     auth_error = await _require_verified_user(request)
     if auth_error:
         return auth_error
-    uid = request.query.get("user_id")
-    if not uid:
-        return web.json_response({"error": "no_uid"}, status=400)
-    if REQUIRE_INIT_DATA and request.get("verified_user_id") and request["verified_user_id"] != str(uid):
-        return web.json_response({"error": "user_mismatch"}, status=403)
+    user_id, user_error = _resolve_user_id(request, allow_verified_fallback=True)
+    if user_error:
+        return user_error
     if not async_session:
         return web.json_response({"error": "db_not_configured"}, status=500)
     async with async_session() as session:
-        stats = (await session.execute(select(PlatformStat).where(PlatformStat.streamer_id == int(uid)))).scalars().all()
+        stats = (await session.execute(select(PlatformStat).where(PlatformStat.streamer_id == user_id))).scalars().all()
         return web.json_response([
             {"platform": s.platform, "followers": s.followers, "views": s.views, "streams": s.streams}
             for s in stats
@@ -1822,10 +1855,14 @@ async def save_settings(request: web.Request):
     if not async_session:
         return web.json_response({"error": "db_not_configured"}, status=500)
 
-    if REQUIRE_INIT_DATA and request.get("verified_user_id") and request["verified_user_id"] != str(payload.user_id):
+    user_id = _parse_int64(payload.user_id)
+    if user_id is None:
+        return web.json_response({"error": "invalid_user_id"}, status=400)
+
+    if REQUIRE_INIT_DATA and request.get("verified_user_id") and request["verified_user_id"] != str(user_id):
         return web.json_response({"error": "user_mismatch"}, status=403)
 
-    if not _allow_rate("save_settings", str(payload.user_id), limit=20, window_seconds=60):
+    if not _allow_rate("save_settings", str(user_id), limit=20, window_seconds=60):
         return web.json_response({"error": "rate_limited"}, status=429)
 
     twitch_name = payload.twitch_name
@@ -1865,10 +1902,10 @@ async def save_settings(request: web.Request):
 
     try:
         async with async_session() as session:
-            streamer = await ensure_streamer(session, payload.user_id, (request.get("verified_user") or {}).get("username"))
-            user = await session.get(User, payload.user_id)
+            streamer = await ensure_streamer(session, user_id, (request.get("verified_user") or {}).get("username"))
+            user = await session.get(User, user_id)
             if not user:
-                user = User(user_id=payload.user_id)
+                user = User(user_id=user_id)
                 session.add(user)
 
             if twitch_name is not None:
@@ -1894,7 +1931,7 @@ async def save_settings(request: web.Request):
         return web.json_response({"error": "save_settings_failed"}, status=500)
 
     await write_audit_log(
-        str(payload.user_id),
+        str(user_id),
         "save_integrations",
         json.dumps(
             {
@@ -2076,13 +2113,12 @@ async def main():
 async def get_all_stats(request: web.Request):
     auth_error = await _require_verified_user(request)
     if auth_error: return auth_error
-    uid = request.query.get("user_id")
-    if not uid: return web.json_response({"error": "no_uid"}, status=400)
-    if REQUIRE_INIT_DATA and request.get("verified_user_id") and request["verified_user_id"] != str(uid): return web.json_response({"error": "user_mismatch"}, status=403)
+    user_id, user_error = _resolve_user_id(request, allow_verified_fallback=True)
+    if user_error: return user_error
     if not async_session: return web.json_response({"error": "db_not_configured"}, status=500)
     async with async_session() as session:
-        streamer = await ensure_streamer(session, int(uid), (request.get("verified_user") or {}).get("username"))
-        user = await session.get(User, int(uid))
+        streamer = await ensure_streamer(session, user_id, (request.get("verified_user") or {}).get("username"))
+        user = await session.get(User, user_id)
         if not user: return web.json_response({"is_linked": False, "clicks": 0, "twitch": {"online": False, "viewers": 0}, "youtube": {"subscribers": 0}})
         twitch_data = await fetch_twitch(user.twitch_name)
         if user.twitch_name:
@@ -2110,20 +2146,19 @@ async def get_all_stats(request: web.Request):
                 views=0,
                 streams=0,
             )
-        await update_stream_history(session, int(uid), bool(twitch_data.get("online")), int(twitch_data.get("viewers", 0)))
+        await update_stream_history(session, user_id, bool(twitch_data.get("online")), int(twitch_data.get("viewers", 0)))
         await session.commit()
         return web.json_response({"is_linked": True, "clicks": user.clicks, "twitch": twitch_data, "youtube": youtube_data})
 
 async def get_settings(request: web.Request):
     auth_error = await _require_verified_user(request)
     if auth_error: return auth_error
-    uid = request.query.get("user_id")
-    if not uid: return web.json_response({"error": "no_uid"}, status=400)
-    if REQUIRE_INIT_DATA and request.get("verified_user_id") and request["verified_user_id"] != str(uid): return web.json_response({"error": "user_mismatch"}, status=403)
+    user_id, user_error = _resolve_user_id(request, allow_verified_fallback=True)
+    if user_error: return user_error
     if not async_session: return web.json_response({"error": "db_not_configured"}, status=500)
     async with async_session() as session:
-        streamer = await ensure_streamer(session, int(uid), (request.get("verified_user") or {}).get("username"))
-        user = await session.get(User, int(uid))
+        streamer = await ensure_streamer(session, user_id, (request.get("verified_user") or {}).get("username"))
+        user = await session.get(User, user_id)
         if not user:
             return web.json_response({
                 "is_linked": bool(streamer.telegram_connected or streamer.kick_connected),
@@ -2149,10 +2184,9 @@ async def get_settings(request: web.Request):
 async def get_analytics(request: web.Request):
     auth_error = await _require_verified_user(request)
     if auth_error: return auth_error
-    uid = request.query.get("user_id")
+    user_id, user_error = _resolve_user_id(request, allow_verified_fallback=True)
     period = (request.query.get("period") or "today").lower()
-    if not uid: return web.json_response({"error": "no_uid"}, status=400)
-    if REQUIRE_INIT_DATA and request.get("verified_user_id") and request["verified_user_id"] != str(uid): return web.json_response({"error": "user_mismatch"}, status=403)
+    if user_error: return user_error
     if not async_session: return web.json_response({"error": "db_not_configured"}, status=500)
     async with async_session() as session:
         now = datetime.now(timezone.utc)
@@ -2170,7 +2204,7 @@ async def get_analytics(request: web.Request):
         elif period == "90d":
             start = now - timedelta(days=90)
 
-        base_query = select(StreamSession).where(StreamSession.user_id == int(uid))
+        base_query = select(StreamSession).where(StreamSession.user_id == user_id)
         if start:
             base_query = base_query.where(StreamSession.started_at >= start)
         if end:
@@ -2180,12 +2214,12 @@ async def get_analytics(request: web.Request):
 
         sessions_all_query = (
             select(StreamSession)
-            .where(StreamSession.user_id == int(uid))
+            .where(StreamSession.user_id == user_id)
             .order_by(desc(StreamSession.started_at))
             .limit(365)
         )
         sessions_all = (await session.execute(sessions_all_query)).scalars().all()
-        user = await session.get(User, int(uid))
+        user = await session.get(User, user_id)
         clicks = user.clicks if user else 0
         streams_count = len(sessions)
         max_peak = max((s.peak_viewers for s in sessions), default=0)
