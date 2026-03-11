@@ -134,9 +134,33 @@ export default function Analytics() {
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="mx-auto max-w-5xl px-3 py-3 md:p-6">
-      <motion.h1 variants={item} className="mb-5 text-xl font-black font-heading md:text-2xl">
-        {t("analytics.title")}
-      </motion.h1>
+      <motion.div variants={item} className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-xl font-black font-heading md:text-2xl">{t("analytics.title")}</h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={period} onValueChange={setPeriod}>
+            <SelectTrigger aria-label={t("analytics.periodSelectLabel")} className="w-[170px]">
+              <CalendarDays size={14} className="mr-2" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="today">{t("analytics.periodToday")}</SelectItem>
+              <SelectItem value="yesterday">{t("analytics.periodYesterday")}</SelectItem>
+              <SelectItem value="7d">{t("analytics.period7d")}</SelectItem>
+              <SelectItem value="30d">{t("analytics.period30d")}</SelectItem>
+              <SelectItem value="all">{t("analytics.periodAll")}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" onClick={exportCsv} className="gap-2" aria-label={t("analytics.exportCsv")}>
+            <Download size={14} />{t("analytics.exportCsv")}
+          </Button>
+          <Button variant="outline" onClick={exportPdf} className="gap-2" aria-label={t("analytics.exportPdf")}>
+            <Download size={14} />{t("analytics.exportPdf")}
+          </Button>
+          <Button variant={combinedChart ? "default" : "secondary"} onClick={() => setCombinedChart((v) => !v)}>
+            {combinedChart ? t("analytics.hideCombined") : t("analytics.showCombined")}
+          </Button>
+        </div>
+      </motion.div>
 
       <motion.div variants={item} className="mb-6 grid grid-cols-1 gap-4">
         <div className="saas-card">
@@ -197,6 +221,16 @@ export default function Analytics() {
         </div>
       </motion.div>
 
+      {hasData ? (
+        <motion.div variants={item} className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-5">
+          <StatsCard icon={Eye} label={t("analytics.clicks")} value={data?.clicks ?? 0} delay={0} loading={isLoading} />
+          <StatsCard icon={TrendingUp} label={t("analytics.peak")} value={data?.max_peak ?? 0} delay={0.08} loading={isLoading} />
+          <StatsCard icon={BarChart3} label={t("analytics.average")} value={data?.avg_peak ?? 0} delay={0.16} loading={isLoading} />
+          <StatsCard icon={Clock} label={t("analytics.streamHours")} value={Number(data?.hours_streamed ?? 0)} delay={0.24} loading={isLoading} />
+          <StatsCard icon={Users} label={t("analytics.viewersNow")} value={0} delay={0.32} loading={isLoading} />
+        </motion.div>
+      ) : null}
+
       <motion.div variants={item} className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="saas-card lg:col-span-2">
           <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.viewersGrowth", "Viewers growth")}</p>
@@ -239,7 +273,7 @@ export default function Analytics() {
                   className={cn("gap-2", activeChart === key && "bg-white/10")}
                 >
                   {chartConfig[key].icon}
-                  {chartConfig[key].label}
+                  <span className="hidden md:inline">{chartConfig[key].label}</span>
                 </Button>
               ))}
             </div>
@@ -267,7 +301,7 @@ export default function Analytics() {
       </motion.div>
 
       <motion.div variants={item} className="mb-6">
-        <ActivityMap />
+        {hasData ? <ActivityMap /> : <div className="saas-card text-sm text-muted-foreground">Нет данных для heatmap.</div>}
       </motion.div>
 
       <motion.div variants={item} className="mb-8 grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -301,34 +335,8 @@ export default function Analytics() {
         </div>
       </motion.div>
 
-      <motion.div variants={item} className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-4">
-        <Select value={period} onValueChange={setPeriod}>
-          <SelectTrigger aria-label={t("analytics.periodSelectLabel")}><CalendarDays size={14} className="mr-2" /><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="today">{t("analytics.periodToday")}</SelectItem>
-            <SelectItem value="yesterday">{t("analytics.periodYesterday")}</SelectItem>
-            <SelectItem value="7d">{t("analytics.period7d")}</SelectItem>
-            <SelectItem value="30d">{t("analytics.period30d")}</SelectItem>
-            <SelectItem value="all">{t("analytics.periodAll")}</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button variant="outline" onClick={exportCsv} className="gap-2" aria-label={t("analytics.exportCsv")}><Download size={14} />{t("analytics.exportCsv")}</Button>
-        <Button variant="outline" onClick={exportPdf} className="gap-2" aria-label={t("analytics.exportPdf")}><Download size={14} />{t("analytics.exportPdf")}</Button>
-        <Button variant={combinedChart ? "default" : "secondary"} onClick={() => setCombinedChart((v) => !v)}>
-          {combinedChart ? t("analytics.hideCombined") : t("analytics.showCombined")}
-        </Button>
-      </motion.div>
-
       {hasData ? (
         <>
-          <motion.div variants={item} className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-5">
-            <StatsCard icon={Eye} label={t("analytics.clicks")} value={data?.clicks ?? 0} delay={0} loading={isLoading} />
-            <StatsCard icon={TrendingUp} label={t("analytics.peak")} value={data?.max_peak ?? 0} delay={0.08} loading={isLoading} />
-            <StatsCard icon={BarChart3} label={t("analytics.average")} value={data?.avg_peak ?? 0} delay={0.16} loading={isLoading} />
-            <StatsCard icon={Clock} label={t("analytics.streamHours")} value={Number(data?.hours_streamed ?? 0)} delay={0.24} loading={isLoading} />
-            <StatsCard icon={Users} label={t("analytics.viewersNow")} value={0} delay={0.32} loading={isLoading} />
-          </motion.div>
-
           <motion.div variants={item} className="mb-8"><ViewerChart loading={isLoading} data={timeline} showCombined={combinedChart} /></motion.div>
           <motion.div variants={item} className="mb-8"><PredictionCard data={timeline} liveViewers={0} isLive={false} /></motion.div>
           <motion.div variants={item} className="mb-8"><StreamSeriesRail data={timeline} /></motion.div>
