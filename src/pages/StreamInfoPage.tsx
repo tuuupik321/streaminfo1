@@ -178,8 +178,6 @@ export default function StreamInfoPage() {
             </Button>
           </div>
         </div>
-      </section>
-
       </motion.section>
 
       <motion.div variants={item} className="mb-4 mt-6 flex items-center justify-between sm:mb-6">
