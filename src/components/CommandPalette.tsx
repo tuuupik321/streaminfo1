@@ -18,7 +18,7 @@ const BASE_ENTRIES: Entry[] = [
   { label: "Источники", path: "/integrations", keywords: "integrations sources" },
   { label: "Настройки", path: "/settings", keywords: "settings" },
   { label: "Поддержка", path: "/support", keywords: "support help" },
-  { label: "Bridge Demo", path: "/bridge", keywords: "bridge twitch youtube" },
+  { label: "Bridge", path: "/bridge", keywords: "bridge twitch youtube" },
 ];
 
 export function CommandPalette() {
