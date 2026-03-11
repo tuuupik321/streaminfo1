@@ -1,4 +1,4 @@
-import { useState } from "react";
+п»їimport { useState } from "react";
 import { PrimaryButton } from "./components";
 
 export function ConnectScreen({ onConnect }: { onConnect: (url: string) => void }) {
@@ -10,32 +10,32 @@ export function ConnectScreen({ onConnect }: { onConnect: (url: string) => void 
       <div className="connect-card">
         <div className="connect-header">
           <span className="connect-badge">Streamer Onboarding</span>
-          <h1>Подключите ваш канал</h1>
-          <p>Вставьте ссылку на Twitch или YouTube канал, и мы настроим панель автоматически.</p>
+          <h1>РџРѕРґРєР»СЋС‡РёС‚Рµ РІР°С€ РєР°РЅР°Р»</h1>
+          <p>Р’СЃС‚Р°РІСЊС‚Рµ СЃСЃС‹Р»РєСѓ РЅР° Twitch РёР»Рё YouTube РєР°РЅР°Р», Рё РјС‹ РЅР°СЃС‚СЂРѕРёРј РїР°РЅРµР»СЊ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё.</p>
         </div>
         <form
           onSubmit={(event) => {
             event.preventDefault();
             setError(null);
             if (!url.trim()) {
-              setError("Введите ссылку на канал");
+              setError("Р’РІРµРґРёС‚Рµ СЃСЃС‹Р»РєСѓ РЅР° РєР°РЅР°Р»");
               return;
             }
             onConnect(url.trim());
           }}
         >
           <label className="input-label" htmlFor="channel-url">
-            Вставьте ссылку на Twitch или YouTube канал
+            Р’СЃС‚Р°РІСЊС‚Рµ СЃСЃС‹Р»РєСѓ РЅР° Twitch РёР»Рё YouTube РєР°РЅР°Р»
           </label>
           <input
             id="channel-url"
             className="input"
-            placeholder="https://twitch.tv/yourname или https://youtube.com/@channel"
+            placeholder="https://twitch.tv/yourname РёР»Рё https://youtube.com/@channel"
             value={url}
             onChange={(event) => setUrl(event.target.value)}
           />
           {error ? <div className="form-error">{error}</div> : null}
-          <PrimaryButton type="submit">Подключить канал</PrimaryButton>
+          <PrimaryButton type="submit">РџРѕРґРєР»СЋС‡РёС‚СЊ РєР°РЅР°Р»</PrimaryButton>
         </form>
         <div className="connect-foot">
           <span className="platform-pill twitch"><span className="platform-dot" />Twitch</span>
@@ -45,3 +45,4 @@ export function ConnectScreen({ onConnect }: { onConnect: (url: string) => void 
     </div>
   );
 }
+

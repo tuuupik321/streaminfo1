@@ -1207,7 +1207,7 @@ async def get_channel(request: web.Request):
     async with async_session() as session:
         connection = await session.get(ChannelConnection, int(user_id))
         if not connection or not connection.connected:
-            return web.json_response({"connected": False}, status=404)
+            return web.json_response({"connected": False})
         return web.json_response({
             "platform": connection.platform,
             "channel_url": connection.channel_url,
@@ -1224,7 +1224,7 @@ async def get_dashboard_stats(request: web.Request):
     async with async_session() as session:
         connection = await session.get(ChannelConnection, int(user_id))
         if not connection or not connection.connected:
-            return web.json_response({"connected": False}, status=404)
+            return web.json_response({"connected": False})
         user = await session.get(User, int(user_id))
         platform = connection.platform
         stats: dict[str, Any] = {"platform": platform}
@@ -1286,7 +1286,7 @@ async def get_streams(request: web.Request):
     async with async_session() as session:
         connection = await session.get(ChannelConnection, int(user_id))
         if not connection or not connection.connected:
-            return web.json_response({"connected": False}, status=404)
+            return web.json_response({"connected": False})
         user = await session.get(User, int(user_id))
         platform = connection.platform
         if platform == "twitch":
@@ -1304,7 +1304,7 @@ async def get_clips(request: web.Request):
     async with async_session() as session:
         connection = await session.get(ChannelConnection, int(user_id))
         if not connection or not connection.connected:
-            return web.json_response({"connected": False}, status=404)
+            return web.json_response({"connected": False})
         user = await session.get(User, int(user_id))
         if connection.platform != "twitch":
             return web.json_response({"platform": connection.platform, "items": []})
@@ -1985,6 +1985,7 @@ if __name__ == "__main__":
         print(f"!!! Startup error: {error}")
 
 # Force update
+
 
 
 

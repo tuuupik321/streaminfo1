@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+ï»¿import { useEffect, useMemo, useState } from "react";
 import "./App.css";
 import { detectPlatform, extractChannelName } from "./utils/detectPlatform";
 import {
@@ -123,7 +123,7 @@ const App = () => {
 
       saveUserProfile(fallbackProfile);
       setProfile(fallbackProfile);
-      setError("Íå óäàëîñü ïîäòâåðäèòü êàíàë, ïîêàçàí äåìî-ðåæèì");
+      setError("ÐÐµ ÑƒÐ´Ð°Ð»Ð¾ÑÑŒ Ð¿Ð¾Ð´Ñ‚Ð²ÐµÑ€Ð´Ð¸Ñ‚ÑŒ ÐºÐ°Ð½Ð°Ð», Ð¿Ð¾ÐºÐ°Ð·Ð°Ð½ Ð´ÐµÐ¼Ð¾-Ñ€ÐµÐ¶Ð¸Ð¼");
     } catch (err) {
       setError((err as Error).message);
     }
@@ -168,3 +168,4 @@ const App = () => {
 };
 
 export default App;
+

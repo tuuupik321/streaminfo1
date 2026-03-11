@@ -1,4 +1,4 @@
-import type { UserProfile } from "../database/users";
+п»їimport type { UserProfile } from "../database/users";
 import type { PlatformTheme } from "./themes";
 import { GhostButton, Pill, PrimaryButton, SectionCard, SidebarItem, StatCard } from "./components";
 
@@ -76,34 +76,34 @@ export function Dashboard({
         <div className="sidebar-footer">
           <div className="connected">
             <span className="status-dot" />
-            Подключено: {profile.channel_name}
+            РџРѕРґРєР»СЋС‡РµРЅРѕ: {profile.channel_name}
           </div>
-          <GhostButton onClick={onReconnect}>Переподключить канал</GhostButton>
+          <GhostButton onClick={onReconnect}>РџРµСЂРµРїРѕРґРєР»СЋС‡РёС‚СЊ РєР°РЅР°Р»</GhostButton>
         </div>
       </aside>
       <main className="content">
         <header className="content-header">
           <div>
             <h1>{theme.name}</h1>
-            <p>Панель управления для стримера. Быстрые действия, статистика и уведомления в одном месте.</p>
+            <p>РџР°РЅРµР»СЊ СѓРїСЂР°РІР»РµРЅРёСЏ РґР»СЏ СЃС‚СЂРёРјРµСЂР°. Р‘С‹СЃС‚СЂС‹Рµ РґРµР№СЃС‚РІРёСЏ, СЃС‚Р°С‚РёСЃС‚РёРєР° Рё СѓРІРµРґРѕРјР»РµРЅРёСЏ РІ РѕРґРЅРѕРј РјРµСЃС‚Рµ.</p>
           </div>
           <div className="header-actions">
             <Pill>{profile.platform.toUpperCase()}</Pill>
-            <PrimaryButton>Создать пост о стриме</PrimaryButton>
+            <PrimaryButton>РЎРѕР·РґР°С‚СЊ РїРѕСЃС‚ Рѕ СЃС‚СЂРёРјРµ</PrimaryButton>
           </div>
         </header>
         <section className="stats">
           {profile.platform === "twitch" ? (
             <>
-              <StatCard label="Live viewers" value={`${viewers}`} trend={isOnline ? "В эфире" : "Оффлайн"} />
-              <StatCard label="Followers" value={`${followers}`} trend="по Twitch" />
-              <StatCard label="Last stream" value="2ч 18м" trend="Пик 1 740" />
+              <StatCard label="Live viewers" value={`${viewers}`} trend={isOnline ? "Р’ СЌС„РёСЂРµ" : "РћС„С„Р»Р°Р№РЅ"} />
+              <StatCard label="Followers" value={`${followers}`} trend="РїРѕ Twitch" />
+              <StatCard label="Last stream" value="2С‡ 18Рј" trend="РџРёРє 1 740" />
             </>
           ) : (
             <>
-              <StatCard label="Subscribers" value={`${subscribers}`} trend="по YouTube" />
-              <StatCard label="Last stream" value="1ч 04м" trend="Пик 2 030" />
-              <StatCard label="Notifications" value="12" trend="за неделю" />
+              <StatCard label="Subscribers" value={`${subscribers}`} trend="РїРѕ YouTube" />
+              <StatCard label="Last stream" value="1С‡ 04Рј" trend="РџРёРє 2 030" />
+              <StatCard label="Notifications" value="12" trend="Р·Р° РЅРµРґРµР»СЋ" />
             </>
           )}
         </section>
@@ -148,7 +148,7 @@ export function Dashboard({
               {notifications.length === 0 ? <li>No notifications</li> : null}
               {notifications.map((note) => (
                 <li key={note.created_at}>
-                  {note.title} {note.body ? `— ${note.body}` : ""}
+                  {note.title} {note.body ? `вЂ” ${note.body}` : ""}
                 </li>
               ))}
             </ul>
@@ -158,3 +158,4 @@ export function Dashboard({
     </div>
   );
 }
+
