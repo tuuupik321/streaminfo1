@@ -152,26 +152,26 @@ export default function SettingsPage() {
         </motion.div>
 
         <motion.div variants={item}>
-          <Section title={t("integrations.title", "Integrations")} description={t("integrations.subtitle", "Connect your platforms")}>
-            <div className="rounded-2xl border border-border/60 bg-secondary/40 p-4">
-              <div className="flex items-center gap-2 text-sm font-semibold">
-                <Link2 size={14} /> {t("integrations.title", "Integrations")}
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">{t("integrations.description", "Manage Twitch, YouTube, and DonationAlerts.")}</p>
-              <Button asChild className="mt-4 w-full hover-lift">
-                <Link to="/integrations">{t("integrations.open", "Open Integrations")}</Link>
-              </Button>
-            </div>
-          </Section>
-        </motion.div>
-
-        <motion.div variants={item}>
           <Section title={t("settings.security", "Security")} description={t("settings.securityDesc", "Control access and protection.")}>
             <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-secondary/40 p-4">
               <div className="flex items-center gap-2 text-sm">
                 <Shield size={14} /> 2FA
               </div>
               <Button size="sm" variant="outline">Enable</Button>
+            </div>
+          </Section>
+        </motion.div>
+
+        <motion.div variants={item}>
+          <Section title={t("integrations.title", "Integrations")} description={t("integrations.subtitle", "Connect your platforms")}>
+            <div className="rounded-2xl border border-border/60 bg-secondary/40 p-4">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <Link2 size={14} /> {t("integrations.title", "Integrations")}
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">{t("integrations.description", "Manage Twitch, YouTube, Telegram and donation platforms.")}</p>
+              <Button asChild className="mt-4 w-full hover-lift">
+                <Link to="/integrations">{t("integrations.open", "Open Integrations")}</Link>
+              </Button>
             </div>
           </Section>
         </motion.div>

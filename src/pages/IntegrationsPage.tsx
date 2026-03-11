@@ -26,6 +26,19 @@ type VerifyResult = {
   videos?: number | null;
   views?: number | null;
   channel?: string | null;
+  chat_id?: string | null;
+  is_verified?: boolean;
+};
+
+type TelegramTarget = {
+  chat_id: string;
+  name: string;
+  platform: "telegram";
+  url?: string;
+  channel?: string | null;
+  subscribers?: number | null;
+  avatar?: string | null;
+  is_verified?: boolean;
 };
 
 type VerifyPayload = {
@@ -67,6 +80,15 @@ async function postVerifyChannel(payload: VerifyPayload) {
   return response;
 }
 
+async function loadTelegramTargets(userId: number, initData: string): Promise<TelegramTarget[]> {
+  const response = await fetch(`/api/telegram_targets?user_id=${userId}&init_data=${encodeURIComponent(initData)}`);
+  if (!response.ok) {
+    return [];
+  }
+  const data = await response.json().catch(() => []);
+  return Array.isArray(data) ? data : [];
+}
+
 type TelegramWindow = Window & {
   Telegram?: {
     WebApp?: {
@@ -79,7 +101,7 @@ type TelegramWindow = Window & {
 const platforms: PlatformConfig[] = [
   { key: "twitch", label: "Twitch", color: "#9146FF", placeholder: "https://twitch.tv/username", icon: Twitch },
   { key: "youtube", label: "YouTube", color: "#FF0000", placeholder: "https://youtube.com/@channel", icon: Youtube },
-  { key: "telegram", label: "Telegram", color: "#00B2FF", placeholder: "@channel", icon: Send },
+  { key: "telegram", label: "Telegram", color: "#00B2FF", placeholder: "@channel, @group или chat_id", icon: Send },
   { key: "donatealerts", label: "DonateAlerts", color: "#F57B20", placeholder: "https://donationalerts.com/r/username", icon: Heart },
   { key: "kick", label: "Kick", color: "#53FC18", placeholder: "https://kick.com/username", icon: Flame },
 ];
@@ -134,6 +156,42 @@ const extractHandle = (value: string) => {
   }
   return raw;
 };
+
+function mapIntegrationError(
+  errorCode: string | null | undefined,
+  platform: Platform,
+  t: (key: string, fallback?: string) => string,
+) {
+  if (!errorCode) return t("integrations.errorUnknown", "Не удалось выполнить действие. Попробуйте ещё раз.");
+  if (errorCode === "bot_not_admin") {
+    return t("integrations.errorBotAdmin", "Добавьте бота в канал или группу и дайте ему нужные права.");
+  }
+  if (errorCode === "telegram_bot_not_configured") {
+    return t("integrations.errorTelegramBot", "Telegram-бот ещё не настроен на сервере.");
+  }
+  if (errorCode === "save_settings_failed") {
+    return t("integrations.errorSave", "Не удалось сохранить подключение в настройках.");
+  }
+  if (errorCode === "rate_limited") {
+    return t("integrations.errorRateLimit", "Слишком много попыток подряд. Подожди немного и повтори.");
+  }
+  if (errorCode === "user_mismatch") {
+    return t("integrations.errorTelegram", "Открой приложение через Telegram, чтобы привязка прошла корректно.");
+  }
+  if (platform === "telegram" && errorCode === "telegram_not_found") {
+    return t("integrations.errorTelegramTarget", "Не нашли канал или группу. Добавь бота и выбери цель из списка ниже.");
+  }
+  if (platform === "twitch" && errorCode === "twitch_validation_not_configured") {
+    return t("integrations.errorTwitchConfig", "Проверка Twitch ещё не настроена на сервере.");
+  }
+  if (platform === "youtube" && errorCode === "youtube_validation_not_configured") {
+    return t("integrations.errorYouTubeConfig", "Проверка YouTube ещё не настроена на сервере.");
+  }
+  if (platform === "donatealerts" && errorCode === "donatealerts_not_configured") {
+    return t("integrations.errorDonateAlertsConfig", "DonateAlerts ещё не настроен на сервере.");
+  }
+  return t("integrations.errorNotFound", "Channel not found. Please check username or link");
+}
 
 function IntegrationCard({
   label,
@@ -251,6 +309,8 @@ export default function IntegrationsPage() {
     kick: null,
   });
   const [botUsername, setBotUsername] = useState<string | null>(null);
+  const [telegramTargets, setTelegramTargets] = useState<TelegramTarget[]>([]);
+  const [loadingTelegramTargets, setLoadingTelegramTargets] = useState(false);
   const [loadingSaved, setLoadingSaved] = useState(false);
   const platformLabels = useMemo(() => {
     return platforms.reduce<Record<Platform, string>>((acc, p) => {
@@ -299,6 +359,35 @@ export default function IntegrationsPage() {
     setErrorMessage(null);
   };
 
+  const makeVerifyResult = useCallback(
+    (platform: Platform, channel: string, data: Record<string, unknown>) =>
+      ({
+        name: (data.name as string) || (data.channel_name as string) || channel,
+        url: (data.url as string) || (data.channel_url as string) || "",
+        platform,
+        avatar: (data.avatar as string) || null,
+        followers: (data.followers as number | null | undefined) ?? null,
+        subscribers: (data.subscribers as number | null | undefined) ?? null,
+        videos: (data.videos as number | null | undefined) ?? null,
+        views: (data.views as number | null | undefined) ?? null,
+        channel: (data.channel as string | null | undefined) ?? null,
+        chat_id: (data.chat_id as string | null | undefined) ?? null,
+        is_verified: (data.is_verified as boolean | undefined) ?? true,
+      }) as VerifyResult,
+    [],
+  );
+
+  const fetchTelegramTargetsList = useCallback(async () => {
+    if (!userId || !initData) return;
+    setLoadingTelegramTargets(true);
+    try {
+      const targets = await loadTelegramTargets(userId, initData);
+      setTelegramTargets(targets);
+    } finally {
+      setLoadingTelegramTargets(false);
+    }
+  }, [initData, userId]);
+
   const hydrateConnection = useCallback(async (platform: Platform, channel: string) => {
     if (!userId || !initData) {
       return {
@@ -316,17 +405,7 @@ export default function IntegrationsPage() {
       });
       const data = await response.json().catch(() => ({}));
       if (response.ok && !data?.error) {
-        return {
-          name: data.name || data.channel_name || channel,
-          url: data.url || data.channel_url || "",
-          platform,
-          avatar: data.avatar || null,
-          followers: data.followers ?? null,
-          subscribers: data.subscribers ?? null,
-          videos: data.videos ?? null,
-          views: data.views ?? null,
-          channel: data.channel || null,
-        } as VerifyResult;
+        return makeVerifyResult(platform, channel, data);
       }
     } catch {
       // ignore
@@ -336,7 +415,7 @@ export default function IntegrationsPage() {
       url: "",
       platform,
     } as VerifyResult;
-  }, [userId, initData]);
+  }, [userId, initData, makeVerifyResult]);
 
   useEffect(() => {
     const loadSaved = async () => {
@@ -384,6 +463,7 @@ export default function IntegrationsPage() {
           );
         }
         await Promise.all(tasks);
+        await fetchTelegramTargetsList();
         if (Object.keys(next).length) {
           setConnected((prev) => ({ ...prev, ...next }));
         }
@@ -393,7 +473,7 @@ export default function IntegrationsPage() {
     };
 
     loadSaved();
-  }, [userId, initData, hydrateConnection]);
+  }, [userId, initData, hydrateConnection, fetchTelegramTargetsList]);
 
   const verify = async () => {
     if (!inputValue.trim()) {
@@ -418,24 +498,17 @@ export default function IntegrationsPage() {
       const data = await response.json().catch(() => ({}));
       if (!response.ok || data?.error) {
         setStatus("error");
-        setErrorMessage(t("integrations.errorNotFound", "Channel not found. Please check username or link"));
+        setErrorMessage(mapIntegrationError((data?.error as string | undefined) || null, activePlatform.key, t));
         return;
       }
-      setResult({
-        name: data.name || data.channel_name || inputValue.trim(),
-        url: data.url || data.channel_url || "",
-        platform: activePlatform.key,
-        avatar: data.avatar || null,
-        followers: data.followers ?? null,
-        subscribers: data.subscribers ?? null,
-        videos: data.videos ?? null,
-        views: data.views ?? null,
-        channel: data.channel || null,
-      });
+      setResult(makeVerifyResult(activePlatform.key, inputValue.trim(), data));
       setStatus("success");
+      if (activePlatform.key === "telegram") {
+        await fetchTelegramTargetsList();
+      }
     } catch {
       setStatus("error");
-      setErrorMessage(t("integrations.errorNotFound", "Channel not found. Please check username or link"));
+      setErrorMessage(mapIntegrationError(null, activePlatform.key, t));
     }
   };
 
@@ -444,7 +517,7 @@ export default function IntegrationsPage() {
       setErrorMessage(t("integrations.errorBotUsername", "Bot username is not available"));
       return;
     }
-    openTelegramLink(`https://t.me/${botUsername}?startchannel=true&admin=post_messages`);
+    openTelegramLink(`https://t.me/${botUsername}?startchannel=true&admin=post_messages+edit_messages+delete_messages+manage_chat`);
   };
 
   const openAddGroup = () => {
@@ -452,15 +525,16 @@ export default function IntegrationsPage() {
       setErrorMessage(t("integrations.errorBotUsername", "Bot username is not available"));
       return;
     }
-    openTelegramLink(`https://t.me/${botUsername}?startgroup=true`);
+    openTelegramLink(`https://t.me/${botUsername}?startgroup=true&admin=manage_chat+delete_messages`);
   };
 
   const confirmConnection = async () => {
     if (!result) return;
     if (userId && initData) {
+      let response: Response | null = null;
       if (result.platform === "twitch") {
         const twitchLogin = extractHandle(result.url || result.name);
-        await fetch("/api/save_settings", {
+        response = await fetch("/api/save_settings", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ user_id: userId, twitch_name: twitchLogin, init_data: initData }),
@@ -468,7 +542,7 @@ export default function IntegrationsPage() {
       }
       if (result.platform === "youtube") {
         const youtubeIdOrHandle = extractHandle(result.url || result.name);
-        await fetch("/api/save_settings", {
+        response = await fetch("/api/save_settings", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ user_id: userId, yt_channel_id: youtubeIdOrHandle, init_data: initData }),
@@ -476,32 +550,41 @@ export default function IntegrationsPage() {
       }
       if (result.platform === "donatealerts") {
         const donatealertsName = extractHandle(result.url || result.name);
-        await fetch("/api/save_settings", {
+        response = await fetch("/api/save_settings", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ user_id: userId, donationalerts_name: donatealertsName, init_data: initData }),
         });
       }
       if (result.platform === "telegram") {
-        const channel = extractHandle(result.channel || result.name);
-        await fetch("/api/save_settings", {
+        const channel = result.chat_id || result.channel || result.name;
+        response = await fetch("/api/save_settings", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: userId, telegram_channel: channel.startsWith("@") ? channel : `@${channel}`, init_data: initData }),
+          body: JSON.stringify({ user_id: userId, telegram_channel: channel, init_data: initData }),
         });
       }
       if (result.platform === "kick") {
         const kickName = extractHandle(result.url || result.name);
-        await fetch("/api/save_settings", {
+        response = await fetch("/api/save_settings", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ user_id: userId, kick_name: kickName, init_data: initData }),
         });
       }
+      const savePayload = response ? await response.json().catch(() => ({})) : {};
+      if (response && (!response.ok || savePayload?.error)) {
+        setStatus("error");
+        setErrorMessage(mapIntegrationError((savePayload?.error as string | undefined) || null, result.platform, t));
+        return;
+      }
     }
     setConnected((prev) => ({ ...prev, [result.platform]: result }));
     setSuccessData(result);
     setShowSuccess(true);
+    if (result.platform === "telegram") {
+      await fetchTelegramTargetsList();
+    }
     closeModal();
   };
 
@@ -530,6 +613,9 @@ export default function IntegrationsPage() {
               setResult(null);
               setInputValue("");
               setErrorMessage(null);
+              if (platform.key === "telegram") {
+                void fetchTelegramTargetsList();
+              }
             }}
           />
         ))}
@@ -582,10 +668,13 @@ export default function IntegrationsPage() {
                       const config = platforms.find((p) => p.key === value.platform);
                       if (!config) return;
                       setActivePlatform(config);
-                      setInputValue(value.url || value.channel || value.name);
+                      setInputValue(value.chat_id || value.url || value.channel || value.name);
                       setStatus("idle");
                       setResult(null);
                       setErrorMessage(null);
+                      if (value.platform === "telegram") {
+                        void fetchTelegramTargetsList();
+                      }
                     }}
                     className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/70 transition hover:border-white/30 hover:bg-white/10"
                   >
@@ -610,9 +699,16 @@ export default function IntegrationsPage() {
           onVerify={verify}
           onConfirm={confirmConnection}
           botUsername={botUsername}
+          telegramTargets={telegramTargets}
+          loadingTelegramTargets={loadingTelegramTargets}
           onRequestBotUsername={fetchBotUsername}
           onOpenAddChannel={openAddChannel}
           onOpenAddGroup={openAddGroup}
+          onSelectTelegramTarget={(target) => {
+            setInputValue(target.chat_id || target.channel || target.name);
+            setErrorMessage(null);
+            setStatus("idle");
+          }}
         />
       )}
 
@@ -640,9 +736,12 @@ function IntegrationModal({
   onVerify,
   onConfirm,
   botUsername,
+  telegramTargets,
+  loadingTelegramTargets,
   onRequestBotUsername,
   onOpenAddChannel,
   onOpenAddGroup,
+  onSelectTelegramTarget,
 }: {
   platform: PlatformConfig;
   inputValue: string;
@@ -654,9 +753,12 @@ function IntegrationModal({
   onVerify: () => void;
   onConfirm: () => void;
   botUsername: string | null;
+  telegramTargets: TelegramTarget[];
+  loadingTelegramTargets: boolean;
   onRequestBotUsername: () => void;
   onOpenAddChannel: () => void;
   onOpenAddGroup: () => void;
+  onSelectTelegramTarget: (target: TelegramTarget) => void;
 }) {
   const { t } = useI18n();
   const { label, color, placeholder, icon: Icon, key } = platform;
@@ -721,8 +823,38 @@ function IntegrationModal({
                   </button>
                 </div>
                 <p className="mt-3 text-[11px] text-white/60">
-                  {t("integrations.telegramMenuHint", "After adding the bot, enter @channel or @chat username below.")}
+                  {t("integrations.telegramMenuHint", "After adding the bot, select the found channel or group below, or enter @username manually.")}
                 </p>
+                <div className="mt-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-white/40">
+                      {t("integrations.telegramAvailableTargets", "Available targets")}
+                    </p>
+                    {loadingTelegramTargets ? <span className="text-[10px] text-white/40">{t("integrations.loadingSaved", "Loading saved connections...")}</span> : null}
+                  </div>
+                  {telegramTargets.length ? (
+                    telegramTargets.map((target) => (
+                      <button
+                        key={target.chat_id}
+                        type="button"
+                        onClick={() => onSelectTelegramTarget(target)}
+                        className="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-left transition hover:border-white/25 hover:bg-white/10"
+                      >
+                        <div>
+                          <p className="text-sm font-semibold text-white">{target.name}</p>
+                          <p className="text-[11px] text-white/50">{target.channel || target.chat_id}</p>
+                        </div>
+                        <span className="rounded-full border border-white/10 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-white/60">
+                          {t("integrations.useTarget", "Use")}
+                        </span>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-white/10 bg-black/10 px-3 py-3 text-[11px] text-white/45">
+                      {t("integrations.telegramTargetsEmpty", "Когда бот будет добавлен в канал или группу, цель появится здесь автоматически.")}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 

@@ -1,16 +1,22 @@
 import type { ReactNode } from "react";
+import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 
 export function StatCard({
   label,
   value,
   trend,
+  trendDirection = "up",
   icon,
 }: {
   label: string;
   value: string;
   trend?: string;
+  trendDirection?: "up" | "down" | "neutral";
   icon?: ReactNode;
 }) {
+  const trendIcon =
+    trendDirection === "up" ? <ArrowUpRight size={14} /> : trendDirection === "down" ? <ArrowDownRight size={14} /> : null;
+
   return (
     <div className="card stat-card">
       <div className="stat-label">
@@ -18,7 +24,12 @@ export function StatCard({
         <span>{label}</span>
       </div>
       <div className="stat-value">{value}</div>
-      {trend ? <div className="stat-trend">{trend}</div> : null}
+      {trend ? (
+        <div className={`stat-trend ${trendDirection}`}>
+          {trendIcon}
+          <span>{trend}</span>
+        </div>
+      ) : null}
     </div>
   );
 }

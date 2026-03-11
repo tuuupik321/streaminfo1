@@ -114,6 +114,35 @@ export default function StreamInfoPage() {
     });
     return map;
   }, [goalsData]);
+  const goalCards = useMemo(
+    () => [
+      {
+        key: "online",
+        title: t("dashboard.goalStream", "Цель стрима"),
+        current: goalsMap.online?.current_value ?? 0,
+        target: goalsMap.online?.target_value ?? 100,
+        tone: "bg-primary",
+        note: viewersNow > 0 ? `Сейчас в эфире ${viewersNow}` : "Прогресс начнётся после старта эфира",
+      },
+      {
+        key: "followers",
+        title: t("dashboard.goalFollowers", "Цель по фолловерам"),
+        current: goalsMap.followers?.current_value ?? 0,
+        target: goalsMap.followers?.target_value ?? 50,
+        tone: "bg-sky-400",
+        note: `База канала: ${followers.toLocaleString("ru-RU")}`,
+      },
+      {
+        key: "subscriptions",
+        title: t("dashboard.goalSubscriptions", "Цель по подпискам"),
+        current: goalsMap.subscriptions?.current_value ?? 0,
+        target: goalsMap.subscriptions?.target_value ?? 10,
+        tone: "bg-emerald-400",
+        note: "Отдельный счётчик для платных подписок",
+      },
+    ],
+    [followers, goalsMap, t, viewersNow],
+  );
 
   const donationsToday = useMemo(() => {
     const items = donationsData?.items ?? [];
@@ -307,25 +336,27 @@ export default function StreamInfoPage() {
             </motion.div>
             <motion.div variants={item} className="saas-card">
               <h3 className="text-sm font-semibold">{t("dashboard.streamGoals", "Stream Goals")}</h3>
-              <div className="mt-4 space-y-3 text-xs text-white/70">
-                <div>
-                  <div className="flex justify-between"><span>{t("dashboard.goalStream", "Stream goal")}</span><span>{viewersNow} / {(goalsMap.online?.target_value ?? 100)}</span></div>
-                  <div className="mt-2 h-2 rounded-full bg-white/10">
-                    <div className="h-2 rounded-full bg-primary" style={{ width: `${Math.min(100, (viewersNow / (goalsMap.online?.target_value ?? 100)) * 100)}%` }} />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between"><span>{t("dashboard.goalFollowers", "Follower goal")}</span><span>{followers} / {(goalsMap.followers?.target_value ?? 50)}</span></div>
-                  <div className="mt-2 h-2 rounded-full bg-white/10">
-                    <div className="h-2 rounded-full bg-blue-400" style={{ width: `${Math.min(100, (followers / (goalsMap.followers?.target_value ?? 50)) * 100)}%` }} />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between"><span>{t("dashboard.goalSubscriptions", "Subscription goal")}</span><span>{(goalsMap.subscriptions?.current_value ?? 0)} / {(goalsMap.subscriptions?.target_value ?? 10)}</span></div>
-                  <div className="mt-2 h-2 rounded-full bg-white/10">
-                    <div className="h-2 rounded-full bg-emerald-400" style={{ width: `${Math.min(100, ((goalsMap.subscriptions?.current_value ?? 0) / (goalsMap.subscriptions?.target_value ?? 10)) * 100)}%` }} />
-                  </div>
-                </div>
+              <div className="mt-4 space-y-3">
+                {goalCards.map((goal) => {
+                  const progress = goal.target > 0 ? Math.min(100, (goal.current / goal.target) * 100) : 0;
+                  return (
+                    <div key={goal.key} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-white/75">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-semibold text-white">{goal.title}</p>
+                          <p className="mt-1 text-[11px] text-white/50">{goal.note}</p>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-base font-bold text-white">{goal.current} из {goal.target}</div>
+                          <div className="text-[10px] uppercase tracking-[0.2em] text-white/35">goal</div>
+                        </div>
+                      </div>
+                      <div className="mt-3 h-2.5 rounded-full bg-white/10">
+                        <div className={`h-2.5 rounded-full ${goal.tone}`} style={{ width: `${progress}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </motion.div>
           </div>

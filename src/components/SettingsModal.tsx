@@ -118,38 +118,7 @@ export function SettingsModal({ open, anchorRect, onClose }: SettingsModalProps)
 
             <div className="px-4 py-4 sm:px-6 sm:py-5">
               <Tabs defaultValue="language" className="w-full">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-white/70">
-                    <Languages size={12} className="text-white/70" />
-                    <span className={activeLanguage === "ru" ? "text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.6)]" : "text-white/40"}>RU</span>
-                    <button
-                      type="button"
-                      onClick={() => setLanguage(activeLanguage === "ru" ? "en" : "ru")}
-                      className="relative h-5 w-16 rounded-full border border-white/10 bg-white/5 px-1"
-                      aria-label={t("settings.language", "Language")}
-                    >
-                      <motion.span
-                        layout
-                        transition={{ type: "spring", stiffness: 260, damping: 20 }}
-                        className="absolute top-1 h-3 w-6 rounded-full bg-white/90 shadow-[0_0_12px_rgba(145,70,255,0.7)]"
-                        style={{ left: activeLanguage === "ru" ? "0.25rem" : "2.5rem" }}
-                      />
-                    </button>
-                    <span className={activeLanguage === "en" ? "text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.6)]" : "text-white/40"}>EN</span>
-                  </div>
-                  <p className="text-[10px] text-white/40">{t("settings.languageHint", "UI language")}</p>
-                </div>
-                <TabsList className="grid w-full grid-cols-3 gap-2 bg-white/5">
-                  <TabsTrigger
-                    value="support"
-                    onClick={(e) => handleRipple(e)}
-                    className="data-[state=active]:shadow-[0_0_18px_rgba(145,70,255,0.5)]"
-                  >
-                    <motion.span animate={{ y: [0, 2, 0] }} transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }} className="mr-1 inline-flex">
-                      <MessageSquare size={12} />
-                    </motion.span>
-                    {t("settings.support", "Support")}
-                  </TabsTrigger>
+                <TabsList className="grid w-full grid-cols-4 gap-2 bg-white/5">
                   <TabsTrigger
                     value="appearance"
                     onClick={(e) => handleRipple(e)}
@@ -170,6 +139,26 @@ export function SettingsModal({ open, anchorRect, onClose }: SettingsModalProps)
                     </motion.span>
                     {t("settings.language", "Language")}
                   </TabsTrigger>
+                  <TabsTrigger
+                    value="integrations"
+                    onClick={(e) => handleRipple(e)}
+                    className="data-[state=active]:shadow-[0_0_18px_rgba(145,70,255,0.5)]"
+                  >
+                    <motion.span animate={{ y: [0, -2, 0] }} transition={{ duration: 3.4, repeat: Infinity, ease: "easeInOut" }} className="mr-1 inline-flex">
+                      <Link2 size={12} />
+                    </motion.span>
+                    {t("integrations.title", "Integrations")}
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="support"
+                    onClick={(e) => handleRipple(e)}
+                    className="data-[state=active]:shadow-[0_0_18px_rgba(145,70,255,0.5)]"
+                  >
+                    <motion.span animate={{ y: [0, 2, 0] }} transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }} className="mr-1 inline-flex">
+                      <MessageSquare size={12} />
+                    </motion.span>
+                    {t("settings.support", "Support")}
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="support" className="mt-4 space-y-3 text-xs text-white/70">
@@ -181,15 +170,6 @@ export function SettingsModal({ open, anchorRect, onClose }: SettingsModalProps)
                     <p className="text-white/60">{t("support.contactSupport", "Contact support")}</p>
                     <Button asChild className="mt-4 w-full gap-2 rounded-[22px] bg-white/10 text-white hover:bg-white/20 hover:shadow-[0_0_30px_rgba(0,178,255,0.55)] hover-lift">
                       <Link to="/support">{t("support.openSupport", "Open Support")}</Link>
-                    </Button>
-                  </div>
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm">
-                    <div className="flex items-center gap-2 text-white">
-                      <Link2 size={12} /> {t("integrations.title", "Integrations")}
-                    </div>
-                    <p className="text-white/60">{t("integrations.description", "Manage Twitch, YouTube, and DonationAlerts.")}</p>
-                    <Button asChild className="mt-4 w-full gap-2 rounded-[22px] bg-white/10 text-white hover:bg-white/20 hover:shadow-[0_0_30px_rgba(145,70,255,0.55)] hover-lift" onClick={onClose}>
-                      <Link to="/integrations">{t("integrations.open", "Open Integrations")}</Link>
                     </Button>
                   </div>
                 </TabsContent>
@@ -236,6 +216,40 @@ export function SettingsModal({ open, anchorRect, onClose }: SettingsModalProps)
                   </motion.div>
                   <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                     <p className="text-xs text-white/60">{t("settings.languageDesc", "Switch the interface language instantly across the app.")}</p>
+                    <div className="mt-4 flex items-center gap-2 rounded-2xl border border-white/10 bg-black/20 p-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={activeLanguage === "ru" ? "default" : "outline"}
+                        onClick={() => setLanguage("ru")}
+                        className="flex-1"
+                      >
+                        RU
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={activeLanguage === "en" ? "default" : "outline"}
+                        onClick={() => setLanguage("en")}
+                        className="flex-1"
+                      >
+                        EN
+                      </Button>
+                    </div>
+                    <p className="mt-3 text-[11px] text-white/40">{t("settings.languageHint", "UI language")}</p>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="integrations" className="mt-4 space-y-3 text-xs text-white/70">
+                  <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2 text-white">
+                    <Link2 size={12} /> {t("integrations.title", "Integrations")}
+                  </motion.div>
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm">
+                    <p className="text-white">{t("integrations.title", "Integrations")}</p>
+                    <p className="text-white/60">{t("integrations.description", "Manage Twitch, YouTube, Telegram and donation platforms.")}</p>
+                    <Button asChild className="mt-4 w-full gap-2 rounded-[22px] bg-white/10 text-white hover:bg-white/20 hover:shadow-[0_0_30px_rgba(145,70,255,0.55)] hover-lift" onClick={onClose}>
+                      <Link to="/integrations">{t("integrations.open", "Open Integrations")}</Link>
+                    </Button>
                   </div>
                 </TabsContent>
               </Tabs>

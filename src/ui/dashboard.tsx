@@ -54,11 +54,22 @@ export function Dashboard({
   onReconnect: () => void;
   showSidebar?: boolean;
 }) {
+  const formatLegacyDuration = (duration?: string) => {
+    if (!duration) return "2ч 18м";
+    return duration
+      .replace(/(\d+)h/i, "$1ч ")
+      .replace(/(\d+)m/i, "$1м")
+      .replace(/(\d+)s/i, "$1с")
+      .trim();
+  };
+
   const viewers = stats?.viewers ?? 0;
   const followers = stats?.followers ?? 0;
   const subscribers = stats?.subscribers ?? 0;
   const isOnline = stats?.online ?? false;
   const maxCount = Math.max(1, ...streamSeries.map((item) => item.count));
+  const lastStream = streams[0];
+  const lastStreamLabel = lastStream?.view_count ? `Просмотров ${lastStream.view_count.toLocaleString("ru-RU")}` : "Архив эфира готов";
 
   return (
     <div className={`dashboard${showSidebar ? "" : " embedded"}`}>
@@ -110,15 +121,51 @@ export function Dashboard({
         <section className="stats">
           {profile.platform === "twitch" ? (
             <>
-              <StatCard label="Зрители сейчас" value={`${viewers}`} trend={isOnline ? "В эфире" : "Оффлайн"} icon={<Users size={16} />} />
-              <StatCard label="Фолловеры" value={`${followers}`} trend="по Twitch" icon={<Activity size={16} />} />
-              <StatCard label="Последний эфир" value="2ч 18м" trend="Пик 1 740" icon={<Flame size={16} />} />
+              <StatCard
+                label="Зрители сейчас"
+                value={`${viewers}`}
+                trend={isOnline ? "Эфир активен" : "Эфир офлайн"}
+                trendDirection={isOnline ? "up" : "down"}
+                icon={<Users size={16} />}
+              />
+              <StatCard
+                label="Фолловеры"
+                value={`${followers}`}
+                trend={followers > 0 ? "Канал набирает базу" : "Нужен первый рост"}
+                trendDirection={followers > 0 ? "up" : "down"}
+                icon={<Activity size={16} />}
+              />
+              <StatCard
+                label="Последний эфир"
+                value={formatLegacyDuration(lastStream?.duration)}
+                trend={lastStreamLabel}
+                trendDirection="neutral"
+                icon={<Flame size={16} />}
+              />
             </>
           ) : (
             <>
-              <StatCard label="Подписчики" value={`${subscribers}`} trend="по YouTube" icon={<Users size={16} />} />
-              <StatCard label="Последний эфир" value="1ч 04м" trend="Пик 2 030" icon={<Flame size={16} />} />
-              <StatCard label="Оповещения" value="12" trend="за неделю" icon={<Bell size={16} />} />
+              <StatCard
+                label="Подписчики"
+                value={`${subscribers}`}
+                trend={subscribers > 0 ? "Аудитория растёт" : "Канал ждёт запуск"}
+                trendDirection={subscribers > 0 ? "up" : "down"}
+                icon={<Users size={16} />}
+              />
+              <StatCard
+                label="Последний эфир"
+                value={formatLegacyDuration(lastStream?.duration || "1h 04m")}
+                trend={lastStreamLabel}
+                trendDirection="neutral"
+                icon={<Flame size={16} />}
+              />
+              <StatCard
+                label="Оповещения"
+                value="12"
+                trend="Неделя под контролем"
+                trendDirection="up"
+                icon={<Bell size={16} />}
+              />
             </>
           )}
         </section>

@@ -6,6 +6,7 @@ import logging
 import os
 import time
 import mimetypes
+import uuid
 from collections import defaultdict, deque
 from datetime import datetime, timezone, timedelta
 from typing import Any, Optional
@@ -19,9 +20,32 @@ from aiogram.types import WebAppInfo
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
 from pydantic import BaseModel, ValidationError
-from sqlalchemy import BigInteger, Boolean, Column, DateTime, Integer, MetaData, String, and_, desc, func, select, text
+from sqlalchemy import BigInteger, Boolean, Column, DateTime, Integer, MetaData, String, and_, desc, func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
+
+def _load_local_env(path: str = ".env") -> None:
+    if not os.path.exists(path):
+        return
+    try:
+        with open(path, "r", encoding="utf-8") as env_file:
+            for raw_line in env_file:
+                line = raw_line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, value = line.split("=", 1)
+                key = key.strip().lstrip("\ufeff")
+                value = value.strip()
+                if not key or key in os.environ:
+                    continue
+                if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+                    value = value[1:-1]
+                os.environ[key] = value
+    except OSError:
+        pass
+
+
+_load_local_env()
 
 def _env_bool(name: str, default: bool) -> bool:
     raw = os.getenv(name)
@@ -136,6 +160,18 @@ class Streamer(Base):
     kick_connected = Column(Boolean, default=False)
     kick_name = Column(String(50), nullable=True)
     language = Column(String(5), default="ru")
+
+class TelegramChannel(Base):
+    __tablename__ = "telegram_channels"
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    bot_token = Column(String, nullable=True)
+    chat_id = Column(String(100), nullable=False, unique=True, index=True)
+    channel_name = Column(String(255), nullable=True)
+    chat_username = Column(String(255), nullable=True, index=True)
+    owner_user_id = Column(BigInteger, nullable=True, index=True)
+    is_verified = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
 
 class ChannelConnection(Base):
     __tablename__ = "channel_connections"
@@ -758,6 +794,32 @@ async def get_bot_info(request: web.Request):
         log_event("bot_info_failed", error=str(error))
         return web.json_response({"available": False, "username": None, "id": None})
 
+async def get_telegram_targets(request: web.Request):
+    auth_error = await _require_verified_user(request)
+    if auth_error:
+        return auth_error
+
+    uid = request.query.get("user_id")
+    if not uid:
+        return web.json_response({"error": "no_uid"}, status=400)
+    if REQUIRE_INIT_DATA and request.get("verified_user_id") and request["verified_user_id"] != str(uid):
+        return web.json_response({"error": "user_mismatch"}, status=403)
+    if not async_session:
+        return web.json_response({"error": "db_not_configured"}, status=500)
+
+    async with async_session() as session:
+        rows = (
+            await session.execute(
+                select(TelegramChannel)
+                .where(
+                    TelegramChannel.owner_user_id == int(uid),
+                    TelegramChannel.is_verified == True,  # noqa: E712
+                )
+                .order_by(desc(TelegramChannel.updated_at), desc(TelegramChannel.created_at))
+            )
+        ).scalars().all()
+        return web.json_response([serialize_telegram_target(row) for row in rows])
+
 # ... (security and other functions remain the same)
 async def _require_verified_user(request: web.Request):
     init_data = request.query.get("init_data")
@@ -800,10 +862,32 @@ async def setup_database():
             await conn.execute(text("ALTER TABLE public.users ADD COLUMN IF NOT EXISTS donationalerts_name VARCHAR"))
         except Exception as error:
             log_event("db_alter_users_failed", error=str(error))
+        try:
+            await conn.execute(
+                text(
+                    """
+                    DO $$
+                    BEGIN
+                      IF EXISTS (
+                        SELECT 1
+                        FROM information_schema.tables
+                        WHERE table_schema = 'public'
+                          AND table_name = 'telegram_channels'
+                      ) THEN
+                        ALTER TABLE public.telegram_channels ADD COLUMN IF NOT EXISTS owner_user_id BIGINT;
+                        ALTER TABLE public.telegram_channels ADD COLUMN IF NOT EXISTS chat_username VARCHAR;
+                      END IF;
+                    END $$;
+                    """
+                )
+            )
+        except Exception as error:
+            log_event("db_alter_telegram_channels_failed", error=str(error))
 
     required_tables = [
         "users",
         "streamers",
+        "telegram_channels",
         "channel_connections",
         "notifications",
         "stream_goals",
@@ -857,6 +941,107 @@ async def keep_database_warm():
 
 async def health_check(request: web.Request):
     return web.Response(text="I'm alive!", status=200)
+
+async def upsert_telegram_channel(
+    session: AsyncSession,
+    *,
+    chat_id: str,
+    channel_name: Optional[str],
+    chat_username: Optional[str],
+    owner_user_id: Optional[int],
+    is_verified: bool = True,
+) -> TelegramChannel:
+    row = (
+        await session.execute(select(TelegramChannel).where(TelegramChannel.chat_id == str(chat_id)))
+    ).scalars().first()
+    if not row:
+        row = TelegramChannel(
+            chat_id=str(chat_id),
+            bot_token=TOKEN or "",
+            channel_name=channel_name,
+            chat_username=chat_username,
+            owner_user_id=owner_user_id,
+            is_verified=is_verified,
+        )
+        session.add(row)
+    else:
+        row.bot_token = TOKEN or row.bot_token
+        row.channel_name = channel_name or row.channel_name
+        row.chat_username = chat_username or row.chat_username
+        row.owner_user_id = owner_user_id or row.owner_user_id
+        row.is_verified = is_verified
+        row.updated_at = datetime.now(timezone.utc)
+    await session.commit()
+    return row
+
+def serialize_telegram_target(target: TelegramChannel, *, subscribers: Optional[int] = None) -> dict[str, Any]:
+    handle = f"@{target.chat_username}" if target.chat_username else None
+    display_name = target.channel_name or handle or target.chat_id
+    return {
+        "chat_id": target.chat_id,
+        "name": display_name,
+        "platform": "telegram",
+        "url": f"https://t.me/{target.chat_username}" if target.chat_username else "",
+        "channel": handle or display_name,
+        "subscribers": subscribers,
+        "avatar": None,
+        "is_verified": bool(target.is_verified),
+    }
+
+async def find_telegram_target(session: AsyncSession, user_id: int, raw_value: str) -> Optional[TelegramChannel]:
+    raw = (raw_value or "").strip()
+    if not raw:
+        return None
+    username = _extract_username(raw).lower()
+    lowered = raw.lower()
+    query = select(TelegramChannel).where(
+        TelegramChannel.owner_user_id == int(user_id),
+        TelegramChannel.is_verified == True,  # noqa: E712
+        or_(
+            TelegramChannel.chat_id == raw,
+            func.lower(func.coalesce(TelegramChannel.channel_name, "")) == lowered,
+            func.lower(func.coalesce(TelegramChannel.chat_username, "")) == username,
+        ),
+    ).order_by(desc(TelegramChannel.updated_at), desc(TelegramChannel.created_at))
+    return (await session.execute(query)).scalars().first()
+
+@dp.my_chat_member()
+async def handle_bot_membership(event: types.ChatMemberUpdated):
+    if not async_session:
+        return
+
+    chat = event.chat
+    if chat.type not in {"channel", "group", "supergroup"}:
+        return
+
+    new_status = event.new_chat_member.status
+    owner_user_id = event.from_user.id if event.from_user else None
+    chat_id = str(chat.id)
+    chat_title = chat.title or (f"@{chat.username}" if chat.username else f"Chat {chat.id}")
+    chat_username = chat.username or None
+
+    try:
+        async with async_session() as session:
+            if new_status in {"administrator", "member"}:
+                await upsert_telegram_channel(
+                    session,
+                    chat_id=chat_id,
+                    channel_name=chat_title,
+                    chat_username=chat_username,
+                    owner_user_id=owner_user_id,
+                    is_verified=True,
+                )
+                log_event("telegram_target_upserted", chat_id=chat_id, owner_user_id=owner_user_id, chat_username=chat_username)
+            elif new_status in {"left", "kicked"}:
+                existing = (
+                    await session.execute(select(TelegramChannel).where(TelegramChannel.chat_id == chat_id))
+                ).scalars().first()
+                if existing:
+                    await session.delete(existing)
+                    await session.commit()
+                    log_event("telegram_target_removed", chat_id=chat_id)
+    except Exception as error:
+        log_event("telegram_target_sync_failed", error=str(error), chat_id=chat_id)
 
 @dp.message(F.text.contains("?"))
 async def handle_questions(message: types.Message):
@@ -1048,6 +1233,20 @@ async def verify_channel(request: web.Request):
         })
 
     if platform == "telegram":
+        if async_session:
+            async with async_session() as session:
+                stored_target = await find_telegram_target(session, payload.user_id, channel_raw)
+            if stored_target:
+                subscribers = None
+                if bot:
+                    try:
+                        subscribers = await bot.get_chat_member_count(int(stored_target.chat_id))
+                    except Exception:
+                        subscribers = None
+                serialized = serialize_telegram_target(stored_target, subscribers=subscribers)
+                serialized["status"] = "ok"
+                return web.json_response(serialized)
+
         username = _extract_username(channel_raw)
         if not username:
             return web.json_response({"error": "telegram_not_found"}, status=404)
@@ -1064,16 +1263,27 @@ async def verify_channel(request: web.Request):
             try:
                 me = await bot.get_me()
                 member = await bot.get_chat_member(f"@{username}", me.id)
-                if member.status not in {"administrator", "creator"}:
+                if member.status not in {"administrator", "creator", "member"}:
                     return web.json_response({"error": "bot_not_admin"}, status=403)
             except TelegramAPIError:
                 return web.json_response({"error": "bot_not_admin"}, status=403)
+            if async_session:
+                async with async_session() as session:
+                    await upsert_telegram_channel(
+                        session,
+                        chat_id=str(chat.id),
+                        channel_name=display,
+                        chat_username=username,
+                        owner_user_id=payload.user_id,
+                        is_verified=True,
+                    )
             return web.json_response({
                 "status": "ok",
                 "platform": "telegram",
                 "name": display,
                 "url": f"https://t.me/{username}",
                 "channel": f"@{username}",
+                "chat_id": str(chat.id),
                 "subscribers": subscribers,
             })
         except TelegramAPIError:
@@ -1639,9 +1849,12 @@ async def save_settings(request: web.Request):
                 user = User(user_id=payload.user_id)
                 session.add(user)
 
-            user.twitch_name = twitch_name
-            user.yt_channel_id = yt_channel_id
-            user.donationalerts_name = donationalerts_name
+            if twitch_name is not None:
+                user.twitch_name = twitch_name
+            if yt_channel_id is not None:
+                user.yt_channel_id = yt_channel_id
+            if donationalerts_name is not None:
+                user.donationalerts_name = donationalerts_name
 
             if twitch_name is not None:
                 streamer.twitch_connected = bool(twitch_name)
@@ -1661,7 +1874,15 @@ async def save_settings(request: web.Request):
     await write_audit_log(
         str(payload.user_id),
         "save_integrations",
-        json.dumps({"twitch": twitch_name, "youtube": yt_channel_id, "donationalerts": donationalerts_name}),
+        json.dumps(
+            {
+                "twitch": twitch_name,
+                "youtube": yt_channel_id,
+                "donationalerts": donationalerts_name,
+                "kick": kick_name,
+                "telegram": telegram_channel,
+            }
+        ),
     )
 
     return web.json_response(
@@ -1704,10 +1925,12 @@ def build_app():
     
     # Health check for cron-job
     app.router.add_get("/health", health_check)
+    app.router.add_get("/healthz", health_check)
 
     # API routes
     app.router.add_post("/api/ping", api_ping)
     app.router.add_get("/api/bot_info", get_bot_info)
+    app.router.add_get("/api/telegram_targets", get_telegram_targets)
     app.router.add_get("/api/stats", get_all_stats)
     app.router.add_get("/api/settings", get_settings)
     app.router.add_get("/api/analytics", get_analytics)
@@ -1881,7 +2104,7 @@ async def get_settings(request: web.Request):
         user = await session.get(User, int(uid))
         if not user:
             return web.json_response({
-                "is_linked": False,
+                "is_linked": bool(streamer.telegram_connected or streamer.kick_connected),
                 "twitch_name": None,
                 "yt_channel_id": None,
                 "donationalerts_name": None,
@@ -1891,7 +2114,7 @@ async def get_settings(request: web.Request):
                 "language": streamer.language,
             })
         return web.json_response({
-            "is_linked": bool(user.twitch_name or user.yt_channel_id or streamer.kick_connected or streamer.telegram_connected),
+            "is_linked": bool(user.twitch_name or user.yt_channel_id or user.donationalerts_name or streamer.kick_connected or streamer.telegram_connected),
             "twitch_name": user.twitch_name,
             "yt_channel_id": user.yt_channel_id,
             "donationalerts_name": user.donationalerts_name,

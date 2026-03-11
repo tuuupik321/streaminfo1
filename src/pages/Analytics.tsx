@@ -178,8 +178,8 @@ export default function Analytics() {
   };
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="mx-auto max-w-5xl px-3 py-3 md:p-6">
-      <motion.div variants={item} className="mb-5 flex flex-wrap items-center justify-between gap-3">
+    <motion.div variants={container} initial="hidden" animate="show" className="mx-auto max-w-[1440px] px-4 py-4 md:px-6 md:py-6 lg:px-8">
+      <motion.div variants={item} className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-xl font-black font-heading md:text-2xl">{t("analytics.title")}</h1>
         <div className="flex flex-wrap items-center gap-2">
           <Select value={period} onValueChange={setPeriod}>
@@ -207,9 +207,9 @@ export default function Analytics() {
         </div>
       </motion.div>
 
-      <motion.div variants={item} className="mb-6 grid grid-cols-1 gap-4">
+      <motion.div variants={item} className="mb-8 grid grid-cols-1 gap-6">
         <div className="saas-card">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.streamForecast", "Stream Forecast")}</p>
               {isLoading ? (
@@ -273,7 +273,7 @@ export default function Analytics() {
       </motion.div>
 
       {hasData ? (
-        <motion.div variants={item} className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-5">
+        <motion.div variants={item} className="mb-10 grid grid-cols-1 gap-5 md:grid-cols-5">
           <StatsCard icon={Eye} label={t("analytics.clicks")} value={data?.clicks ?? 0} delay={0} loading={isLoading} />
           <StatsCard icon={TrendingUp} label={t("analytics.peak")} value={data?.max_peak ?? 0} delay={0.08} loading={isLoading} />
           <StatsCard icon={BarChart3} label={t("analytics.average")} value={data?.avg_peak ?? 0} delay={0.16} loading={isLoading} />
@@ -282,10 +282,10 @@ export default function Analytics() {
         </motion.div>
       ) : null}
 
-      <motion.div variants={item} className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <motion.div variants={item} className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="saas-card lg:col-span-2">
           <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.viewersGrowth", "Viewers growth")}</p>
-          <div className="mt-4 h-56 sm:h-64">
+          <div className="mt-5 h-72">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
                 <XAxis dataKey="time" stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
@@ -316,7 +316,7 @@ export default function Analytics() {
         </div>
       </motion.div>
 
-      <motion.div variants={item} className="mb-6 grid grid-cols-1 gap-4">
+      <motion.div variants={item} className="mb-8 grid grid-cols-1 gap-6">
         <div className="saas-card">
           <div className="flex items-center justify-between">
             <p className="text-xs uppercase tracking-[0.3em] text-white/50">{chartConfig[activeChart].label}</p>
@@ -335,7 +335,7 @@ export default function Analytics() {
               ))}
             </div>
           </div>
-          <div className="mt-4 h-56 sm:h-64">
+          <div className="mt-5 h-72">
             <ResponsiveContainer width="100%" height="100%">
               {activeChart === "followers" ? (
                 <LineChart data={chartData}>
@@ -357,14 +357,14 @@ export default function Analytics() {
         </div>
       </motion.div>
 
-      <motion.div variants={item} className="mb-6">
+      <motion.div variants={item} className="mb-8">
         {hasData ? <ActivityMap /> : <div className="saas-card text-sm text-muted-foreground">{t("analytics.noHeatmap", "No data for heatmap yet.")}</div>}
       </motion.div>
 
-      <motion.div variants={item} className="mb-8 grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <motion.div variants={item} className="mb-10 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="saas-card lg:col-span-2">
           <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.platformComparison", "Platform comparison")}</p>
-          <div className="mt-4 h-52 sm:h-56">
+          <div className="mt-5 h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={platformComparison}>
                 <XAxis dataKey="name" stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
@@ -377,7 +377,7 @@ export default function Analytics() {
         </div>
         <div className="saas-card">
           <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.donutChart", "Donut chart")}</p>
-          <div className="mt-4 h-52 sm:h-56">
+          <div className="mt-5 h-64">
             <ResponsiveContainer width="100%" height="100%">
               <RePieChart>
                 <Pie data={donutData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={4}>

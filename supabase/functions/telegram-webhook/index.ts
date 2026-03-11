@@ -94,6 +94,7 @@ Deno.serve(async (req) => {
             {
               chat_id: chatId,
               channel_name: channelName,
+              chat_username: chat.username ?? null,
               bot_token: botToken,
               is_verified: true,
               owner_user_id: ownerUserId,
