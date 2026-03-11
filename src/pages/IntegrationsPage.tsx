@@ -28,6 +28,45 @@ type VerifyResult = {
   channel?: string | null;
 };
 
+type VerifyPayload = {
+  user_id: number;
+  platform: Platform;
+  channel: string;
+  init_data?: string | null;
+};
+
+function buildChannelUrl(platform: Platform, channel: string) {
+  const trimmed = channel.trim();
+  if (!trimmed) return "";
+  if (trimmed.includes("http://") || trimmed.includes("https://")) {
+    return trimmed;
+  }
+  if (platform === "twitch") return `https://twitch.tv/${trimmed}`;
+  if (platform === "youtube") return `https://youtube.com/${trimmed}`;
+  if (platform === "telegram") return `https://t.me/${trimmed.replace(/^@/, "")}`;
+  return trimmed;
+}
+
+async function postVerifyChannel(payload: VerifyPayload) {
+  const response = await fetch("/api/verify_channel", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (response.status !== 404 && response.status !== 405) {
+    return response;
+  }
+  if (payload.platform === "twitch" || payload.platform === "youtube") {
+    const channel_url = buildChannelUrl(payload.platform, payload.channel);
+    return fetch("/api/channel/connect", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: payload.user_id, channel_url }),
+    });
+  }
+  return response;
+}
+
 type TelegramWindow = Window & {
   Telegram?: {
     WebApp?: {
@@ -269,21 +308,17 @@ export default function IntegrationsPage() {
       } as VerifyResult;
     }
     try {
-      const response = await fetch("/api/verify_channel", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_id: userId,
-          platform,
-          channel,
-          init_data: initData,
-        }),
+      const response = await postVerifyChannel({
+        user_id: userId,
+        platform,
+        channel,
+        init_data: initData,
       });
       const data = await response.json().catch(() => ({}));
       if (response.ok && !data?.error) {
         return {
-          name: data.name || channel,
-          url: data.url || "",
+          name: data.name || data.channel_name || channel,
+          url: data.url || data.channel_url || "",
           platform,
           avatar: data.avatar || null,
           followers: data.followers ?? null,
@@ -374,15 +409,11 @@ export default function IntegrationsPage() {
     setStatus("verifying");
     setErrorMessage(null);
     try {
-      const response = await fetch("/api/verify_channel", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_id: userId,
-          platform: activePlatform.key,
-          channel: inputValue.trim(),
-          init_data: initData,
-        }),
+      const response = await postVerifyChannel({
+        user_id: userId,
+        platform: activePlatform.key,
+        channel: inputValue.trim(),
+        init_data: initData,
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || data?.error) {
@@ -391,8 +422,8 @@ export default function IntegrationsPage() {
         return;
       }
       setResult({
-        name: data.name || inputValue.trim(),
-        url: data.url || "",
+        name: data.name || data.channel_name || inputValue.trim(),
+        url: data.url || data.channel_url || "",
         platform: activePlatform.key,
         avatar: data.avatar || null,
         followers: data.followers ?? null,
