@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+﻿import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "./App.css";
@@ -16,20 +16,34 @@ import { type ClipItem, type DashboardStats, type NotificationItem, type StreamI
 import { AppLayout } from "./app/AppLayout";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { I18nProvider } from "./lib/i18n";
-import AdminPage from "./pages/AdminPage";
-import Analytics from "./pages/Analytics";
-import AnnouncementsPage from "./pages/AnnouncementsPage";
-import BridgeTransferPage from "./pages/BridgeTransferPage";
-import DesignAgentPage from "./pages/DesignAgentPage";
-import DonationsPage from "./pages/DonationsPage";
-import Index from "./pages/Index";
-import IntegrationsPage from "./pages/IntegrationsPage";
-import LiveDashboardPage from "./pages/LiveDashboardPage";
-import NotFound from "./pages/NotFound";
-import SettingsPage from "./pages/SettingsPage";
-import StreamInfoPage from "./pages/StreamInfoPage";
-import SupportPage from "./pages/SupportPage";
-import { NewDashboardPage } from "./pages/NewDashboardPage";
+
+const AdminPage = lazy(() => import("./pages/AdminPage"));
+const Analytics = lazy(() => import("./pages/Analytics"));
+const AnnouncementsPage = lazy(() => import("./pages/AnnouncementsPage"));
+const BridgeTransferPage = lazy(() => import("./pages/BridgeTransferPage"));
+const DesignAgentPage = lazy(() => import("./pages/DesignAgentPage"));
+const DonationsPage = lazy(() => import("./pages/DonationsPage"));
+const Index = lazy(() => import("./pages/Index"));
+const IntegrationsPage = lazy(() => import("./pages/IntegrationsPage"));
+const LiveDashboardPage = lazy(() => import("./pages/LiveDashboardPage"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const StreamInfoPage = lazy(() => import("./pages/StreamInfoPage"));
+const SupportPage = lazy(() => import("./pages/SupportPage"));
+const NewDashboardPage = lazy(() =>
+  import("./pages/NewDashboardPage").then((module) => ({ default: module.NewDashboardPage })),
+);
+
+function RouteLoadingState() {
+  return (
+    <div className="saas-card flex min-h-[220px] items-center justify-center rounded-[28px] border border-border/60 bg-card/75 p-6">
+      <div className="space-y-2 text-center">
+        <div className="text-[11px] font-mono uppercase tracking-[0.28em] text-muted-foreground">Loading</div>
+        <div className="text-sm font-medium text-foreground/80">Подгружаем экран...</div>
+      </div>
+    </div>
+  );
+}
 
 const App = () => {
   const [profile, setProfile] = useState<UserProfile | null>(() => getUserProfile());
@@ -102,7 +116,7 @@ const App = () => {
         // ignore
       }
     };
-    loadStats();
+    void loadStats();
     const timer = window.setInterval(loadStats, 30000);
     return () => {
       active = false;
@@ -153,60 +167,68 @@ const App = () => {
     setStreamSeries([]);
   };
 
+  const publicRoutes = (
+    <Routes>
+      <Route
+        path="/"
+        element={
+          <div className="app-shell">
+            <ConnectScreen onConnect={handleConnect} />
+            {error ? <div className="global-error">{error}</div> : null}
+          </div>
+        }
+      />
+      <Route path="/design-agent" element={<DesignAgentPage />} />
+      <Route path="/legacy" element={<Index />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+
+  const authenticatedRoutes = (
+    <Routes>
+      <Route
+        path="/"
+        element={
+          theme ? (
+            <NewDashboardPage
+              theme={theme}
+              profile={profile}
+              stats={stats}
+              streams={streams}
+              clips={clips}
+              notifications={notifications}
+              streamSeries={streamSeries}
+              onReconnect={handleReconnect}
+            />
+          ) : null
+        }
+      />
+      <Route path="/info" element={<StreamInfoPage />} />
+      <Route path="/analytics" element={<Analytics />} />
+      <Route path="/donations" element={<DonationsPage />} />
+      <Route path="/announcements" element={<AnnouncementsPage />} />
+      <Route path="/integrations" element={<IntegrationsPage />} />
+      <Route path="/settings" element={<SettingsPage />} />
+      <Route path="/support" element={<SupportPage />} />
+      <Route path="/admin" element={<AdminPage />} />
+      <Route path="/live" element={<LiveDashboardPage />} />
+      <Route path="/bridge" element={<BridgeTransferPage />} />
+      <Route path="/design-agent" element={<DesignAgentPage />} />
+      <Route path="/legacy" element={<Index />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <I18nProvider>
           <BrowserRouter>
             {!profile ? (
-              <Routes>
-                <Route
-                  path="/"
-                  element={
-                    <div className="app-shell">
-                      <ConnectScreen onConnect={handleConnect} />
-                      {error ? <div className="global-error">{error}</div> : null}
-                    </div>
-                  }
-                />
-                <Route path="/design-agent" element={<DesignAgentPage />} />
-                <Route path="/legacy" element={<Index />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+              <Suspense fallback={<RouteLoadingState />}>{publicRoutes}</Suspense>
             ) : (
               <AppLayout>
-                <Routes>
-                  <Route
-                    path="/"
-                    element={
-                      theme ? (
-                        <NewDashboardPage
-                          theme={theme}
-                          profile={profile}
-                          stats={stats}
-                          streams={streams}
-                          clips={clips}
-                          notifications={notifications}
-                          streamSeries={streamSeries}
-                          onReconnect={handleReconnect}
-                        />
-                      ) : null
-                    }
-                  />
-                  <Route path="/info" element={<StreamInfoPage />} />
-                  <Route path="/analytics" element={<Analytics />} />
-                  <Route path="/donations" element={<DonationsPage />} />
-                  <Route path="/announcements" element={<AnnouncementsPage />} />
-                  <Route path="/integrations" element={<IntegrationsPage />} />
-                  <Route path="/settings" element={<SettingsPage />} />
-                  <Route path="/support" element={<SupportPage />} />
-                  <Route path="/admin" element={<AdminPage />} />
-                  <Route path="/live" element={<LiveDashboardPage />} />
-                  <Route path="/bridge" element={<BridgeTransferPage />} />
-                  <Route path="/design-agent" element={<DesignAgentPage />} />
-                  <Route path="/legacy" element={<Index />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
+                <Suspense fallback={<RouteLoadingState />}>{authenticatedRoutes}</Suspense>
               </AppLayout>
             )}
           </BrowserRouter>

@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Eye, Bell, Radio } from "lucide-react";
+﻿import { useEffect, useState } from "react";
+import { Bell, Eye, Radio } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useStreamInfo } from "@/hooks/useStreamInfo";
@@ -39,35 +39,54 @@ export function GlobalStatusBar() {
       alive = false;
       void supabase.removeChannel(channel);
     };
-  }, [isLive]);
+  }, []);
 
   return (
-    <div className="sticky top-12 z-30 flex h-11 items-center justify-center gap-8 border-b bg-background/80 px-4 backdrop-blur-xl">
-      <motion.div
-        animate={{ scale: isLive ? [1, 1.05, 1] : 1 }}
-        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-        className={cn(
-          "flex items-center gap-2 text-sm font-mono font-bold",
-          isLive ? "text-green-400" : "text-muted-foreground"
-        )}
-      >
-        <Radio size={15} className={cn(isLive && "fill-current")} />
-        <span>{isLive ? 'LIVE' : 'OFFLINE'}</span>
-      </motion.div>
-
-      <div className="flex items-center gap-2 text-sm font-mono text-foreground">
-        <Eye size={15} className="text-muted-foreground" />
-        <span className="font-bold">{viewers}</span>
+    <div className="mb-4 grid grid-cols-3 gap-2 rounded-[24px] border border-white/8 bg-[hsl(var(--card))/0.72] p-2 shadow-[0_18px_40px_rgba(6,16,31,0.22)] backdrop-blur-xl">
+      <div className="flex min-h-[58px] items-center gap-3 rounded-[18px] bg-white/[0.04] px-3 py-2">
+        <motion.span
+          animate={isLive ? { scale: [1, 1.15, 1] } : { scale: 1 }}
+          transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+          className={cn(
+            "flex h-9 w-9 items-center justify-center rounded-full",
+            isLive ? "bg-emerald-500/14 text-emerald-300" : "bg-white/[0.06] text-muted-foreground",
+          )}
+        >
+          <Radio size={16} className={cn(isLive && "fill-current")} />
+        </motion.span>
+        <div>
+          <div className="text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">Статус</div>
+          <div className={cn("text-sm font-semibold", isLive ? "text-emerald-300" : "text-foreground")}>{isLive ? "В эфире" : "Оффлайн"}</div>
+        </div>
       </div>
 
-      <motion.button
+      <div className="flex min-h-[58px] items-center gap-3 rounded-[18px] bg-white/[0.04] px-3 py-2">
+        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.06] text-foreground/85">
+          <Eye size={16} />
+        </span>
+        <div>
+          <div className="text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">Сейчас</div>
+          <div className="text-sm font-semibold text-foreground">{viewers.toLocaleString("ru-RU")}</div>
+        </div>
+      </div>
+
+      <button
+        type="button"
         onClick={() => setHasNewEvent(false)}
-        animate={{ scale: hasNewEvent ? [1, 1.1, 1, 1.1, 1] : 1 }}
-        transition={{ duration: 0.8, repeat: Infinity }}
-        className="flex items-center gap-2 text-xs font-mono text-muted-foreground"
+        className="flex min-h-[58px] items-center gap-3 rounded-[18px] bg-white/[0.04] px-3 py-2 text-left transition-colors duration-200 hover:bg-white/[0.06]"
       >
-        <Bell size={15} className={cn(hasNewEvent && "fill-yellow-400 text-yellow-400")} />
-      </motion.button>
+        <span className={cn(
+          "relative flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.06] text-foreground/85",
+          hasNewEvent && "text-amber-300",
+        )}>
+          <Bell size={16} className={cn(hasNewEvent && "fill-current")} />
+          {hasNewEvent ? <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.7)]" /> : null}
+        </span>
+        <div>
+          <div className="text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">События</div>
+          <div className="text-sm font-semibold text-foreground">{hasNewEvent ? "Есть новые" : "Тихо"}</div>
+        </div>
+      </button>
     </div>
   );
 }

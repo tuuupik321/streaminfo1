@@ -2,7 +2,7 @@
 
 export const youtubeTheme: PlatformTheme = {
   platform: "youtube",
-  name: "YouTube Control Center",
+  name: "Панель YouTube",
   colors: {
     accent: "#FF0000",
     bg: "#0F0F0F",

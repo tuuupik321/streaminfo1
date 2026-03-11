@@ -226,17 +226,17 @@ export default function StreamInfoPage() {
   };
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="mx-auto max-w-6xl px-3 py-3 md:p-6">
+    <motion.div variants={container} initial="hidden" animate="show" className="mx-auto max-w-6xl px-2.5 py-2.5 pb-24 sm:px-3 sm:py-3 md:p-6">
       <motion.section variants={item} className={cn("saas-card relative overflow-hidden", isLive ? "pulse-live" : "")}> 
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-3.5 md:flex-row md:items-center md:justify-between md:gap-4">
           <div>
             <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-white/50">
               <span className={cn("h-2 w-2 rounded-full", isLive ? "bg-red-500" : "bg-white/30")} />
-              {t("dashboard.liveStatus", "LIVE STATUS")}
+              {t("dashboard.liveStatus", "Live status")}
             </div>
-            <h2 className="mt-2 text-xl font-bold">{t("dashboard.heroTitle", "Stream Center")}</h2>
+            <h2 className="mt-2 text-xl font-bold">{t("dashboard.heroTitle", "Stream hub")}</h2>
             <p className="text-xs text-white/60">{t("dashboard.channel", "Channel")}: {streamUrl}</p>
-            <div className="mt-3 flex flex-wrap gap-4 text-sm text-white/70">
+            <div className="mt-2.5 flex flex-wrap gap-3 text-sm text-white/70 sm:mt-3 sm:gap-4">
               <span>{t("dashboard.viewers", "Viewers")}: <span className="text-white font-semibold">{viewersNow}</span></span>
               <span>{t("dashboard.streamTime", "Stream time")}: <span className="text-white font-semibold">{streamDuration}</span></span>
             </div>
@@ -255,7 +255,7 @@ export default function StreamInfoPage() {
         </div>
       </motion.section>
 
-      <motion.div variants={item} className="mb-4 mt-6 flex items-center justify-between sm:mb-6">
+      <motion.div variants={item} className="mb-4 mt-5 flex items-center justify-between sm:mb-6 sm:mt-6">
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-gradient-primary text-xl">{t("streamInfo.title")}</h1>
           <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
@@ -272,7 +272,7 @@ export default function StreamInfoPage() {
         )}
       </motion.div>
 
-      <motion.div variants={item} className="mb-5 flex gap-2.5 sm:mb-6 sm:gap-3">
+      <motion.div variants={item} className="mb-4 flex gap-2 sm:mb-6 sm:gap-3">
         <Select value={period} onValueChange={setPeriod}>
           <SelectTrigger className="flex-1">
             <CalendarDays size={14} className="mr-2" />
@@ -305,8 +305,8 @@ export default function StreamInfoPage() {
         </DropdownMenu>
       </motion.div>
 
-      <motion.div variants={item} className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
-        <div className="lg:col-span-2 space-y-6">
+      <motion.div variants={item} className="grid grid-cols-1 gap-3.5 lg:grid-cols-3 lg:gap-6">
+        <div className="space-y-4 lg:col-span-2 lg:space-y-6">
           <AnimatePresence mode="wait">
             <motion.div
               key="viewerChart"
@@ -318,7 +318,7 @@ export default function StreamInfoPage() {
               <ViewerChart loading={isLoading} data={timeline} />
             </motion.div>
           </AnimatePresence>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
             <motion.div variants={item} className="saas-card">
               <h3 className="text-sm font-semibold">{t("dashboard.activityFeed", "Activity Feed")}</h3>
               <div className="mt-3 max-h-64 space-y-2 overflow-auto">
@@ -340,7 +340,7 @@ export default function StreamInfoPage() {
                 {goalCards.map((goal) => {
                   const progress = goal.target > 0 ? Math.min(100, (goal.current / goal.target) * 100) : 0;
                   return (
-                    <div key={goal.key} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-white/75">
+                    <div key={goal.key} className="rounded-[1.1rem] border border-white/10 bg-white/5 px-3.5 py-3 text-xs text-white/75 sm:rounded-2xl sm:px-4">
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="font-semibold text-white">{goal.title}</p>
@@ -351,7 +351,7 @@ export default function StreamInfoPage() {
                           <div className="text-[10px] uppercase tracking-[0.2em] text-white/35">goal</div>
                         </div>
                       </div>
-                      <div className="mt-3 h-2.5 rounded-full bg-white/10">
+                      <div className="mt-2.5 h-2.5 rounded-full bg-white/10 sm:mt-3">
                         <div className={`h-2.5 rounded-full ${goal.tone}`} style={{ width: `${progress}%` }} />
                       </div>
                     </div>
@@ -361,8 +361,8 @@ export default function StreamInfoPage() {
             </motion.div>
           </div>
         </div>
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-3 sm:space-y-4">
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
             <motion.div variants={item}>
               <KpiTile icon={Eye} label={t("dashboard.kpi.viewersToday", "Viewers today")} value={isLoading ? "—" : viewersNow} />
             </motion.div>
@@ -377,7 +377,7 @@ export default function StreamInfoPage() {
             </motion.div>
           </div>
           <motion.div variants={item} className="saas-card">
-            <h3 className="text-sm font-semibold">{t("dashboard.streamCenter", "STREAM CENTER")}</h3>
+            <h3 className="text-sm font-semibold">{t("dashboard.streamCenter", "Action panel")}</h3>
             <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
               <Button size="sm" variant="outline">{t("dashboard.startStream", "Start stream")}</Button>
               <Button size="sm" variant="outline">{t("dashboard.sendAnnouncement", "Send announcement")}</Button>
@@ -387,7 +387,7 @@ export default function StreamInfoPage() {
           </motion.div>
           <motion.div variants={item} className="saas-card">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold">{t("dashboard.streamerScore", "STREAMER SCORE")}</h3>
+              <h3 className="text-sm font-semibold">{t("dashboard.streamerScore", "Stream score")}</h3>
               <Sparkles size={14} className="text-white/60" />
             </div>
             <div className="mt-3 text-2xl font-bold">{streamerScore} / 100</div>

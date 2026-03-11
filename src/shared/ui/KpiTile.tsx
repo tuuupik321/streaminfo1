@@ -10,11 +10,11 @@ type KpiTileProps = {
 
 export function KpiTile({ icon: Icon, label, value, className }: KpiTileProps) {
   return (
-    <div className={cn("saas-card text-xs", className)}>
-      <div className="flex items-center gap-2 text-white/60">
+    <div className={cn("saas-card p-3 text-[11px] sm:p-4 sm:text-xs", className)}>
+      <div className="flex items-center gap-1.5 text-white/60 sm:gap-2">
         <Icon size={14} /> {label}
       </div>
-      <div className="mt-2 text-lg font-semibold">{value}</div>
+      <div className="mt-1.5 text-[1.05rem] font-semibold sm:mt-2 sm:text-lg">{value}</div>
     </div>
   );
 }

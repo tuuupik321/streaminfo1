@@ -6,6 +6,7 @@
 
 :root {
   color-scheme: dark;
+  --safe-bottom: env(safe-area-inset-bottom);
   --background: 214 52% 8%;
   --foreground: 210 40% 98%;
   --card: 214 33% 13%;
@@ -159,9 +160,9 @@
     position: fixed;
     inset: 0;
     background:
-      radial-gradient(circle at 14% 12%, hsl(var(--accent) / 0.16), transparent 28%),
-      radial-gradient(circle at 86% 16%, hsl(var(--primary) / 0.18), transparent 30%),
-      radial-gradient(circle at 48% 100%, hsl(var(--info) / 0.1), transparent 36%);
+      radial-gradient(circle at 14% 12%, hsl(var(--accent) / 0.1), transparent 28%),
+      radial-gradient(circle at 86% 16%, hsl(var(--primary) / 0.12), transparent 30%),
+      radial-gradient(circle at 48% 100%, hsl(var(--info) / 0.08), transparent 36%);
     pointer-events: none;
     z-index: -2;
   }
@@ -171,10 +172,10 @@
     position: fixed;
     inset: 0;
     background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 22%),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
-      linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px);
-    background-size: auto, 36px 36px, 36px 36px;
+      linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 18%),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.01) 1px, transparent 1px),
+      linear-gradient(rgba(255, 255, 255, 0.01) 1px, transparent 1px);
+    background-size: auto, 44px 44px, 44px 44px;
     mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.7), transparent);
     pointer-events: none;
     z-index: -1;
@@ -372,9 +373,9 @@
   .app-shell {
     min-height: 100vh;
     background:
-      radial-gradient(circle at 10% 12%, rgba(255, 132, 83, 0.18), transparent 34%),
-      radial-gradient(circle at 86% 16%, rgba(42, 157, 143, 0.18), transparent 34%),
-      radial-gradient(circle at 38% 100%, rgba(255, 224, 102, 0.12), transparent 40%),
+      radial-gradient(circle at 10% 12%, rgba(255, 132, 83, 0.12), transparent 34%),
+      radial-gradient(circle at 86% 16%, rgba(42, 157, 143, 0.12), transparent 34%),
+      radial-gradient(circle at 38% 100%, rgba(255, 224, 102, 0.08), transparent 40%),
       var(--panel-bg, #0b1420);
     color: var(--text-primary);
   }
@@ -408,10 +409,10 @@
   }
 
   .dashboard.embedded .content {
-    max-width: 1440px;
+    max-width: 1280px;
     margin: 0 auto;
     width: 100%;
-    padding: 32px clamp(16px, 3vw, 40px) 64px;
+    padding: 20px clamp(14px, 2.8vw, 32px) 48px;
   }
 
   .sidebar {
@@ -419,13 +420,13 @@
     top: 0;
     align-self: start;
     min-height: 100vh;
-    padding: 28px 20px;
+    padding: 24px 18px;
     border-right: 1px solid hsl(var(--sidebar-border));
     background: linear-gradient(180deg, hsl(var(--sidebar-background) / 0.95), hsl(var(--sidebar-background) / 0.84));
     backdrop-filter: blur(20px);
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 20px;
   }
 
   .brand {
@@ -528,14 +529,14 @@
 
   .content {
     width: 100%;
-    padding: 32px clamp(20px, 3.4vw, 48px) 72px;
+    padding: 24px clamp(18px, 3vw, 36px) 64px;
   }
 
   .content-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 24px;
+    gap: 20px;
   }
 
   .content-header h1 {
@@ -544,9 +545,9 @@
 
   .content-header p {
     margin-top: 12px;
-    max-width: 680px;
-    font-size: 15px;
-    line-height: 1.72;
+    max-width: 620px;
+    font-size: 14px;
+    line-height: 1.65;
   }
 
   .header-actions {
@@ -573,7 +574,7 @@
   }
 
   .hero-tags {
-    margin-top: 16px;
+    margin-top: 14px;
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
@@ -603,21 +604,21 @@
   }
 
   .stats {
-    margin-top: 30px;
+    margin-top: 24px;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 18px;
+    gap: 14px;
     align-items: stretch;
   }
 
   .card {
     position: relative;
     overflow: hidden;
-    border-radius: 22px;
+    border-radius: 26px;
     border: 1px solid var(--card-border);
-    background: var(--card-bg);
-    padding: 20px;
-    box-shadow: 0 22px 56px rgba(0, 0, 0, 0.34);
+    background: color-mix(in srgb, var(--card-bg) 92%, #0c1624);
+    padding: 18px;
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.24);
     backdrop-filter: blur(20px);
     transition:
       transform 0.22s ease,
@@ -626,11 +627,11 @@
   }
 
   .card:hover {
-    transform: translateY(-3px);
-    border-color: color-mix(in srgb, var(--platform-accent) 38%, rgba(255, 255, 255, 0.12));
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--platform-accent) 28%, rgba(255, 255, 255, 0.12));
     box-shadow:
-      0 26px 70px rgba(0, 0, 0, 0.42),
-      0 0 56px color-mix(in srgb, var(--platform-accent) 18%, transparent);
+      0 20px 52px rgba(0, 0, 0, 0.3),
+      0 0 28px color-mix(in srgb, var(--platform-accent) 10%, transparent);
   }
 
   .stat-head,
@@ -701,17 +702,26 @@
   }
 
   .stat-card {
-    min-height: 214px;
+    min-height: 196px;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
+    animation: card-rise 0.42s ease both;
+  }
+
+  .stats .stat-card:nth-child(2) {
+    animation-delay: 0.05s;
+  }
+
+  .stats .stat-card:nth-child(3) {
+    animation-delay: 0.1s;
   }
 
   .sections {
-    margin-top: 32px;
+    margin-top: 24px;
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 18px;
+    gap: 14px;
   }
 
   .section-title {
@@ -733,13 +743,13 @@
     padding: 0;
     margin: 0;
     display: grid;
-    gap: 10px;
+    gap: 8px;
     color: hsl(var(--muted-foreground));
     font-size: 13px;
   }
 
   .section-list li {
-    padding: 10px 0;
+    padding: 9px 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     line-height: 1.55;
   }
@@ -1054,6 +1064,36 @@
   }
 }
 
+@media (max-width: 640px) {
+  @layer components {
+    .saas-card {
+      border-radius: 1.25rem;
+      padding: 0.95rem;
+      box-shadow:
+        0 12px 28px hsl(var(--shadow) / 0.28),
+        inset 0 1px 0 hsl(0 0% 100% / 0.04);
+    }
+
+    .card-glass {
+      border-radius: 1.25rem;
+      box-shadow:
+        0 10px 24px hsl(var(--shadow) / 0.22),
+        inset 0 1px 0 hsl(0 0% 100% / 0.04);
+    }
+
+    .dashboard.embedded .content {
+      padding: 16px 12px 32px;
+    }
+
+    .global-error {
+      bottom: calc(env(safe-area-inset-bottom) + 88px);
+      min-width: min(92vw, 320px);
+      padding: 10px 14px;
+      font-size: 12px;
+    }
+  }
+}
+
 @keyframes fade-lift {
   from {
     opacity: 0;
@@ -1076,6 +1116,17 @@
     box-shadow:
       0 24px 60px hsl(var(--shadow) / 0.5),
       0 0 var(--glow-strong) hsl(var(--primary) / calc(var(--glow-alpha-strong) * 1.2));
+  }
+}
+
+@keyframes card-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -1135,12 +1186,25 @@
 @media (max-width: 640px) {
   .dashboard.embedded .content,
   .content {
-    padding: 20px 16px calc(88px + env(safe-area-inset-bottom));
+    padding: 14px 12px calc(102px + env(safe-area-inset-bottom));
   }
 
   .stats,
   .sections {
     grid-template-columns: 1fr;
+  }
+
+  .content-header {
+    gap: 16px;
+  }
+
+  .content-header h1 {
+    font-size: 1.7rem;
+  }
+
+  .card {
+    border-radius: 24px;
+    padding: 16px;
   }
 
   .bar-chart {

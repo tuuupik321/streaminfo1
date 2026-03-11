@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { BarChart3, CalendarDays, Clock, Download, Eye, TrendingUp, Users, PieChart, Flame, Award, Sparkles, DollarSign, Heart } from "lucide-react";
+import { BarChart3, CalendarDays, Clock, Download, Eye, TrendingUp, Users, PieChart, Flame, Award, DollarSign, Heart } from "lucide-react";
 import { StatsCard } from "@/shared/ui/StatsCard";
 import { DataPoint, ViewerChart } from "@/components/dashboard/ViewerChart";
 import { PredictionCard } from "@/components/dashboard/PredictionCard";
@@ -129,7 +129,7 @@ export default function Analytics() {
     const rows = timeline.map((p) => `<tr><td>${p.time}</td><td>${p.viewers}</td><td>${p.clicks ?? 0}</td><td>${p.donations ?? 0}</td><td>${p.event || ""}</td></tr>`).join("");
     const win = window.open("", "_blank", "noopener,noreferrer,width=1000,height=700");
     if (!win) return;
-    win.document.write(`<html><head><title>Analytics ${period}</title><style>body{font-family:Arial;padding:24px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ddd;padding:8px;font-size:12px}th{background:#f4f4f4;text-align:left}</style></head><body><h2>Analytics report (${period})</h2><p>Generated: ${new Date().toLocaleString()}</p><table><thead><tr><th>Time</th><th>Viewers</th><th>Clicks</th><th>Donations</th><th>Event</th></tr></thead><tbody>${rows}</tbody></table></body></html>`);
+    win.document.write(`<html><head><title>${t("analytics.reportTitle", "Analytics report")} ${period}</title><style>body{font-family:Arial;padding:24px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ddd;padding:8px;font-size:12px}th{background:#f4f4f4;text-align:left}</style></head><body><h2>${t("analytics.reportTitle", "Analytics report")} (${period})</h2><p>${t("analytics.generatedAt", "Generated")}: ${new Date().toLocaleString()}</p><table><thead><tr><th>${t("analytics.tableTime", "Time")}</th><th>${t("analytics.tableViewers", "Viewers")}</th><th>${t("analytics.tableClicks", "Clicks")}</th><th>${t("analytics.tableDonations", "Donations")}</th><th>${t("analytics.tableEvent", "Event")}</th></tr></thead><tbody>${rows}</tbody></table></body></html>`);
     win.document.close();
     win.focus();
     win.print();
@@ -153,12 +153,19 @@ export default function Analytics() {
     return map;
   }, [platformStats]);
 
-  const platformComparison = [
+  const platformComparison = useMemo(() => ([
     { name: "Twitch", value: platformMap.twitch?.followers ?? 0 },
     { name: "YouTube", value: platformMap.youtube?.followers ?? 0 },
     { name: "Kick", value: platformMap.kick?.followers ?? 0 },
     { name: "Trovo", value: platformMap.trovo?.followers ?? 0 },
-  ];
+  ]), [platformMap]);
+
+  const bestPlatform = useMemo(() => {
+    const top = platformComparison.reduce((currentBest, candidate) => (
+      candidate.value > currentBest.value ? candidate : currentBest
+    ), platformComparison[0] ?? { name: "--", value: 0 });
+    return top.value > 0 ? top.name : "--";
+  }, [platformComparison]);
 
   const donutData = [
     { name: "Twitch", value: platformMap.twitch?.views ?? 0, color: "#9146FF" },
@@ -178,12 +185,12 @@ export default function Analytics() {
   };
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="mx-auto max-w-[1440px] px-4 py-4 md:px-6 md:py-6 lg:px-8">
-      <motion.div variants={item} className="mb-8 flex flex-wrap items-center justify-between gap-4">
+    <motion.div variants={container} initial="hidden" animate="show" className="mx-auto max-w-[1440px] px-2.5 py-2.5 pb-24 sm:px-3 sm:py-3 md:px-6 md:py-6 lg:px-8">
+      <motion.div variants={item} className="mb-5 flex flex-wrap items-center justify-between gap-3 sm:mb-8 sm:gap-4">
         <h1 className="text-xl font-black font-heading md:text-2xl">{t("analytics.title")}</h1>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           <Select value={period} onValueChange={setPeriod}>
-            <SelectTrigger aria-label={t("analytics.periodSelectLabel")} className="w-[170px]">
+            <SelectTrigger aria-label={t("analytics.periodSelectLabel")} className="w-full sm:w-[170px]">
               <CalendarDays size={14} className="mr-2" />
               <SelectValue />
             </SelectTrigger>
@@ -195,21 +202,21 @@ export default function Analytics() {
               <SelectItem value="all">{t("analytics.periodAll")}</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" onClick={exportCsv} className="gap-2" aria-label={t("analytics.exportCsv")}>
+          <Button variant="outline" onClick={exportCsv} className="flex-1 gap-2 sm:flex-none" aria-label={t("analytics.exportCsv")}>
             <Download size={14} />{t("analytics.exportCsv")}
           </Button>
-          <Button variant="outline" onClick={exportPdf} className="gap-2" aria-label={t("analytics.exportPdf")}>
+          <Button variant="outline" onClick={exportPdf} className="flex-1 gap-2 sm:flex-none" aria-label={t("analytics.exportPdf")}>
             <Download size={14} />{t("analytics.exportPdf")}
           </Button>
-          <Button variant={combinedChart ? "default" : "secondary"} onClick={() => setCombinedChart((v) => !v)}>
+          <Button className="w-full sm:w-auto" variant={combinedChart ? "default" : "secondary"} onClick={() => setCombinedChart((v) => !v)}>
             {combinedChart ? t("analytics.hideCombined") : t("analytics.showCombined")}
           </Button>
         </div>
       </motion.div>
 
-      <motion.div variants={item} className="mb-8 grid grid-cols-1 gap-6">
+      <motion.div variants={item} className="mb-5 grid grid-cols-1 gap-3.5 sm:mb-8 sm:gap-6">
         <div className="saas-card">
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.streamForecast", "Stream Forecast")}</p>
               {isLoading ? (
@@ -273,7 +280,7 @@ export default function Analytics() {
       </motion.div>
 
       {hasData ? (
-        <motion.div variants={item} className="mb-10 grid grid-cols-1 gap-5 md:grid-cols-5">
+        <motion.div variants={item} className="mb-6 grid grid-cols-1 gap-3 md:mb-10 md:gap-5 md:grid-cols-5">
           <StatsCard icon={Eye} label={t("analytics.clicks")} value={data?.clicks ?? 0} delay={0} loading={isLoading} />
           <StatsCard icon={TrendingUp} label={t("analytics.peak")} value={data?.max_peak ?? 0} delay={0.08} loading={isLoading} />
           <StatsCard icon={BarChart3} label={t("analytics.average")} value={data?.avg_peak ?? 0} delay={0.16} loading={isLoading} />
@@ -282,7 +289,7 @@ export default function Analytics() {
         </motion.div>
       ) : null}
 
-      <motion.div variants={item} className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <motion.div variants={item} className="mb-5 grid grid-cols-1 gap-3.5 lg:grid-cols-3 lg:gap-6 sm:mb-8">
         <div className="saas-card lg:col-span-2">
           <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.viewersGrowth", "Viewers growth")}</p>
           <div className="mt-5 h-72">
@@ -299,24 +306,24 @@ export default function Analytics() {
         </div>
         <div className="saas-card">
           <div className="flex items-center justify-between">
-            <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.aiInsight", "AI Insight")}</p>
-            <Sparkles size={14} className="text-white/60" />
+            <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.summary", "Краткий итог")}</p>
+            <BarChart3 size={14} className="text-white/60" />
           </div>
           <div className="mt-4 space-y-2 text-sm text-white/70">
             {hasRecentStreams ? (
               <>
                 <p>{t("analytics.bestTime", "Best time to stream")}: <span className="text-white font-semibold">{peakTime}</span></p>
-                <p>{t("analytics.bestPlatform", "Best platform today")}: <span className="text-white font-semibold">Twitch</span></p>
-                <p>{t("analytics.viewerPeak", "Viewer peak")}: <span className="text-white font-semibold">{peakTime}</span></p>
+                <p>{t("analytics.bestPlatform", "Best platform today")}: <span className="text-white font-semibold">{bestPlatform}</span></p>
+                <p>{t("analytics.viewerPeak", "Viewer peak")}: <span className="text-white font-semibold">{peak.toLocaleString()}</span></p>
               </>
             ) : (
-              <p className="text-white/60">{t("analytics.noInsights", "No insights yet. Stream to generate analytics.")}</p>
+              <p className="text-white/60">{t("analytics.noInsights", "Not enough data yet. Start a stream to get useful insights.")}</p>
             )}
           </div>
         </div>
       </motion.div>
 
-      <motion.div variants={item} className="mb-8 grid grid-cols-1 gap-6">
+      <motion.div variants={item} className="mb-5 grid grid-cols-1 gap-3.5 sm:mb-8 sm:gap-6">
         <div className="saas-card">
           <div className="flex items-center justify-between">
             <p className="text-xs uppercase tracking-[0.3em] text-white/50">{chartConfig[activeChart].label}</p>
@@ -357,11 +364,11 @@ export default function Analytics() {
         </div>
       </motion.div>
 
-      <motion.div variants={item} className="mb-8">
+      <motion.div variants={item} className="mb-5 sm:mb-8">
         {hasData ? <ActivityMap /> : <div className="saas-card text-sm text-muted-foreground">{t("analytics.noHeatmap", "No data for heatmap yet.")}</div>}
       </motion.div>
 
-      <motion.div variants={item} className="mb-10 grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <motion.div variants={item} className="mb-6 grid grid-cols-1 gap-3.5 lg:grid-cols-3 lg:gap-6 sm:mb-10">
         <div className="saas-card lg:col-span-2">
           <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.platformComparison", "Platform comparison")}</p>
           <div className="mt-5 h-64">
@@ -394,10 +401,10 @@ export default function Analytics() {
 
       {hasData ? (
         <>
-          <motion.div variants={item} className="mb-8"><ViewerChart loading={isLoading} data={timeline} showCombined={combinedChart} /></motion.div>
-          <motion.div variants={item} className="mb-8"><PredictionCard data={timeline} liveViewers={0} isLive={false} /></motion.div>
-          <motion.div variants={item} className="mb-8"><StreamSeriesRail data={timeline} /></motion.div>
-          <motion.div variants={item} className="mb-8"><LiveEventsFeed /></motion.div>
+          <motion.div variants={item} className="mb-5 sm:mb-8"><ViewerChart loading={isLoading} data={timeline} showCombined={combinedChart} /></motion.div>
+          <motion.div variants={item} className="mb-5 sm:mb-8"><PredictionCard data={timeline} liveViewers={0} isLive={false} /></motion.div>
+          <motion.div variants={item} className="mb-5 sm:mb-8"><StreamSeriesRail data={timeline} /></motion.div>
+          <motion.div variants={item} className="mb-5 sm:mb-8"><LiveEventsFeed /></motion.div>
 
           <motion.div variants={item} className="rounded-2xl border border-border/60 bg-card/65 py-6 text-center font-mono text-sm text-muted-foreground">
             {t("analytics.sessions")}: {data?.streams_count ?? 0} | {t("analytics.peak")}: {peak}
@@ -409,3 +416,5 @@ export default function Analytics() {
     </motion.div>
   );
 }
+
+

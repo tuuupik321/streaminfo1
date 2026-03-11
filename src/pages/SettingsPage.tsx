@@ -14,13 +14,13 @@ import { makeFadeUp, makeStagger } from "@/shared/motion";
 function Section({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
   return (
     <Card className="card-glass">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-lg">
+      <CardHeader className="px-4 pb-3 pt-4 sm:px-6 sm:pb-4 sm:pt-6">
+        <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
           {title}
         </CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3 px-4 pb-4 pt-0 sm:space-y-4 sm:px-6 sm:pb-6">
         {children}
       </CardContent>
     </Card>
@@ -99,18 +99,18 @@ export default function SettingsPage() {
   const item = makeFadeUp(reduceMotion);
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="mx-auto max-w-3xl px-3 py-3 pb-24 md:p-6">
-      <motion.h1 variants={item} className="mb-5 text-gradient-primary sm:mb-8">
+    <motion.div variants={container} initial="hidden" animate="show" className="mx-auto max-w-3xl px-2.5 py-2.5 pb-24 sm:px-3 sm:py-3 md:p-6">
+      <motion.h1 variants={item} className="mb-4 text-gradient-primary sm:mb-8">
         {t("settings.title", "Settings")}
       </motion.h1>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <motion.div variants={item}>
           <Section title={t("settings.account", "Account")} description={t("settings.accountDesc", "Manage your profile and access.")}>
             <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-secondary/40 p-4">
               <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center"><User size={16} /></div>
               <div>
-                <p className="text-sm font-semibold">Streamer</p>
-                <p className="text-xs text-muted-foreground">Connected via Telegram</p>
+                <p className="text-sm font-semibold">{t("settings.accountName", "Стример")}</p>
+                <p className="text-xs text-muted-foreground">{t("settings.accountConnected", "Подключено через Telegram")}</p>
               </div>
             </div>
           </Section>
@@ -126,19 +126,19 @@ export default function SettingsPage() {
           <Section title={t("settings.notifications", "Notifications")} description={t("settings.notificationsDesc", "Choose what you want to be notified about.")}>
             <div className="space-y-3">
               <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-secondary/40 p-3">
-                <span className="text-sm">Stream start</span>
+                <span className="text-sm">{t("settings.notifyStreamStart", "Старт стрима")}</span>
                 <Switch defaultChecked />
               </div>
               <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-secondary/40 p-3">
-                <span className="text-sm">Donations</span>
+                <span className="text-sm">{t("settings.notifyDonations", "Донаты")}</span>
                 <Switch defaultChecked />
               </div>
               <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-secondary/40 p-3">
-                <span className="text-sm">Followers</span>
+                <span className="text-sm">{t("settings.notifyFollowers", "Фолловеры")}</span>
                 <Switch />
               </div>
               <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-secondary/40 p-3">
-                <span className="text-sm">Subscribers</span>
+                <span className="text-sm">{t("settings.notifySubscribers", "Подписчики")}</span>
                 <Switch />
               </div>
             </div>
@@ -157,7 +157,7 @@ export default function SettingsPage() {
               <div className="flex items-center gap-2 text-sm">
                 <Shield size={14} /> 2FA
               </div>
-              <Button size="sm" variant="outline">Enable</Button>
+              <Button size="sm" variant="outline">{t("settings.enable", "Включить")}</Button>
             </div>
           </Section>
         </motion.div>

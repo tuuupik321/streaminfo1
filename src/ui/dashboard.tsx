@@ -1,5 +1,5 @@
 ﻿import type { UserProfile } from "../database/users";
-import { Activity, Bell, Film, Flame, Radio, Sparkles, Users, Video } from "lucide-react";
+import { Activity, Bell, Film, Flame, Radio, Users, Video } from "lucide-react";
 import type { PlatformTheme } from "./themes";
 import { GhostButton, Pill, PrimaryButton, SectionCard, SidebarItem, StatCard } from "./components";
 
@@ -69,7 +69,7 @@ export function Dashboard({
   const isOnline = stats?.online ?? false;
   const maxCount = Math.max(1, ...streamSeries.map((item) => item.count));
   const lastStream = streams[0];
-  const lastStreamLabel = lastStream?.view_count ? `Просмотров ${lastStream.view_count.toLocaleString("ru-RU")}` : "Архив эфира готов";
+  const lastStreamLabel = lastStream?.view_count ? `Просмотров ${lastStream.view_count.toLocaleString("ru-RU")}` : "Архив готов";
 
   return (
     <div className={`dashboard${showSidebar ? "" : " embedded"}`}>
@@ -78,22 +78,22 @@ export function Dashboard({
           <div className="brand">
             <div className="brand-mark" />
             <div className="brand-text">
-              <span>Stream Control</span>
+              <span>StreamsInfo</span>
               <small>{theme.platform.toUpperCase()}</small>
             </div>
           </div>
           <nav className="sidebar-nav">
-            <SidebarItem label="Обзор" active />
+            <SidebarItem label="Дашборд" active />
             <SidebarItem label="Эфиры" />
-            <SidebarItem label="Оповещения" />
+            <SidebarItem label="Лента" />
             <SidebarItem label="Настройки" />
           </nav>
           <div className="sidebar-footer">
             <div className="connected">
               <span className="status-dot" />
-              Подключено: {profile.channel_name}
+              Канал: {profile.channel_name}
             </div>
-            <GhostButton onClick={onReconnect}>Переподключить канал</GhostButton>
+            <GhostButton onClick={onReconnect}>Сменить канал</GhostButton>
           </div>
         </aside>
       ) : null}
@@ -101,37 +101,33 @@ export function Dashboard({
         <header className="content-header">
           <div>
             <h1>{theme.name}</h1>
-            <p>Панель управления для стримера. Быстрые действия, статистика и уведомления в одном месте.</p>
+            <p>Ключевые цифры, эфиры и уведомления в одном спокойном рабочем экране.</p>
             <div className="hero-tags">
               <span className={`status-pill ${isOnline ? "online" : "offline"}`}>
                 <Radio size={14} />
                 {isOnline ? "В эфире" : "Оффлайн"}
               </span>
-              <span className="status-pill">
-                <Sparkles size={14} />
-                AI‑подсказки
-              </span>
             </div>
           </div>
           <div className="header-actions">
             <Pill>{profile.platform.toUpperCase()}</Pill>
-            <PrimaryButton>Создать пост о стриме</PrimaryButton>
+            <PrimaryButton>Открыть анонсы</PrimaryButton>
           </div>
         </header>
         <section className="stats">
           {profile.platform === "twitch" ? (
             <>
               <StatCard
-                label="Зрители сейчас"
+                label="Зрители"
                 value={`${viewers}`}
-                trend={isOnline ? "Эфир активен" : "Эфир офлайн"}
+                trend={isOnline ? "Эфир активен" : "Ждём следующий старт"}
                 trendDirection={isOnline ? "up" : "down"}
                 icon={<Users size={16} />}
               />
               <StatCard
                 label="Фолловеры"
                 value={`${followers}`}
-                trend={followers > 0 ? "Канал набирает базу" : "Нужен первый рост"}
+                trend={followers > 0 ? "Канал растёт" : "Нужен первый рост"}
                 trendDirection={followers > 0 ? "up" : "down"}
                 icon={<Activity size={16} />}
               />
@@ -160,10 +156,10 @@ export function Dashboard({
                 icon={<Flame size={16} />}
               />
               <StatCard
-                label="Оповещения"
-                value="12"
-                trend="Неделя под контролем"
-                trendDirection="up"
+                label="Уведомления"
+                value={`${notifications.length}`}
+                trend={notifications.length > 0 ? "Новые события есть" : "Пока спокойно"}
+                trendDirection={notifications.length > 0 ? "up" : "neutral"}
                 icon={<Bell size={16} />}
               />
             </>
@@ -172,7 +168,7 @@ export function Dashboard({
         <section className="sections">
           <SectionCard title="История эфиров" icon={<Activity size={16} />}>
             <div className="bar-chart">
-              {streamSeries.length === 0 ? <div className="empty">Данных пока нет</div> : null}
+              {streamSeries.length === 0 ? <div className="empty">Пока нет истории</div> : null}
               {streamSeries.map((item) => (
                 <div key={item.date} className="bar">
                   <div className="bar-fill" style={{ height: `${(item.count / maxCount) * 100}%` }} />
@@ -181,7 +177,7 @@ export function Dashboard({
               ))}
             </div>
           </SectionCard>
-          <SectionCard title="Эфиры" icon={<Video size={16} />}>
+          <SectionCard title="Недавние эфиры" icon={<Video size={16} />}>
             <ul className="section-list">
               {streams.length === 0 ? <li>Эфиров пока нет</li> : null}
               {streams.map((stream) => (
@@ -193,7 +189,7 @@ export function Dashboard({
               ))}
             </ul>
           </SectionCard>
-          <SectionCard title="Последние клипы" icon={<Film size={16} />}>
+          <SectionCard title="Клипы" icon={<Film size={16} />}>
             <ul className="section-list">
               {clips.length === 0 ? <li>Клипов пока нет</li> : null}
               {clips.map((clip) => (
@@ -205,9 +201,9 @@ export function Dashboard({
               ))}
             </ul>
           </SectionCard>
-          <SectionCard title="Уведомления" icon={<Bell size={16} />}>
+          <SectionCard title="Лента событий" icon={<Bell size={16} />}>
             <ul className="section-list">
-              {notifications.length === 0 ? <li>Уведомлений пока нет</li> : null}
+              {notifications.length === 0 ? <li>Пока без уведомлений</li> : null}
               {notifications.map((note) => (
                 <li key={note.created_at}>
                   {note.title} {note.body ? `- ${note.body}` : ""}
@@ -220,8 +216,3 @@ export function Dashboard({
     </div>
   );
 }
-
-
-
-
-

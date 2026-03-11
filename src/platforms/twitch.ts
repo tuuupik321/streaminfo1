@@ -2,7 +2,7 @@
 
 export const twitchTheme: PlatformTheme = {
   platform: "twitch",
-  name: "Twitch Control Center",
+  name: "Панель Twitch",
   colors: {
     accent: "#9146FF",
     bg: "#18181B",

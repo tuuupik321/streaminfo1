@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -57,7 +57,7 @@ export function CommandPalette() {
       <DialogContent className="border-border/70 bg-popover/95 p-4 shadow-[0_32px_80px_hsl(var(--shadow)/0.48)] backdrop-blur-2xl sm:max-w-xl">
         <DialogHeader>
           <DialogTitle className="text-sm font-mono uppercase tracking-[0.18em] text-muted-foreground">
-            Command Palette
+            Быстрый переход
           </DialogTitle>
         </DialogHeader>
 
@@ -66,7 +66,7 @@ export function CommandPalette() {
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Перейти к разделу..."
+            placeholder="Открой раздел..."
             className="pl-11"
           />
         </div>

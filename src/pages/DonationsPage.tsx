@@ -52,10 +52,10 @@ function ActivityRow({ item, index }: { item: ActivityItem; index: number }) {
       initial={{ opacity: 0, x: 30 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.08 }}
-      className="group flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80 hover-lift"
+      className="group flex items-center justify-between rounded-[1.1rem] border border-white/10 bg-white/5 px-3 py-2.5 text-[13px] text-white/80 hover-lift sm:rounded-2xl sm:px-4 sm:py-3 sm:text-sm"
     >
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 shadow-[0_0_20px_rgba(145,70,255,0.45)]">
+      <div className="flex items-center gap-2.5 sm:gap-3">
+        <div className="flex h-9 w-9 items-center justify-center rounded-[0.95rem] bg-white/10 shadow-[0_0_20px_rgba(145,70,255,0.45)] sm:h-10 sm:w-10 sm:rounded-xl">
           {item.kind === "donation" ? <DollarSign size={16} /> : item.kind === "gift" ? <Gift size={16} /> : <UserCheck size={16} />}
         </div>
         <p className="font-semibold">{item.text}</p>
@@ -107,11 +107,11 @@ export default function DonationsPage() {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-3xl p-4 md:p-8">
-        <motion.h1 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-5 font-heading text-xl font-black md:text-2xl">
+      <div className="mx-auto max-w-3xl px-2.5 py-2.5 pb-24 sm:px-3 sm:py-3 md:p-8">
+        <motion.h1 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-4 font-heading text-xl font-black md:text-2xl">
           {t("donations.title")}
         </motion.h1>
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           <Skeleton className="h-24 w-full" />
           <Skeleton className="h-24 w-full" />
           <Skeleton className="h-24 w-full" />
@@ -129,8 +129,8 @@ export default function DonationsPage() {
   }
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="mx-auto max-w-3xl px-3 py-3 md:p-6">
-      <motion.h1 variants={item} className="mb-5 font-heading text-xl font-black md:text-2xl">
+    <motion.div variants={container} initial="hidden" animate="show" className="mx-auto max-w-3xl px-2.5 py-2.5 pb-24 sm:px-3 sm:py-3 md:p-6">
+      <motion.h1 variants={item} className="mb-4 font-heading text-xl font-black md:text-2xl">
         {t("donations.title")}
       </motion.h1>
 
@@ -145,7 +145,7 @@ export default function DonationsPage() {
           </div>
         </div>
 
-        <div className="mt-6 space-y-3">
+        <div className="mt-5 space-y-2.5 sm:mt-6 sm:space-y-3">
           {activity.length ? (
             activity.map((entry, index) => <ActivityRow key={entry.id} item={entry} index={index} />)
           ) : (
@@ -156,7 +156,7 @@ export default function DonationsPage() {
         </div>
       </motion.div>
 
-      <motion.div variants={item} className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+      <motion.div variants={item} className="mt-5 grid grid-cols-1 gap-3 sm:mt-6 sm:gap-4 md:grid-cols-2">
         <div className="saas-card">
           <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("donations.topSupporters", "Top supporters")}</p>
           <div className="mt-4 space-y-3 text-sm text-white/70">

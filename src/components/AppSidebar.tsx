@@ -2,7 +2,6 @@
 import { Activity, BarChart3, Info, LifeBuoy, Puzzle, Settings, ShieldCheck, Star, Languages, Moon, Sun, Megaphone } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
-import { PartnerBanner } from "@/components/PartnerBanner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -96,7 +95,7 @@ function SettingsMenu({ canSeeAdmin, collapsed }: { canSeeAdmin: boolean; collap
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-lg">
+          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-2xl border border-white/8 bg-white/[0.04]">
             <Settings size={18} />
           </Button>
         </DropdownMenuTrigger>
@@ -128,7 +127,7 @@ function SettingsMenu({ canSeeAdmin, collapsed }: { canSeeAdmin: boolean; collap
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel className="text-xs text-muted-foreground/60 font-mono uppercase tracking-widest">
+      <SidebarGroupLabel className="font-mono text-xs uppercase tracking-widest text-muted-foreground/60">
         {t("sidebar.system", "System")}
       </SidebarGroupLabel>
       <SidebarGroupContent>
@@ -136,7 +135,7 @@ function SettingsMenu({ canSeeAdmin, collapsed }: { canSeeAdmin: boolean; collap
           {menuItems.map((item) => (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton asChild>
-                <Link to={item.url} className="flex items-center gap-2 rounded-lg p-2 transition-all duration-200 hover:bg-primary/5 active:scale-[0.98]">
+                <Link to={item.url} className="flex items-center gap-2 rounded-2xl p-2.5 transition-all duration-200 hover:bg-white/[0.04] active:scale-[0.98]">
                   <item.icon className="h-4 w-4" />
                   <span>{item.title}</span>
                 </Link>
@@ -146,7 +145,7 @@ function SettingsMenu({ canSeeAdmin, collapsed }: { canSeeAdmin: boolean; collap
           {canSeeAdmin && (
             <SidebarMenuItem>
               <SidebarMenuButton asChild>
-                <Link to="/admin" className="flex items-center gap-2 rounded-lg p-2 transition-all duration-200 hover:bg-primary/5 active:scale-[0.98]">
+                <Link to="/admin" className="flex items-center gap-2 rounded-2xl p-2.5 transition-all duration-200 hover:bg-white/[0.04] active:scale-[0.98]">
                   <ShieldCheck className="h-4 w-4" />
                   <span>{t("sidebar.adminCenter", "Admin Center")}</span>
                 </Link>
@@ -193,21 +192,22 @@ export function AppSidebar() {
   }, [currentTelegramId]);
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-border/60">
+    <Sidebar collapsible="icon" className="border-r border-border/60 bg-sidebar/90">
       <SidebarContent className="flex flex-col pt-4">
         <div className="mb-6 flex items-center gap-2.5 px-4">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 glow-primary">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/12 shadow-[0_14px_32px_rgba(34,197,94,0.12)]">
             <Activity size={18} className="text-primary" />
           </div>
           {!collapsed && (
-            <span className="text-gradient-primary text-lg font-black font-heading tracking-tight">
-              STREAMSINFO
-            </span>
+            <div>
+              <span className="block text-base font-black tracking-tight text-foreground">StreamsInfo</span>
+              <small className="block text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Telegram Mini App</small>
+            </div>
           )}
         </div>
 
         <SidebarGroup className="flex-1">
-          <SidebarGroupLabel className="text-xs text-muted-foreground/60 font-mono uppercase tracking-widest">
+          <SidebarGroupLabel className="font-mono text-xs uppercase tracking-widest text-muted-foreground/60">
             {t("sidebar.menu", "Menu")}
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -218,8 +218,8 @@ export function AppSidebar() {
                     <NavLink
                       to={item.url}
                       end={item.url === "/"}
-                      className="rounded-xl transition-all duration-200 hover:-translate-y-0.5 hover:bg-primary/5 active:scale-[0.98]"
-                      activeClassName="bg-primary/12 text-primary font-semibold shadow-[0_8px_22px_rgba(34,197,94,0.18)]"
+                      className="rounded-[18px] px-3 py-2.5 transition-all duration-200 hover:bg-white/[0.04] active:scale-[0.98]"
+                      activeClassName="bg-white/[0.06] text-foreground font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
                     >
                       <item.icon className="mr-2 h-4 w-4" />
                       {!collapsed && <span>{t(`sidebar.${item.key}`, item.fallback)}</span>}
@@ -231,9 +231,8 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <div className="mt-auto flex flex-col gap-2 px-2">
+        <div className="mt-auto flex flex-col gap-2 px-2 pb-2">
           <SettingsMenu canSeeAdmin={canSeeAdmin} collapsed={collapsed} />
-          <PartnerBanner collapsed={collapsed} />
         </div>
       </SidebarContent>
     </Sidebar>
