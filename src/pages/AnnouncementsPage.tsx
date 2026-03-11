@@ -57,7 +57,7 @@ function TelegramPreview({ message, buttons }: { message: string; buttons: Annou
           </a>
         ))}
       </div>
-    </motion.div>
+    </div>
   );
 }
 
