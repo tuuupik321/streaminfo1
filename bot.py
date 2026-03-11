@@ -137,6 +137,16 @@ class Streamer(Base):
     kick_name = Column(String(50), nullable=True)
     language = Column(String(5), default="ru")
 
+class ChannelConnection(Base):
+    __tablename__ = "channel_connections"
+    user_id = Column(BigInteger, primary_key=True)
+    platform = Column(String(20), nullable=False)
+    channel_url = Column(String(255), nullable=False)
+    channel_name = Column(String(100), nullable=False)
+    connected = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+
 class StreamGoal(Base):
     __tablename__ = "stream_goals"
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -692,6 +702,7 @@ async def setup_database():
     required_tables = [
         "users",
         "streamers",
+        "channel_connections",
         "stream_goals",
         "donations",
         "visual_settings",
@@ -870,6 +881,14 @@ def _extract_username(value: str) -> str:
         raw = raw[1:]
     return raw.strip()
 
+def _detect_platform_from_url(url: str) -> str:
+    lowered = (url or "").lower()
+    if "twitch.tv" in lowered:
+        return "twitch"
+    if "youtube.com" in lowered or "youtu.be" in lowered:
+        return "youtube"
+    raise ValueError("Не удалось определить платформу")
+
 async def verify_channel(request: web.Request):
     auth_error = await _require_verified_user(request)
     if auth_error:
@@ -983,6 +1002,144 @@ async def verify_channel(request: web.Request):
         })
 
     return web.json_response({"error": "unsupported_platform"}, status=400)
+
+async def connect_channel(request: web.Request):
+    try:
+        payload = await request.json()
+        user_id = int(payload.get("user_id"))
+        channel_url = str(payload.get("channel_url") or "").strip()
+    except Exception:
+        return web.json_response({"error": "bad_request"}, status=400)
+
+    if not channel_url:
+        return web.json_response({"error": "bad_request"}, status=400)
+
+    try:
+        platform = _detect_platform_from_url(channel_url)
+    except ValueError as error:
+        return web.json_response({"error": str(error)}, status=400)
+
+    channel_name = _extract_username(channel_url)
+    profile_data: dict[str, Any] = {
+        "platform": platform,
+        "channel_url": channel_url,
+        "channel_name": channel_name,
+        "connected": True,
+    }
+
+    if platform == "twitch":
+        resolved = await resolve_twitch_login(channel_name)
+        if not resolved:
+            return web.json_response({"error": "twitch_not_found"}, status=404)
+        details = await fetch_twitch_channel_details(resolved)
+        channel_name = (details or {}).get("name") or resolved
+        profile_data.update({
+            "channel_name": channel_name,
+            "avatar": (details or {}).get("avatar"),
+            "followers": (details or {}).get("followers"),
+            "views": (details or {}).get("views"),
+        })
+        twitch_name = resolved
+        yt_channel_id = None
+    else:
+        resolved = await resolve_youtube_channel_id(channel_name)
+        if not resolved:
+            return web.json_response({"error": "youtube_not_found"}, status=404)
+        details = await fetch_youtube_channel_details(resolved)
+        channel_name = (details or {}).get("name") or resolved
+        profile_data.update({
+            "channel_name": channel_name,
+            "avatar": (details or {}).get("avatar"),
+            "subscribers": (details or {}).get("subscribers"),
+            "views": (details or {}).get("views"),
+        })
+        twitch_name = None
+        yt_channel_id = resolved
+        profile_data["channel_url"] = f"https://youtube.com/channel/{resolved}"
+
+    if not async_session:
+        return web.json_response({"error": "db_not_configured"}, status=500)
+
+    async with async_session() as session:
+        streamer = await ensure_streamer(session, user_id, None)
+        user = await session.get(User, user_id)
+        if not user:
+            user = User(user_id=user_id)
+            session.add(user)
+
+        if twitch_name is not None:
+            user.twitch_name = twitch_name
+            streamer.twitch_connected = bool(twitch_name)
+        if yt_channel_id is not None:
+            user.yt_channel_id = yt_channel_id
+            streamer.youtube_connected = bool(yt_channel_id)
+
+        connection = await session.get(ChannelConnection, user_id)
+        if not connection:
+            connection = ChannelConnection(
+                user_id=user_id,
+                platform=platform,
+                channel_url=profile_data["channel_url"],
+                channel_name=channel_name,
+                connected=True,
+            )
+            session.add(connection)
+        else:
+            connection.platform = platform
+            connection.channel_url = profile_data["channel_url"]
+            connection.channel_name = channel_name
+            connection.connected = True
+            connection.updated_at = datetime.now(timezone.utc)
+
+        await session.commit()
+
+    return web.json_response(profile_data)
+
+async def get_channel(request: web.Request):
+    user_id = request.query.get("user_id")
+    if not user_id:
+        return web.json_response({"error": "no_uid"}, status=400)
+    if not async_session:
+        return web.json_response({"error": "db_not_configured"}, status=500)
+    async with async_session() as session:
+        connection = await session.get(ChannelConnection, int(user_id))
+        if not connection or not connection.connected:
+            return web.json_response({"connected": False}, status=404)
+        return web.json_response({
+            "platform": connection.platform,
+            "channel_url": connection.channel_url,
+            "channel_name": connection.channel_name,
+            "connected": connection.connected,
+        })
+
+async def get_dashboard_stats(request: web.Request):
+    user_id = request.query.get("user_id")
+    if not user_id:
+        return web.json_response({"error": "no_uid"}, status=400)
+    if not async_session:
+        return web.json_response({"error": "db_not_configured"}, status=500)
+    async with async_session() as session:
+        connection = await session.get(ChannelConnection, int(user_id))
+        if not connection or not connection.connected:
+            return web.json_response({"connected": False}, status=404)
+        user = await session.get(User, int(user_id))
+        platform = connection.platform
+        stats: dict[str, Any] = {"platform": platform}
+        if platform == "twitch":
+            twitch_data = await fetch_twitch(user.twitch_name if user else None)
+            profile = await fetch_twitch_profile(user.twitch_name if user else None)
+            stats.update({
+                "online": bool(twitch_data.get("online")),
+                "viewers": int(twitch_data.get("viewers", 0)),
+                "followers": int(profile.get("followers") or 0) if profile else 0,
+                "views": int(profile.get("views") or 0) if profile else 0,
+            })
+        if platform == "youtube":
+            yt_data = await fetch_youtube(user.yt_channel_id if user else None)
+            stats.update({
+                "subscribers": int(yt_data.get("subscribers") or 0),
+            })
+        return web.json_response(stats)
 
 def _normalize_donation_payload(payload: dict[str, Any]) -> Optional[dict[str, Any]]:
     donor = payload.get("donor") or payload.get("username") or payload.get("name")
@@ -1375,6 +1532,9 @@ def build_app():
     app.router.add_post("/api/live_banner", set_live_banner)
     app.router.add_get("/api/live_banner", get_live_banner)
     app.router.add_post("/api/verify_channel", verify_channel)
+    app.router.add_post("/api/channel/connect", connect_channel)
+    app.router.add_get("/api/channel", get_channel)
+    app.router.add_get("/api/dashboard_stats", get_dashboard_stats)
     app.router.add_post("/api/save_settings", save_settings)
     app.router.add_post("/api/donations/webhook", donations_webhook)
     app.router.add_get("/api/donations/live", get_donations_live)

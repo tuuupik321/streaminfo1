@@ -1,14 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
 import "./App.css";
 import { detectPlatform, extractChannelName } from "./utils/detectPlatform";
-import { clearUserProfile, getUserProfile, saveUserProfile, type UserProfile } from "./database/users";
+import {
+  clearUserProfile,
+  getOrCreateUserId,
+  getUserProfile,
+  saveUserProfile,
+  type UserProfile,
+} from "./database/users";
 import { getThemeByPlatform } from "./ui/themes";
 import { ConnectScreen } from "./ui/connect";
-import { Dashboard } from "./ui/dashboard";
+import { Dashboard, type DashboardStats } from "./ui/dashboard";
 
 const App = () => {
   const [profile, setProfile] = useState<UserProfile | null>(() => getUserProfile());
   const [error, setError] = useState<string | null>(null);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const userId = useMemo(() => getOrCreateUserId(), []);
 
   const theme = useMemo(() => (profile ? getThemeByPlatform(profile.platform) : null), [profile]);
 
@@ -19,19 +27,72 @@ const App = () => {
     root.style.setProperty("--panel-bg", theme.colors.bg);
   }, [theme]);
 
-  const handleConnect = (url: string) => {
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const res = await fetch(`/api/channel?user_id=${userId}`);
+        if (!res.ok) return;
+        const data = (await res.json()) as UserProfile;
+        if (data?.connected) {
+          saveUserProfile(data);
+          setProfile(data);
+        }
+      } catch {
+        // ignore
+      }
+    };
+    void loadProfile();
+  }, [userId]);
+
+  useEffect(() => {
+    if (!profile) return;
+    let active = true;
+    const loadStats = async () => {
+      try {
+        const res = await fetch(`/api/dashboard_stats?user_id=${userId}`);
+        if (!res.ok) return;
+        const data = (await res.json()) as DashboardStats;
+        if (active) setStats(data);
+      } catch {
+        // ignore
+      }
+    };
+    loadStats();
+    const timer = window.setInterval(loadStats, 30000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [profile, userId]);
+
+  const handleConnect = async (url: string) => {
     try {
       const platform = detectPlatform(url);
       const channelName = extractChannelName(url);
-      const nextProfile: UserProfile = {
+      const fallbackProfile: UserProfile = {
         platform,
         channel_url: url,
         channel_name: channelName,
         connected: true,
       };
-      saveUserProfile(nextProfile);
-      setProfile(nextProfile);
-      setError(null);
+
+      const res = await fetch("/api/channel/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userId, channel_url: url }),
+      });
+
+      if (res.ok) {
+        const data = (await res.json()) as UserProfile;
+        saveUserProfile(data);
+        setProfile(data);
+        setError(null);
+        return;
+      }
+
+      saveUserProfile(fallbackProfile);
+      setProfile(fallbackProfile);
+      setError("Ќе удалось подтвердить канал, показан демо-режим");
     } catch (err) {
       setError((err as Error).message);
     }
@@ -40,6 +101,7 @@ const App = () => {
   const handleReconnect = () => {
     clearUserProfile();
     setProfile(null);
+    setStats(null);
   };
 
   if (!profile) {
@@ -53,7 +115,8 @@ const App = () => {
 
   return (
     <div className="app-shell">
-      {theme ? <Dashboard theme={theme} profile={profile} onReconnect={handleReconnect} /> : null}
+      {theme ? <Dashboard theme={theme} profile={profile} stats={stats} onReconnect={handleReconnect} /> : null}
+      {error ? <div className="global-error">{error}</div> : null}
     </div>
   );
 };

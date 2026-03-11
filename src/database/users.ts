@@ -8,6 +8,7 @@ export type UserProfile = {
 };
 
 const STORAGE_KEY = "streamer_profile_v1";
+const USER_ID_KEY = "streamer_user_id";
 
 export function getUserProfile(): UserProfile | null {
   try {
@@ -25,4 +26,18 @@ export function saveUserProfile(profile: UserProfile): void {
 
 export function clearUserProfile(): void {
   window.localStorage.removeItem(STORAGE_KEY);
+}
+
+export function getOrCreateUserId(): string {
+  const existing = window.localStorage.getItem(USER_ID_KEY);
+  if (existing) return existing;
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
+  let value = 0n;
+  for (const byte of bytes) {
+    value = (value << 8n) | BigInt(byte);
+  }
+  const id = value.toString();
+  window.localStorage.setItem(USER_ID_KEY, id);
+  return id;
 }

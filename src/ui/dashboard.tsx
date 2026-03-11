@@ -2,7 +2,30 @@ import type { UserProfile } from "../database/users";
 import type { PlatformTheme } from "./themes";
 import { GhostButton, Pill, PrimaryButton, SectionCard, SidebarItem, StatCard } from "./components";
 
-export function Dashboard({ theme, profile, onReconnect }: { theme: PlatformTheme; profile: UserProfile; onReconnect: () => void }) {
+export type DashboardStats = {
+  online?: boolean;
+  viewers?: number;
+  followers?: number;
+  views?: number;
+  subscribers?: number;
+};
+
+export function Dashboard({
+  theme,
+  profile,
+  stats,
+  onReconnect,
+}: {
+  theme: PlatformTheme;
+  profile: UserProfile;
+  stats: DashboardStats | null;
+  onReconnect: () => void;
+}) {
+  const viewers = stats?.viewers ?? 0;
+  const followers = stats?.followers ?? 0;
+  const subscribers = stats?.subscribers ?? 0;
+  const isOnline = stats?.online ?? false;
+
   return (
     <div className="dashboard">
       <aside className="sidebar">
@@ -39,9 +62,19 @@ export function Dashboard({ theme, profile, onReconnect }: { theme: PlatformThem
           </div>
         </header>
         <section className="stats">
-          <StatCard label="Live viewers" value="1 248" trend="+12% сегодня" />
-          <StatCard label="Followers" value="32 410" trend="+230 за неделю" />
-          <StatCard label="Last stream" value="2ч 18м" trend="Пик 1 740" />
+          {profile.platform === "twitch" ? (
+            <>
+              <StatCard label="Live viewers" value={`${viewers}`} trend={isOnline ? "В эфире" : "Оффлайн"} />
+              <StatCard label="Followers" value={`${followers}`} trend="по Twitch" />
+              <StatCard label="Last stream" value="2ч 18м" trend="Пик 1 740" />
+            </>
+          ) : (
+            <>
+              <StatCard label="Subscribers" value={`${subscribers}`} trend="по YouTube" />
+              <StatCard label="Last stream" value="1ч 04м" trend="Пик 2 030" />
+              <StatCard label="Notifications" value="12" trend="за неделю" />
+            </>
+          )}
         </section>
         <section className="sections">
           {theme.sections.map((section) => (
