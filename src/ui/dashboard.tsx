@@ -1,4 +1,5 @@
 ﻿import type { UserProfile } from "../database/users";
+import { Activity, Bell, Film, Flame, Radio, Sparkles, Users, Video } from "lucide-react";
 import type { PlatformTheme } from "./themes";
 import { GhostButton, Pill, PrimaryButton, SectionCard, SidebarItem, StatCard } from "./components";
 
@@ -90,6 +91,16 @@ export function Dashboard({
           <div>
             <h1>{theme.name}</h1>
             <p>Панель управления для стримера. Быстрые действия, статистика и уведомления в одном месте.</p>
+            <div className="hero-tags">
+              <span className={`status-pill ${isOnline ? "online" : "offline"}`}>
+                <Radio size={14} />
+                {isOnline ? "В эфире" : "Оффлайн"}
+              </span>
+              <span className="status-pill">
+                <Sparkles size={14} />
+                AI‑подсказки
+              </span>
+            </div>
           </div>
           <div className="header-actions">
             <Pill>{profile.platform.toUpperCase()}</Pill>
@@ -99,20 +110,20 @@ export function Dashboard({
         <section className="stats">
           {profile.platform === "twitch" ? (
             <>
-              <StatCard label="Live viewers" value={`${viewers}`} trend={isOnline ? "В эфире" : "Оффлайн"} />
-              <StatCard label="Followers" value={`${followers}`} trend="по Twitch" />
-              <StatCard label="Last stream" value="2ч 18м" trend="Пик 1 740" />
+              <StatCard label="Live viewers" value={`${viewers}`} trend={isOnline ? "В эфире" : "Оффлайн"} icon={<Users size={16} />} />
+              <StatCard label="Followers" value={`${followers}`} trend="по Twitch" icon={<Activity size={16} />} />
+              <StatCard label="Last stream" value="2ч 18м" trend="Пик 1 740" icon={<Flame size={16} />} />
             </>
           ) : (
             <>
-              <StatCard label="Subscribers" value={`${subscribers}`} trend="по YouTube" />
-              <StatCard label="Last stream" value="1ч 04м" trend="Пик 2 030" />
-              <StatCard label="Notifications" value="12" trend="за неделю" />
+              <StatCard label="Subscribers" value={`${subscribers}`} trend="по YouTube" icon={<Users size={16} />} />
+              <StatCard label="Last stream" value="1ч 04м" trend="Пик 2 030" icon={<Flame size={16} />} />
+              <StatCard label="Notifications" value="12" trend="за неделю" icon={<Bell size={16} />} />
             </>
           )}
         </section>
         <section className="sections">
-          <SectionCard title="Stream history">
+          <SectionCard title="Stream history" icon={<Activity size={16} />}> 
             <div className="bar-chart">
               {streamSeries.length === 0 ? <div className="empty">No data yet</div> : null}
               {streamSeries.map((item) => (
@@ -123,7 +134,7 @@ export function Dashboard({
               ))}
             </div>
           </SectionCard>
-          <SectionCard title="Streams">
+          <SectionCard title="Streams" icon={<Video size={16} />}> 
             <ul className="section-list">
               {streams.length === 0 ? <li>No streams yet</li> : null}
               {streams.map((stream) => (
@@ -135,7 +146,7 @@ export function Dashboard({
               ))}
             </ul>
           </SectionCard>
-          <SectionCard title="Latest clips">
+          <SectionCard title="Latest clips" icon={<Film size={16} />}> 
             <ul className="section-list">
               {clips.length === 0 ? <li>No clips yet</li> : null}
               {clips.map((clip) => (
@@ -147,7 +158,7 @@ export function Dashboard({
               ))}
             </ul>
           </SectionCard>
-          <SectionCard title="Notifications">
+          <SectionCard title="Notifications" icon={<Bell size={16} />}> 
             <ul className="section-list">
               {notifications.length === 0 ? <li>No notifications</li> : null}
               {notifications.map((note) => (
@@ -162,4 +173,8 @@ export function Dashboard({
     </div>
   );
 }
+
+
+
+
 

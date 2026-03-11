@@ -1,19 +1,35 @@
 import type { ReactNode } from "react";
 
-export function StatCard({ label, value, trend }: { label: string; value: string; trend?: string }) {
+export function StatCard({
+  label,
+  value,
+  trend,
+  icon,
+}: {
+  label: string;
+  value: string;
+  trend?: string;
+  icon?: ReactNode;
+}) {
   return (
     <div className="card stat-card">
-      <div className="stat-label">{label}</div>
+      <div className="stat-label">
+        {icon ? <span className="stat-icon">{icon}</span> : null}
+        <span>{label}</span>
+      </div>
       <div className="stat-value">{value}</div>
       {trend ? <div className="stat-trend">{trend}</div> : null}
     </div>
   );
 }
 
-export function SectionCard({ title, children }: { title: string; children: ReactNode }) {
+export function SectionCard({ title, children, icon }: { title: string; children: ReactNode; icon?: ReactNode }) {
   return (
     <div className="card section-card">
-      <div className="section-title">{title}</div>
+      <div className="section-title">
+        {icon ? <span className="section-icon">{icon}</span> : null}
+        <span>{title}</span>
+      </div>
       <div className="section-body">{children}</div>
     </div>
   );
