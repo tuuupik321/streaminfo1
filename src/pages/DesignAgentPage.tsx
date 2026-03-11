@@ -1,4 +1,4 @@
-import { motion, useReducedMotion } from "framer-motion";
+﻿import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, Code2, Layers, Monitor, RefreshCw, Rocket, Sparkles, WandSparkles } from "lucide-react";
 import { makeFadeUp, makeStagger } from "@/shared/motion";
 
@@ -6,7 +6,7 @@ const features = [
   {
     icon: Monitor,
     title: "Локальный preview",
-    text: "Поднимает dev-сервер и показывает результат на localhost прямо в браузере.",
+    text: "Поднимает dev-сервер и показывает результат на localhost прямо в браузере, чтобы изменения были видны сразу.",
   },
   {
     icon: RefreshCw,
@@ -16,26 +16,26 @@ const features = [
   {
     icon: Code2,
     title: "Код и UI рядом",
-    text: "В браузере видно визуальные изменения, а в Codex или VS Code сразу видно diff.",
+    text: "В браузере видно визуальный результат, а в редакторе сразу виден diff и точные изменения в файлах.",
   },
 ];
 
 const process = [
   {
-    title: "Interpret request",
-    text: "Понять, что задача не только в правке кода, но и в локальном просмотре результата: запустить сайт, открыть браузер и работать в живом цикле.",
+    title: "Понять задачу",
+    text: "Сначала важно определить не только правку кода, но и то, как проверять результат на живом интерфейсе.",
   },
   {
-    title: "Run locally",
-    text: "Обычно это npm run dev, pnpm dev или yarn dev. После старта проект чаще всего открывается на http://localhost:3000 или http://localhost:5173.",
+    title: "Запустить локально",
+    text: "Обычно это npm run dev, pnpm dev или yarn dev. После старта сайт открывается на localhost.",
   },
   {
-    title: "Watch refresh",
-    text: "Codex меняет файлы в проекте, а браузер обычно подхватывает изменения автоматически. Это делает сам фреймворк, а не Codex.",
+    title: "Следить за обновлением",
+    text: "Когда код меняется, фреймворк подхватывает изменения и сразу показывает новый экран без ручной пересборки.",
   },
   {
-    title: "Review diff",
-    text: "Параллельно смотришь preview changes: в браузере видно, что поменялось на сайте, а в редакторе видно, какой код был изменён.",
+    title: "Сравнить diff",
+    text: "Параллельно видно и сам результат, и точные изменения в проекте. Это ускоряет и дизайн, и отладку.",
   },
 ];
 
@@ -63,7 +63,7 @@ export default function DesignAgentPage() {
               </span>
             </h1>
             <p className="mt-5 max-w-xl text-sm leading-relaxed text-slate-200/90 sm:text-base">
-              Codex работает с локальным проектом: запускает dev-сервер, открывает localhost, вносит правки в файлы и даёт тебе живой цикл проверки через браузер и diff.
+              Codex работает с локальным проектом: запускает dev-сервер, открывает localhost, вносит правки в файлы и даёт живой цикл проверки через браузер и diff.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
               <button className="rounded-xl bg-cyan-300 px-5 py-3 text-sm font-bold text-[#07202e] transition hover:bg-cyan-200">
@@ -129,7 +129,7 @@ export default function DesignAgentPage() {
             </p>
             <h3 className="text-2xl font-black leading-tight text-emerald-50">Браузер, hot reload и diff в одном цикле</h3>
             <p className="mt-3 text-sm text-emerald-50/90">
-              Не нужно ждать отдельный билд или пересобирать макет вручную: изменения сразу проверяются на живом сайте и сразу видны в коде.
+              Не нужно ждать отдельный билд или собирать макет вручную: изменения сразу проверяются на живом сайте и сразу видны в коде.
             </p>
             <button className="mt-5 inline-flex items-center gap-2 rounded-lg border border-emerald-100/35 bg-emerald-200/20 px-4 py-2 text-sm font-semibold text-emerald-50 transition hover:bg-emerald-200/30">
               Открыть preview
@@ -145,7 +145,7 @@ export default function DesignAgentPage() {
           <div className="mt-4 grid gap-3 md:grid-cols-3">
             <div className="rounded-xl border border-white/15 bg-[#0d192d]/65 p-4">
               <p className="text-sm font-bold">Это Codex сам обновляет страницу?</p>
-              <p className="mt-2 text-sm text-slate-200/85">Нет, автообновление обычно даёт сам фреймворк через hot reload или fast refresh.</p>
+              <p className="mt-2 text-sm text-slate-200/85">Нет, автообновление обычно делает сам фреймворк через hot reload или fast refresh.</p>
             </div>
             <div className="rounded-xl border border-white/15 bg-[#0d192d]/65 p-4">
               <p className="text-sm font-bold">Где смотреть изменения?</p>

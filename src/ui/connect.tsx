@@ -1,19 +1,19 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Link } from "react-router-dom";
 import { PrimaryButton } from "./components";
 
 const benefitCards = [
   {
     title: "Рабочий дашборд",
-    text: "Главная с оффлайн-подсказками, следующими шагами и быстрыми действиями для эфира.",
+    text: "Главная с оффлайн-подсказками, следующими шагами и быстрыми действиями для старта эфира.",
   },
   {
     title: "История и аналитика",
-    text: "Эфиры, клипы и базовая аналитика появятся без ручной настройки карточек и блоков.",
+    text: "Эфиры, клипы и базовая аналитика появятся без ручной сборки экранов и карточек.",
   },
   {
     title: "Гибкий старт",
-    text: "Сначала подключаем канал, а Telegram и донаты можно добавить позже в один тап.",
+    text: "Сначала подключаем канал, а Telegram и донаты можно спокойно добавить позже в одном месте.",
   },
 ];
 
@@ -31,13 +31,24 @@ export function ConnectScreen({ onConnect }: { onConnect: (url: string) => void 
         <div className="connect-header">
           <span className="connect-badge">Быстрый старт</span>
           <h1>Подключите канал и получите рабочий экран за минуту</h1>
-          <p>Вставьте ссылку на Twitch или YouTube. Мы соберем стартовый дашборд, историю эфиров и базовые сценарии без ручной настройки.</p>
+          <p>
+            Вставьте ссылку на Twitch или YouTube. Мы соберём стартовый дашборд, историю эфиров и базовые сценарии без ручной настройки.
+          </p>
         </div>
 
         <div className="connect-utility-row">
-          <span className="platform-pill twitch"><span className="platform-dot" />Twitch</span>
-          <span className="platform-pill youtube"><span className="platform-dot" />YouTube</span>
-          <span className="platform-pill neutral"><span className="platform-dot neutral-dot" />Можно сменить позже</span>
+          <span className="platform-pill twitch">
+            <span className="platform-dot" />
+            Twitch
+          </span>
+          <span className="platform-pill youtube">
+            <span className="platform-dot" />
+            YouTube
+          </span>
+          <span className="platform-pill neutral">
+            <span className="platform-dot neutral-dot" />
+            Можно сменить позже
+          </span>
         </div>
 
         <form
@@ -61,14 +72,16 @@ export function ConnectScreen({ onConnect }: { onConnect: (url: string) => void 
             value={url}
             onChange={(event) => setUrl(event.target.value)}
           />
-          <div className="connect-form-hint">Поддерживаются полные ссылки и короткие адреса канала.</div>
+          <div className="connect-form-hint">Поддерживаются полные ссылки и короткий адрес канала.</div>
           {error ? <div className="form-error">{error}</div> : null}
           <PrimaryButton type="submit">Продолжить</PrimaryButton>
         </form>
 
         <div className="connect-inline-note">
-          <strong>Что появится после подключения</strong>
-          <span>Главная с оффлайн-помощью, история эфиров, анонсы и базовая аналитика для старта.</span>
+          <div>
+            <strong>Что появится после подключения</strong>
+            <span>Главная с оффлайн-помощью, история эфиров, анонсы и базовая аналитика для старта.</span>
+          </div>
         </div>
 
         <div className="connect-highlights">
@@ -83,7 +96,9 @@ export function ConnectScreen({ onConnect }: { onConnect: (url: string) => void 
         <div className="connect-next-step">
           <div>
             <strong>Следующий шаг</strong>
-            <span>После канала стоит подключить Telegram, чтобы публиковать ссылку на эфир и заранее собирать зрителей.</span>
+            <span>
+              После канала стоит подключить Telegram, чтобы публиковать ссылку на эфир и заранее собирать зрителей.
+            </span>
           </div>
           {isDev ? (
             <Link to="/design-agent" className="connect-next-step-link">
@@ -98,7 +113,9 @@ export function ConnectScreen({ onConnect }: { onConnect: (url: string) => void 
           <div className="connect-preview">
             <div>
               <strong>Локальный просмотр</strong>
-              <span>Можно сразу открыть тестовый экран на localhost или перейти в режим оформления без реального подключения канала.</span>
+              <span>
+                Можно сразу открыть тестовый экран на localhost или перейти в режим оформления без реального подключения канала.
+              </span>
             </div>
             <div className="connect-preview-actions">
               <Link to="/design-agent" className="connect-preview-link">

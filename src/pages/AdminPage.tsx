@@ -140,6 +140,17 @@ export default function AdminPage() {
       </motion.div>
 
       <motion.div variants={item}>
+        <CardShell className="space-y-3">
+          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-primary/90">
+            <Crown size={12} /> Следующий шаг
+          </div>
+          <p className="text-sm leading-6 text-muted-foreground">
+            Сначала проверь поддержку и свежие обращения, затем рассылки и только после этого системные действия. Так админка остаётся рабочим инструментом, а не складом кнопок.
+          </p>
+        </CardShell>
+      </motion.div>
+
+      <motion.div variants={item}>
         <Tabs defaultValue="content" className="w-full">
           <TabsList className="w-full grid grid-cols-3 h-auto gap-1 bg-secondary/30 p-1 sm:p-1.5 rounded-xl">
             <TabsTrigger value="content" className="gap-1.5 text-xs font-mono data-[state=active]:bg-background"><BotMessageSquare size={12} /> Контент</TabsTrigger>

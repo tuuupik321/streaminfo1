@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+﻿import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface StreamStatus {
@@ -12,7 +12,6 @@ export interface StreamStatus {
 
 interface UseStreamStatusOptions {
   accounts: { platform: string; username: string }[];
-  /** Polling interval in ms (default 60000 = 1 min) */
   interval?: number;
   enabled?: boolean;
 }
@@ -24,7 +23,7 @@ export function useStreamStatus({ accounts, interval = 60_000, enabled = true }:
 
   const streamAccounts = useMemo(
     () => accounts.filter((a) => a.platform === "twitch" || a.platform === "youtube"),
-    [accounts]
+    [accounts],
   );
 
   const fetchStatuses = useCallback(async () => {
@@ -57,11 +56,10 @@ export function useStreamStatus({ accounts, interval = 60_000, enabled = true }:
       setLoading(false);
     }
 
-    // Also trigger the monitor-streams function for Telegram notifications
     try {
       await supabase.functions.invoke("monitor-streams", { body: {} });
     } catch {
-      // Silent — monitoring is best-effort
+      // Monitoring is best-effort and should not break the UI.
     }
   }, [streamAccounts]);
 

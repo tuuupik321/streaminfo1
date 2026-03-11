@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { LiveEvent } from "@/features/live-dashboard/components/EventFeed";
 import { supabase } from "@/integrations/supabase/client";
 

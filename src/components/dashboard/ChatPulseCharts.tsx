@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageSquare, Users, HelpCircle } from "lucide-react";
@@ -38,7 +38,7 @@ function buildBuckets(rows: EventLogRow[]): PulsePoint[] {
   const buckets: PulsePoint[] = Array.from({ length: BUCKET_MINUTES }).map((_, index) => {
     const minsAgo = BUCKET_MINUTES - 1 - index;
     return {
-      time: minsAgo === 0 ? "now" : `-${minsAgo}m`,
+      time: minsAgo === 0 ? "сейчас" : `-${minsAgo}м`,
       messages: 0,
       authors: 0,
       questions: 0,
@@ -64,12 +64,14 @@ function buildBuckets(rows: EventLogRow[]): PulsePoint[] {
 
 function ChartCard({
   title,
+  description,
   data,
   dataKey,
   color,
   icon: Icon,
 }: {
   title: string;
+  description: string;
   data: PulsePoint[];
   dataKey: keyof PulsePoint;
   color: string;
@@ -82,6 +84,7 @@ function ChartCard({
           <Icon size={16} className="text-primary" />
           {title}
         </CardTitle>
+        <p className="text-xs text-muted-foreground">{description}</p>
       </CardHeader>
       <CardContent className="h-48">
         <ResponsiveContainer width="100%" height="100%">
@@ -151,9 +154,30 @@ export function ChatPulseCharts() {
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-      <ChartCard title="Сообщения в минуту" data={data} dataKey="messages" color="hsl(var(--primary))" icon={MessageSquare} />
-      <ChartCard title="Уникальные авторы" data={data} dataKey="authors" color="hsl(var(--info))" icon={Users} />
-      <ChartCard title="Вопросы в чате" data={data} dataKey="questions" color="hsl(var(--warning))" icon={HelpCircle} />
+      <ChartCard
+        title="Сообщения за 10 минут"
+        description="Показывает, насколько активно двигается чат прямо сейчас."
+        data={data}
+        dataKey="messages"
+        color="hsl(var(--primary))"
+        icon={MessageSquare}
+      />
+      <ChartCard
+        title="Уникальные участники"
+        description="Сколько разных людей включилось в чат за последние минуты."
+        data={data}
+        dataKey="authors"
+        color="hsl(var(--info))"
+        icon={Users}
+      />
+      <ChartCard
+        title="Вопросы из чата"
+        description="Помогает заметить моменты, когда зрителям нужен быстрый ответ."
+        data={data}
+        dataKey="questions"
+        color="hsl(var(--warning))"
+        icon={HelpCircle}
+      />
     </div>
   );
 }

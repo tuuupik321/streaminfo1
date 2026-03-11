@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Megaphone, Trash2, Plus, Copy, Sparkles, Link as LinkIcon, Save } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
@@ -93,17 +93,20 @@ export default function AnnouncementsPage() {
     () => [
       {
         label: "Старт через час",
-        message: "**Сегодня в 20:00 выходим в эфир.**\nРазберём свежие апдейты, отвечу на вопросы из чата и покажу, что готовим дальше.",
+        message:
+          "**Сегодня в 20:00 выходим в эфир.**\nРазберём свежие апдейты, отвечу на вопросы из чата и покажу, что готовим дальше.",
         button: { text: "Напомнить об эфире", url: "https://t.me/" },
       },
       {
         label: "Старт через 30 минут",
-        message: "**Через 30 минут стартуем.**\nЕсли хотели успеть на начало эфира, самое время сохранить ссылку и залететь вовремя.",
+        message:
+          "**Через 30 минут стартуем.**\nЕсли хотите успеть к началу эфира, самое время сохранить ссылку и подключиться вовремя.",
         button: { text: "Открыть эфир", url: "https://twitch.tv/" },
       },
       {
         label: "Тестовый эфир",
-        message: "**Запускаем тестовый эфир.**\nПроверим новую сцену, соберём обратную связь и посмотрим, как лучше оформить следующий полноценный запуск.",
+        message:
+          "**Запускаем тестовый эфир.**\nПроверим новую сцену, соберём обратную связь и посмотрим, что стоит улучшить перед полноценным стартом.",
         button: { text: "Перейти к эфиру", url: "https://youtube.com/" },
       },
     ],
@@ -189,22 +192,21 @@ export default function AnnouncementsPage() {
 
       <motion.div variants={item} className="mb-8 text-center">
         <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-[11px] uppercase tracking-[0.18em] text-primary/90">
-          <Megaphone size={14} />
-          Announcement Lab
+          <Megaphone size={14} /> Announcement Lab
         </div>
         <h1 className="text-gradient-primary inline-flex items-center gap-3 text-4xl md:text-5xl">
           <Megaphone />
           {t("announcements.title", "Центр анонсов")}
         </h1>
         <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-          Соберите короткий анонс, оставьте один главный CTA и сохраните черновик, чтобы не думать об этом перед самым стартом.
+          Соберите короткий анонс, оставьте один главный CTA и сохраните черновик, чтобы перед стартом не собирать это заново.
         </p>
       </motion.div>
 
       <motion.div variants={item} className="mb-6 grid gap-3 md:grid-cols-3">
         <div className="rounded-[24px] border border-border/60 bg-card/70 p-4 text-sm text-muted-foreground shadow-[0_14px_30px_hsla(var(--shadow)/0.18)] backdrop-blur-xl">
           <strong className="block text-foreground">Один главный CTA</strong>
-          <span className="mt-2 block leading-6">Обычно лучше работает одна заметная кнопка, чем 2–3 спорящих действия.</span>
+          <span className="mt-2 block leading-6">Обычно лучше работает одна заметная кнопка, чем 2-3 спорящих действия.</span>
         </div>
         <div className="rounded-[24px] border border-border/60 bg-card/70 p-4 text-sm text-muted-foreground shadow-[0_14px_30px_hsla(var(--shadow)/0.18)] backdrop-blur-xl">
           <strong className="block text-foreground">До 3 кнопок</strong>
@@ -219,11 +221,9 @@ export default function AnnouncementsPage() {
       <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
         <motion.div variants={item} className="space-y-6">
           <CardShell className="space-y-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h3 className="text-lg font-medium text-foreground">Шаблоны</h3>
-                <p className="mt-1 text-sm text-muted-foreground">Выберите основу и быстро адаптируйте её под сегодняшний эфир.</p>
-              </div>
+            <div>
+              <h3 className="text-lg font-medium text-foreground">Шаблоны</h3>
+              <p className="mt-1 text-sm text-muted-foreground">Выберите основу и быстро адаптируйте её под сегодняшний эфир.</p>
             </div>
             <div className="flex flex-wrap gap-2">
               {templates.map((template) => (
@@ -247,7 +247,7 @@ export default function AnnouncementsPage() {
               id="message"
               value={message}
               onChange={(event) => setMessage(event.target.value)}
-              placeholder="Во сколько старт, что будет на эфире и почему стоит подключиться прямо сегодня."
+              placeholder="Во сколько старт, что будет на эфире и почему зрителю стоит подключиться именно сегодня."
               rows={7}
               className="text-base"
             />

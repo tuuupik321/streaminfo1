@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { AppSidebar } from "@/components/AppSidebar";
 import { BottomNav } from "@/components/BottomNav";
@@ -18,47 +18,47 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       return {
         eyebrow: "Подготовка",
         title: "Подготовка к эфиру",
-        description: "Чеклист, цели, анонс и всё, что помогает аккуратно выйти в эфир.",
-        chip: "Следующий шаг: анонс и ссылка",
+        description: "Чеклист, цели, анонс и всё, что помогает спокойно и вовремя выйти в эфир.",
+        chip: "Следующий шаг: собрать анонс и проверить ссылку",
       };
     }
     if (location.pathname.startsWith("/analytics")) {
       return {
         eyebrow: "Аналитика",
         title: "Рост и лучшие окна",
-        description: "Средний онлайн, лучшие часы и спокойные AI-подсказки без перегруза.",
-        chip: "Периоды: 7 / 30 / 90 / всё время",
+        description: "Средний онлайн, пики, лучшие часы и подсказки, которые помогают запустить эфир в нужный момент.",
+        chip: "Периоды: 7 / 30 / 90 дней / всё время",
       };
     }
     if (location.pathname.startsWith("/donations")) {
       return {
         eyebrow: "Поддержка",
         title: "Донаты и активные зрители",
-        description: "История поддержки, средний донат и самые активные донатеры в одном экране.",
-        chip: "Следующий шаг: подключить сервис",
+        description: "История поддержки, средний донат, топ донатеры и подключение сервисов в одном экране.",
+        chip: "Следующий шаг: подключить сервис донатов",
       };
     }
     if (location.pathname.startsWith("/announcements")) {
       return {
         eyebrow: "Анонсы",
         title: "Подготовка анонса",
-        description: "Соберите текст, кнопки и превью так, чтобы зрителю было легко нажать и прийти на эфир.",
-        chip: "Один главный CTA работает лучше",
+        description: "Соберите короткий текст, один главный CTA и готовую ссылку для Telegram или канала.",
+        chip: "Хороший анонс ведёт к одному понятному действию",
       };
     }
     if (location.pathname.startsWith("/integrations")) {
       return {
         eyebrow: "Интеграции",
-        title: "Подключение платформ и сервисов",
-        description: "Откройте аналитику, историю эфиров, уведомления и поддержку в одном месте.",
-        chip: "Подключения открывают новые блоки",
+        title: "Платформы и сервисы",
+        description: "Подключите платформы, донаты и уведомления, чтобы открыть аналитику, историю эфиров и поддержку.",
+        chip: "Подключения открывают новые блоки mini app",
       };
     }
     if (location.pathname.startsWith("/settings")) {
       return {
         eyebrow: "Настройки",
         title: "Быстрые настройки mini app",
-        description: "Тема, язык и интеграции собраны без лишней глубины, чтобы не терять фокус.",
+        description: "Тема, язык и интеграции собраны без лишней глубины, чтобы не терять фокус перед эфиром.",
         chip: "Меняйте только то, что реально влияет на опыт",
       };
     }
@@ -66,22 +66,54 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       return {
         eyebrow: "Поддержка",
         title: "Связь с командой",
-        description: "Опишите проблему или идею, а ответ придёт в этот же Telegram-аккаунт.",
-        chip: "Лучше описать шаги и ожидание",
+        description: "Опишите проблему или идею, а ответ придёт прямо в этот Telegram-аккаунт.",
+        chip: "Лучше указать шаги, экран и ожидаемый результат",
       };
     }
     if (location.pathname.startsWith("/admin")) {
       return {
         eyebrow: "Admin",
         title: "Центр управления",
-        description: "Сервисные действия и проверка состояния проекта в одном месте.",
+        description: "Поддержка, рассылки, мониторинг и системные действия для команды и владельца проекта.",
         chip: "Только для админ-доступа",
+      };
+    }
+    if (location.pathname.startsWith("/live")) {
+      return {
+        eyebrow: "Live",
+        title: "Пульс эфира",
+        description: "События, активность чата и быстрые действия для живого эфира в одном компактном экране.",
+        chip: "Следующий шаг: отреагировать на чат или собрать анонс",
+      };
+    }
+    if (location.pathname.startsWith("/bridge")) {
+      return {
+        eyebrow: "Bridge",
+        title: "Маршрут аудитории",
+        description: "Показывает, как связать платформы, Telegram и анонсы, чтобы зрителю было проще дойти до эфира.",
+        chip: "Следующий шаг: открыть интеграции",
+      };
+    }
+    if (location.pathname.startsWith("/design-agent")) {
+      return {
+        eyebrow: "Workflow",
+        title: "Локальный дизайн-цикл",
+        description: "Экран о том, как мы работаем с localhost, diff и живой проверкой интерфейса в браузере.",
+        chip: "Локальный preview быстрее любого статичного макета",
+      };
+    }
+    if (location.pathname.startsWith("/legacy")) {
+      return {
+        eyebrow: "Legacy",
+        title: "Архивный экран",
+        description: "Старый dashboard сохранён как reference, чтобы сравнивать решения и не терять полезные идеи.",
+        chip: "Текущая главная живёт на новом сценарном экране",
       };
     }
     return {
       eyebrow: "Telegram Mini App",
       title: "StreamsInfo",
-      description: "Главная сводка по эфиру, истории, аналитике и следующему полезному шагу.",
+      description: "Главная сводка по эфиру, истории, аналитике и следующему полезному действию для стримера.",
       chip: "Следующий шаг: подготовить анонс",
     };
   }, [location.pathname]);

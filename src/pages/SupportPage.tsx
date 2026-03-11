@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { CheckCircle2, HeadphonesIcon, MessageSquare, Send, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -36,22 +36,22 @@ const gradients = [
 const COPY = {
   ru: {
     writeFirst: "Сначала напишите сообщение",
-    openFromTelegram: "Откройте мини-приложение из Telegram-аккаунта",
-    sendError: "Ошибка отправки",
+    openFromTelegram: "Откройте mini app из Telegram-аккаунта",
+    sendError: "Не удалось отправить сообщение",
     sentOk: "Сообщение отправлено",
     requestSent: "Запрос отправлен",
-    sameAccount: "Ответ придет в этот же Telegram-аккаунт.",
+    sameAccount: "Ответ придёт в этот же Telegram-аккаунт.",
     newMessage: "Новое сообщение",
     title: "Поддержка и обратная связь",
-    subtitle: "Опишите проблему или идею, а мы ответим в этот же Telegram-аккаунт.",
-    directRequest: "Прямой запрос",
+    subtitle: "Опишите проблему или идею, а мы ответим прямо в этот Telegram-аккаунт.",
+    directRequest: "Сообщение в команду",
     telegramId: "Telegram ID",
     unknown: "неизвестно",
-    placeholder: "Что случилось, где это произошло и что вы ожидали увидеть?",
-    sending: "Отправка...",
+    placeholder: "Что произошло, где это произошло и что вы ожидали увидеть?",
+    sending: "Отправляем...",
     send: "Отправить сообщение",
     quickTitle: "Чем помочь быстрее",
-    quickSubtitle: "Коротко выберите тему или используйте её как заготовку сообщения.",
+    quickSubtitle: "Выберите тему или используйте её как основу сообщения.",
     expectationTitle: "Что полезно указать",
     expectationBody: "Опишите экран, шаги до ошибки и ожидаемый результат. Так мы разберёмся заметно быстрее.",
     replyTitle: "Куда придёт ответ",
@@ -66,25 +66,25 @@ const COPY = {
   en: {
     writeFirst: "Write a message first",
     openFromTelegram: "Open this mini app from your Telegram account",
-    sendError: "Send error",
+    sendError: "Could not send the message",
     sentOk: "Message sent",
     requestSent: "Request sent",
-    sameAccount: "We will reply to the same Telegram account.",
+    sameAccount: "We will reply in the same Telegram account.",
     newMessage: "New message",
     title: "Support and feedback",
     subtitle: "Describe the issue or idea and we will reply in the same Telegram account.",
-    directRequest: "Direct request",
+    directRequest: "Message to the team",
     telegramId: "Telegram ID",
     unknown: "unknown",
     placeholder: "What happened, where did it happen, and what were you expecting to see?",
     sending: "Sending...",
     send: "Send message",
-    quickTitle: "Fastest help",
+    quickTitle: "Get help faster",
     quickSubtitle: "Choose a topic or use it as a starting draft.",
     expectationTitle: "What helps most",
     expectationBody: "Describe the screen, steps before the issue, and the expected result so we can move faster.",
     replyTitle: "Where we reply",
-    replyBody: "We reply in this same Telegram account, so you do not need to add extra contacts.",
+    replyBody: "We reply in the same Telegram account, so you do not need to add extra contacts.",
     presetBug: "Telegram issue",
     presetBugText: "There is a Telegram integration issue: describe what does not work and at which step it happens.",
     presetAnalytics: "No analytics data",
@@ -94,28 +94,28 @@ const COPY = {
   },
   uk: {
     writeFirst: "Спочатку напишіть повідомлення",
-    openFromTelegram: "Відкрийте міні-додаток із Telegram-акаунта",
-    sendError: "Помилка надсилання",
+    openFromTelegram: "Відкрийте mini app з Telegram-акаунта",
+    sendError: "Не вдалося надіслати повідомлення",
     sentOk: "Повідомлення надіслано",
     requestSent: "Запит надіслано",
     sameAccount: "Відповідь прийде в цей самий Telegram-акаунт.",
     newMessage: "Нове повідомлення",
     title: "Підтримка та зворотний зв'язок",
-    subtitle: "Опишіть проблему або ідею, а ми відповімо в цей самий Telegram-акаунт.",
-    directRequest: "Прямий запит",
+    subtitle: "Опишіть проблему або ідею, а ми відповімо прямо в цей Telegram-акаунт.",
+    directRequest: "Повідомлення команді",
     telegramId: "Telegram ID",
     unknown: "невідомо",
     placeholder: "Що сталося, де це сталося і що ви очікували побачити?",
-    sending: "Надсилання...",
+    sending: "Надсилаємо...",
     send: "Надіслати повідомлення",
     quickTitle: "Як допомогти швидше",
-    quickSubtitle: "Оберіть тему або використайте її як заготовку повідомлення.",
+    quickSubtitle: "Оберіть тему або використайте її як основу повідомлення.",
     expectationTitle: "Що корисно вказати",
-    expectationBody: "Опишіть екран, кроки до проблеми та очікуваний результат, щоб ми розібралися швидше.",
+    expectationBody: "Опишіть екран, кроки до помилки та очікуваний результат. Так ми розберемося швидше.",
     replyTitle: "Куди прийде відповідь",
     replyBody: "Відповімо прямо в цей Telegram-акаунт, тому нічого додатково вказувати не потрібно.",
     presetBug: "Проблема з Telegram",
-    presetBugText: "Є проблема з Telegram-інтеграцією: опишіть, що саме не працює і на якому кроці це трапляється.",
+    presetBugText: "Є проблема з Telegram-інтеграцією: опишіть, що саме не працює і на якому кроці це відбувається.",
     presetAnalytics: "Немає даних в аналітиці",
     presetAnalyticsText: "Не з'являються дані в аналітиці: вкажіть екран, період і що ви очікували побачити.",
     presetIdea: "Ідея для функції",
@@ -136,7 +136,7 @@ function getInitial(name: string) {
 
 export default function SupportPage() {
   const { language } = useI18n();
-  const t = useMemo(() => COPY[language], [language]);
+  const t = useMemo(() => COPY[language as keyof typeof COPY] ?? COPY.ru, [language]);
 
   const [message, setMessage] = useState("");
   const [sent, setSent] = useState(false);
