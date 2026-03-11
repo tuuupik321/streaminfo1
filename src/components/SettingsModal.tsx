@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Cog, MessageSquare, Palette, Languages, Sparkles } from "lucide-react";
+import { Cog, MessageSquare, Palette, Languages, Sparkles, Link2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -181,6 +181,15 @@ export function SettingsModal({ open, anchorRect, onClose }: SettingsModalProps)
                     <p className="text-white/60">{t("support.contactSupport", "Contact support")}</p>
                     <Button asChild className="mt-4 w-full gap-2 rounded-[22px] bg-white/10 text-white hover:bg-white/20 hover:shadow-[0_0_30px_rgba(0,178,255,0.55)] hover-lift">
                       <Link to="/support">{t("support.openSupport", "Open Support")}</Link>
+                    </Button>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm">
+                    <div className="flex items-center gap-2 text-white">
+                      <Link2 size={12} /> {t("integrations.title", "Integrations")}
+                    </div>
+                    <p className="text-white/60">{t("integrations.description", "Manage Twitch, YouTube, and DonationAlerts.")}</p>
+                    <Button asChild className="mt-4 w-full gap-2 rounded-[22px] bg-white/10 text-white hover:bg-white/20 hover:shadow-[0_0_30px_rgba(145,70,255,0.55)] hover-lift" onClick={onClose}>
+                      <Link to="/integrations">{t("integrations.open", "Open Integrations")}</Link>
                     </Button>
                   </div>
                 </TabsContent>

@@ -1,5 +1,5 @@
 import { motion, useReducedMotion } from "framer-motion";
-import { Sparkles, Bell, Shield, User } from "lucide-react";
+import { Sparkles, Shield, User, Link2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -33,26 +33,30 @@ function LanguageSettings() {
   const activeLanguage = language === "ru" ? "ru" : "en";
 
   return (
-    <div className="space-y-2">
-      <label className="font-mono text-sm">{t("settings.language")}</label>
-      <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-secondary/40 px-3 py-2">
-        <span className={activeLanguage === "ru" ? "text-foreground drop-shadow-[0_0_10px_rgba(145,70,255,0.6)]" : "text-muted-foreground"}>RU</span>
-        <button
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">
+        {t("settings.languageDesc", "Switch the interface language instantly across the app.")}
+      </p>
+      <div className="flex items-center gap-2 rounded-2xl border border-border/60 bg-secondary/40 p-2">
+        <Button
           type="button"
-          onClick={() => setLanguage((activeLanguage === "ru" ? "en" : "ru") as UiLanguage)}
-          className="relative h-6 w-16 rounded-full border border-border/40 bg-background/80"
-          aria-label={t("settings.language", "Language")}
+          size="sm"
+          variant={activeLanguage === "ru" ? "default" : "outline"}
+          onClick={() => setLanguage("ru" as UiLanguage)}
+          className="flex-1"
         >
-          <motion.span
-            layout
-            transition={{ type: "spring", stiffness: 260, damping: 20 }}
-            className="absolute top-1 h-4 w-7 rounded-full bg-primary shadow-[0_0_14px_rgba(145,70,255,0.6)]"
-            style={{ left: activeLanguage === "ru" ? "0.25rem" : "2.75rem" }}
-          />
-        </button>
-        <span className={activeLanguage === "en" ? "text-foreground drop-shadow-[0_0_10px_rgba(145,70,255,0.6)]" : "text-muted-foreground"}>EN</span>
+          RU
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={activeLanguage === "en" ? "default" : "outline"}
+          onClick={() => setLanguage("en" as UiLanguage)}
+          className="flex-1"
+        >
+          EN
+        </Button>
       </div>
-      <p className="text-xs text-muted-foreground">{t("settings.languageDesc", "Switch the interface language instantly across the app.")}</p>
     </div>
   );
 }
@@ -144,6 +148,20 @@ export default function SettingsPage() {
         <motion.div variants={item}>
           <Section title={t("settings.language", "Language")} description={t("settings.languageDesc", "Switch the interface language instantly across the app.")}>
             <LanguageSettings />
+          </Section>
+        </motion.div>
+
+        <motion.div variants={item}>
+          <Section title={t("integrations.title", "Integrations")} description={t("integrations.subtitle", "Connect your platforms")}>
+            <div className="rounded-2xl border border-border/60 bg-secondary/40 p-4">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <Link2 size={14} /> {t("integrations.title", "Integrations")}
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">{t("integrations.description", "Manage Twitch, YouTube, and DonationAlerts.")}</p>
+              <Button asChild className="mt-4 w-full hover-lift">
+                <Link to="/integrations">{t("integrations.open", "Open Integrations")}</Link>
+              </Button>
+            </div>
           </Section>
         </motion.div>
 
