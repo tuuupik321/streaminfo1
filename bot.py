@@ -1275,7 +1275,9 @@ async def get_stream_history(request: web.Request):
                 continue
             buckets[day] = buckets.get(day, 0) + 1
         series = [{"date": key, "count": buckets[key]} for key in sorted(buckets.keys())]
-        return web.json_response({"series": series})`n`nasync def get_streams(request: web.Request):
+        return web.json_response({"series": series})
+
+async def get_streams(request: web.Request):
     user_id = request.query.get("user_id")
     if not user_id:
         return web.json_response({"error": "no_uid"}, status=400)
@@ -1721,7 +1723,8 @@ def build_app():
     app.router.add_post("/api/verify_channel", verify_channel)
     app.router.add_post("/api/channel/connect", connect_channel)
     app.router.add_get("/api/channel", get_channel)
-    app.router.add_get("/api/dashboard_stats", get_dashboard_stats)`n    app.router.add_get("/api/stream_history", get_stream_history)
+    app.router.add_get("/api/dashboard_stats", get_dashboard_stats)
+    app.router.add_get("/api/stream_history", get_stream_history)
     app.router.add_get("/api/streams", get_streams)
     app.router.add_get("/api/clips", get_clips)
     app.router.add_get("/api/notifications", get_notifications)
@@ -1982,6 +1985,10 @@ if __name__ == "__main__":
         print(f"!!! Startup error: {error}")
 
 # Force update
+
+
+
+
 
 
 
