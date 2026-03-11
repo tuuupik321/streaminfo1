@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { BarChart3, CalendarDays, Clock, Download, Eye, TrendingUp, Users, PieChart, Flame, Award, Sparkles } from "lucide-react";
+import { BarChart3, CalendarDays, Clock, Download, Eye, TrendingUp, Users, PieChart, Flame, Award, Sparkles, DollarSign, Heart } from "lucide-react";
 import { StatsCard } from "@/shared/ui/StatsCard";
 import { DataPoint, ViewerChart } from "@/components/dashboard/ViewerChart";
 import { PredictionCard } from "@/components/dashboard/PredictionCard";
@@ -12,8 +12,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAnalyticsData } from "@/hooks/useAnalyticsData";
 import { EmptyState } from "@/shared/ui/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Bar, BarChart, Cell, Line, LineChart, Pie, PieChart as RePieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, Brush, Cell, Line, LineChart, Pie, PieChart as RePieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { makeFadeUp, makeStagger } from "@/shared/motion";
+import { cn } from "@/lib/utils";
+import { ActivityMap } from "@/components/dashboard/ActivityMap";
 
 type TimelineItem = {
   time: string;
@@ -41,10 +43,13 @@ function mapTimeline(timeline: TimelineItem[] | undefined): DataPoint[] {
   });
 }
 
+type ChartType = "clicks" | "donations" | "followers";
+
 export default function Analytics() {
   const { t } = useI18n();
   const [period, setPeriod] = useState("today");
   const [combinedChart, setCombinedChart] = useState(false);
+  const [activeChart, setActiveChart] = useState<ChartType>("clicks");
 
   const { data, isLoading, error } = useAnalyticsData(period);
 
@@ -121,65 +126,75 @@ export default function Analytics() {
   const container = makeStagger(reduceMotion);
   const item = makeFadeUp(reduceMotion);
 
+  const chartConfig: Record<ChartType, { label: string; color: string; icon: React.ReactNode }> = {
+    clicks: { label: t("analytics.clicksToStream", "Clicks to stream"), color: "#00B2FF", icon: <Eye size={14} /> },
+    donations: { label: t("analytics.donationsPerStream", "Donations per stream"), color: "#F59E0B", icon: <DollarSign size={14} /> },
+    followers: { label: t("analytics.followersPerStream", "Followers per stream"), color: "#34D399", icon: <Heart size={14} /> },
+  };
+
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="mx-auto max-w-5xl px-3 py-3 md:p-6">
       <motion.h1 variants={item} className="mb-5 text-xl font-black font-heading md:text-2xl">
         {t("analytics.title")}
       </motion.h1>
 
-      <motion.div variants={item} className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <motion.div variants={item} className="saas-card">
-          <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.streamForecast", "Stream Forecast")}</p>
-          {isLoading ? (
-            <div className="mt-3 space-y-2">
-              <Skeleton className="h-4 w-40" />
-              <Skeleton className="h-4 w-32" />
+      <motion.div variants={item} className="mb-6 grid grid-cols-1 gap-4">
+        <div className="saas-card">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.streamForecast", "Stream Forecast")}</p>
+              {isLoading ? (
+                <div className="mt-3 space-y-2">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+              ) : (
+                <>
+                  <p className="mt-3 text-sm text-white/70">{t("analytics.expectedViewers", "Expected viewers today")}: <span className="text-white font-semibold">{expectedViewers}</span></p>
+                  <p className="text-sm text-white/70">{t("analytics.peakTime", "Peak time")}: <span className="text-white font-semibold">{peakTime}</span></p>
+                </>
+              )}
             </div>
-          ) : (
-            <>
-              <p className="mt-3 text-sm text-white/70">{t("analytics.expectedViewers", "Expected viewers today")}: <span className="text-white font-semibold">{expectedViewers}</span></p>
-              <p className="text-sm text-white/70">{t("analytics.peakTime", "Peak time")}: <span className="text-white font-semibold">{peakTime}</span></p>
-            </>
-          )}
-        </motion.div>
-        <motion.div variants={item} className="saas-card">
-          <div className="flex items-center gap-2 text-white">
-            <Flame size={18} className="animate-[streakFlame_1.6s_ease-in-out_infinite]" />
-            <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.streamStreak", "Stream Streak")}</p>
+            <div>
+              <div className="flex items-center gap-2 text-white">
+                <Flame size={18} className="animate-[streakFlame_1.6s_ease-in-out_infinite]" />
+                <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.streamStreak", "Stream Streak")}</p>
+              </div>
+              {isLoading ? (
+                <div className="mt-3 space-y-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-4 w-28" />
+                </div>
+              ) : (
+                <>
+                  <p className="mt-3 text-sm text-white/70">{t("analytics.currentStreak", "Current streak")}: <span className="text-white font-semibold">5 days</span></p>
+                  <p className="text-sm text-white/70">{t("analytics.longestStreak", "Longest streak")}: <span className="text-white font-semibold">14 days</span></p>
+                </>
+              )}
+            </div>
+            <div>
+              <div className="flex items-center gap-2 text-white">
+                <Award size={16} />
+                <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.achievements", "Achievements")}</p>
+              </div>
+              {isLoading ? (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Skeleton className="h-6 w-24 rounded-full" />
+                  <Skeleton className="h-6 w-20 rounded-full" />
+                  <Skeleton className="h-6 w-28 rounded-full" />
+                </div>
+              ) : (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {achievements.map((badge) => (
+                    <span key={badge} className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-[11px] text-white/80 shadow-[0_0_20px_rgba(145,70,255,0.35)]">
+                      {badge}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-          {isLoading ? (
-            <div className="mt-3 space-y-2">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-4 w-28" />
-            </div>
-          ) : (
-            <>
-              <p className="mt-3 text-sm text-white/70">{t("analytics.currentStreak", "Current streak")}: <span className="text-white font-semibold">5 days</span></p>
-              <p className="text-sm text-white/70">{t("analytics.longestStreak", "Longest streak")}: <span className="text-white font-semibold">14 days</span></p>
-            </>
-          )}
-        </motion.div>
-        <motion.div variants={item} className="saas-card">
-          <div className="flex items-center gap-2 text-white">
-            <Award size={16} />
-            <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.achievements", "Achievements")}</p>
-          </div>
-          {isLoading ? (
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Skeleton className="h-6 w-24 rounded-full" />
-              <Skeleton className="h-6 w-20 rounded-full" />
-              <Skeleton className="h-6 w-28 rounded-full" />
-            </div>
-          ) : (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {achievements.map((badge) => (
-                <span key={badge} className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-[11px] text-white/80 shadow-[0_0_20px_rgba(145,70,255,0.35)]">
-                  {badge}
-                </span>
-              ))}
-            </div>
-          )}
-        </motion.div>
+        </div>
       </motion.div>
 
       <motion.div variants={item} className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -192,6 +207,7 @@ export default function Analytics() {
                 <YAxis stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
                 <Tooltip />
                 <Line type="monotone" dataKey="viewers" stroke="#9146FF" strokeWidth={2} dot={false} />
+                <Brush dataKey="time" height={30} stroke="#9146FF" />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -209,46 +225,49 @@ export default function Analytics() {
         </div>
       </motion.div>
 
-      <motion.div variants={item} className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <motion.div variants={item} className="mb-6 grid grid-cols-1 gap-4">
         <div className="saas-card">
-          <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.clicksToStream", "Clicks to stream")}</p>
-          <div className="mt-4 h-56">
+          <div className="flex items-center justify-between">
+            <p className="text-xs uppercase tracking-[0.3em] text-white/50">{chartConfig[activeChart].label}</p>
+            <div className="flex items-center gap-2">
+              {(Object.keys(chartConfig) as ChartType[]).map((key) => (
+                <Button
+                  key={key}
+                  size="sm"
+                  variant={activeChart === key ? "secondary" : "ghost"}
+                  onClick={() => setActiveChart(key)}
+                  className={cn("gap-2", activeChart === key && "bg-white/10")}
+                >
+                  {chartConfig[key].icon}
+                  {chartConfig[key].label}
+                </Button>
+              ))}
+            </div>
+          </div>
+          <div className="mt-4 h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <XAxis dataKey="time" stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
-                <YAxis stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
-                <Tooltip />
-                <Bar dataKey="clicks" fill="#00B2FF" radius={[6, 6, 0, 0]} />
-              </BarChart>
+              {activeChart === "followers" ? (
+                <LineChart data={chartData}>
+                  <XAxis dataKey="time" stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
+                  <YAxis stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
+                  <Tooltip />
+                  <Line type="monotone" dataKey={activeChart} stroke={chartConfig[activeChart].color} strokeWidth={2} dot={false} />
+                </LineChart>
+              ) : (
+                <BarChart data={chartData}>
+                  <XAxis dataKey="time" stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
+                  <YAxis stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
+                  <Tooltip />
+                  <Bar dataKey={activeChart} fill={chartConfig[activeChart].color} radius={[6, 6, 0, 0]} />
+                </BarChart>
+              )}
             </ResponsiveContainer>
           </div>
         </div>
-        <div className="saas-card">
-          <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.donationsPerStream", "Donations per stream")}</p>
-          <div className="mt-4 h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <XAxis dataKey="time" stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
-                <YAxis stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
-                <Tooltip />
-                <Bar dataKey="donations" fill="#F59E0B" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-        <div className="saas-card">
-          <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("analytics.followersPerStream", "Followers per stream")}</p>
-          <div className="mt-4 h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
-                <XAxis dataKey="time" stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
-                <YAxis stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
-                <Tooltip />
-                <Line type="monotone" dataKey="followers" stroke="#34D399" strokeWidth={2} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+      </motion.div>
+
+      <motion.div variants={item} className="mb-6">
+        <ActivityMap />
       </motion.div>
 
       <motion.div variants={item} className="mb-8 grid grid-cols-1 gap-4 lg:grid-cols-3">
