@@ -47,7 +47,7 @@ const App = () => {
   useEffect(() => {
     if (!theme) return;
     const root = document.documentElement;
-    root.style.setProperty("--accent", theme.colors.accent);
+    root.style.setProperty("--platform-accent", theme.colors.accent);
     root.style.setProperty("--panel-bg", theme.colors.bg);
   }, [theme]);
 
@@ -157,13 +157,23 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <I18nProvider>
-          {!profile ? (
-            <div className="app-shell">
-              <ConnectScreen onConnect={handleConnect} />
-              {error ? <div className="global-error">{error}</div> : null}
-            </div>
-          ) : (
-            <BrowserRouter>
+          <BrowserRouter>
+            {!profile ? (
+              <Routes>
+                <Route
+                  path="/"
+                  element={
+                    <div className="app-shell">
+                      <ConnectScreen onConnect={handleConnect} />
+                      {error ? <div className="global-error">{error}</div> : null}
+                    </div>
+                  }
+                />
+                <Route path="/design-agent" element={<DesignAgentPage />} />
+                <Route path="/legacy" element={<Index />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            ) : (
               <AppLayout>
                 <Routes>
                   <Route
@@ -198,8 +208,8 @@ const App = () => {
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </AppLayout>
-            </BrowserRouter>
-          )}
+            )}
+          </BrowserRouter>
         </I18nProvider>
       </ThemeProvider>
     </QueryClientProvider>

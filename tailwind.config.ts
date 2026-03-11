@@ -16,8 +16,12 @@ export default {
     },
     extend: {
       fontFamily: {
-        heading: ['"Space Grotesk"', 'sans-serif'],
-        mono: ['"JetBrains Mono"', 'monospace'],
+        sans: ['"IBM Plex Sans"', '"Segoe UI"', "sans-serif"],
+        heading: ['"Sora"', '"IBM Plex Sans"', "sans-serif"],
+        mono: ['"JetBrains Mono"', "monospace"],
+      },
+      gridTemplateColumns: {
+        24: "repeat(24, minmax(0, 1fr))",
       },
       colors: {
         border: "hsl(var(--border))",

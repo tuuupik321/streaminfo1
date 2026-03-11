@@ -1,17 +1,42 @@
-﻿import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, Brush, Code2, Layers, Rocket, Sparkles, Timer, WandSparkles } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
+import { ArrowRight, Code2, Layers, Monitor, RefreshCw, Rocket, Sparkles, WandSparkles } from "lucide-react";
 import { makeFadeUp, makeStagger } from "@/shared/motion";
 
 const features = [
-  { icon: Brush, title: "Сильный стиль", text: "Не шаблон, а фирменная визуальная система под твою нишу." },
-  { icon: Code2, title: "Чистый код", text: "Готовые секции в HTML/CSS/JS с адаптивом под мобильные." },
-  { icon: Timer, title: "Быстрый запуск", text: "Первый рабочий экран за 1 итерацию без долгого брифа." },
+  {
+    icon: Monitor,
+    title: "Локальный preview",
+    text: "Поднимает dev-сервер и показывает результат на localhost прямо в браузере.",
+  },
+  {
+    icon: RefreshCw,
+    title: "Живое обновление",
+    text: "После сохранения файлов страница обычно обновляется сама через hot reload или fast refresh.",
+  },
+  {
+    icon: Code2,
+    title: "Код и UI рядом",
+    text: "В браузере видно визуальные изменения, а в Codex или VS Code сразу видно diff.",
+  },
 ];
 
 const process = [
-  "Ты пишешь короткий запрос: ниша, стиль, цель.",
-  "Агент строит структуру: hero, ценности, оффер, CTA.",
-  "Сразу генерируется код для интеграции в проект.",
+  {
+    title: "Interpret request",
+    text: "Понять, что задача не только в правке кода, но и в локальном просмотре результата: запустить сайт, открыть браузер и работать в живом цикле.",
+  },
+  {
+    title: "Run locally",
+    text: "Обычно это npm run dev, pnpm dev или yarn dev. После старта проект чаще всего открывается на http://localhost:3000 или http://localhost:5173.",
+  },
+  {
+    title: "Watch refresh",
+    text: "Codex меняет файлы в проекте, а браузер обычно подхватывает изменения автоматически. Это делает сам фреймворк, а не Codex.",
+  },
+  {
+    title: "Review diff",
+    text: "Параллельно смотришь preview changes: в браузере видно, что поменялось на сайте, а в редакторе видно, какой код был изменён.",
+  },
 ];
 
 export default function DesignAgentPage() {
@@ -26,27 +51,26 @@ export default function DesignAgentPage() {
       <motion.section variants={item} className="mx-auto max-w-6xl px-4 pb-16 pt-14 md:px-8 md:pt-20">
         <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-cyan-200/30 bg-cyan-300/10 px-4 py-1 text-xs font-bold uppercase tracking-[0.18em] text-cyan-100">
           <Sparkles className="h-3.5 w-3.5" />
-          Web Design Agent
+          Codex Local Workflow
         </div>
 
         <div className="grid gap-8 md:grid-cols-[1.15fr_0.85fr] md:items-end">
           <div>
             <h1 className="text-4xl font-black leading-[1.03] text-balance sm:text-5xl md:text-6xl">
-              Дизайн сайта,
+              Локальный сайт,
               <span className="block bg-gradient-to-r from-cyan-300 via-emerald-300 to-amber-200 bg-clip-text text-transparent">
-                который сразу в прод
+                который видно сразу
               </span>
             </h1>
             <p className="mt-5 max-w-xl text-sm leading-relaxed text-slate-200/90 sm:text-base">
-              Готовая стартовая страница с четким оффером, контентными блоками и кодовой базой. Можно сразу
-              доработать в PyCharm и выкатывать.
+              Codex работает с локальным проектом: запускает dev-сервер, открывает localhost, вносит правки в файлы и даёт тебе живой цикл проверки через браузер и diff.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
               <button className="rounded-xl bg-cyan-300 px-5 py-3 text-sm font-bold text-[#07202e] transition hover:bg-cyan-200">
-                Создать макет
+                Запустить локально
               </button>
               <button className="rounded-xl border border-white/25 bg-white/5 px-5 py-3 text-sm font-semibold transition hover:bg-white/10">
-                Сгенерировать HTML
+                Смотреть diff
               </button>
             </div>
           </div>
@@ -57,13 +81,13 @@ export default function DesignAgentPage() {
               Prompt
             </p>
             <div className="rounded-xl border border-emerald-100/15 bg-[#0a1425] p-4 font-mono text-xs leading-relaxed text-slate-200">
-              Сделай лендинг для IT-сервиса.
+              Обнови экран в локальном проекте.
               <br />
-              Стиль: modern editorial + bold typography.
+              Запусти dev-сервер и открой localhost в браузере.
               <br />
-              Блоки: hero, преимущества, кейсы, тарифы, FAQ, CTA.
+              Вноси правки в файлы так, чтобы я сразу видел результат на сайте.
               <br />
-              Выгрузка: адаптивный HTML/CSS.
+              Параллельно показывай, какой diff появился в проекте.
             </div>
           </div>
         </div>
@@ -89,9 +113,10 @@ export default function DesignAgentPage() {
               Процесс
             </p>
             <ol className="space-y-3 text-sm text-slate-100/90">
-              {process.map((itemText) => (
-                <li key={itemText} className="rounded-lg border border-white/10 bg-white/5 p-3">
-                  {itemText}
+              {process.map(({ title, text }) => (
+                <li key={title} className="rounded-lg border border-white/10 bg-white/5 p-3">
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-cyan-200">{title}</p>
+                  <p className="mt-2 leading-relaxed text-slate-100/85">{text}</p>
                 </li>
               ))}
             </ol>
@@ -102,12 +127,12 @@ export default function DesignAgentPage() {
               <Rocket className="h-4 w-4" />
               Результат
             </p>
-            <h3 className="text-2xl font-black leading-tight text-emerald-50">Готовый экран + код за один проход</h3>
+            <h3 className="text-2xl font-black leading-tight text-emerald-50">Браузер, hot reload и diff в одном цикле</h3>
             <p className="mt-3 text-sm text-emerald-50/90">
-              Ты не теряешь время между дизайнером и разработкой: интерфейс сразу становится частью проекта.
+              Не нужно ждать отдельный билд или пересобирать макет вручную: изменения сразу проверяются на живом сайте и сразу видны в коде.
             </p>
             <button className="mt-5 inline-flex items-center gap-2 rounded-lg border border-emerald-100/35 bg-emerald-200/20 px-4 py-2 text-sm font-semibold text-emerald-50 transition hover:bg-emerald-200/30">
-              Собрать версию 1
+              Открыть preview
               <ArrowRight className="h-4 w-4" />
             </button>
           </article>
@@ -119,16 +144,16 @@ export default function DesignAgentPage() {
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-100/90">FAQ</p>
           <div className="mt-4 grid gap-3 md:grid-cols-3">
             <div className="rounded-xl border border-white/15 bg-[#0d192d]/65 p-4">
-              <p className="text-sm font-bold">Можно подключить к текущему проекту?</p>
-              <p className="mt-2 text-sm text-slate-200/85">Да, страница уже в React/Tailwind и легко встраивается в роуты.</p>
+              <p className="text-sm font-bold">Это Codex сам обновляет страницу?</p>
+              <p className="mt-2 text-sm text-slate-200/85">Нет, автообновление обычно даёт сам фреймворк через hot reload или fast refresh.</p>
             </div>
             <div className="rounded-xl border border-white/15 bg-[#0d192d]/65 p-4">
-              <p className="text-sm font-bold">Адаптив включен?</p>
-              <p className="mt-2 text-sm text-slate-200/85">Да, макет оптимизирован для мобильных и десктопа.</p>
+              <p className="text-sm font-bold">Где смотреть изменения?</p>
+              <p className="mt-2 text-sm text-slate-200/85">В браузере виден новый интерфейс, а в Codex или VS Code виден diff файлов.</p>
             </div>
             <div className="rounded-xl border border-white/15 bg-[#0d192d]/65 p-4">
-              <p className="text-sm font-bold">Можно сменить стиль?</p>
-              <p className="mt-2 text-sm text-slate-200/85">Да, меняем палитру, типографику и блоки под твой бренд.</p>
+              <p className="text-sm font-bold">Какой адрес открывать?</p>
+              <p className="mt-2 text-sm text-slate-200/85">Чаще всего это localhost:3000 или localhost:5173, в зависимости от dev-сервера проекта.</p>
             </div>
           </div>
         </div>

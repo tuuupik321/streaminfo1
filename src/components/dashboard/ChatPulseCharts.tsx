@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
+import { XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageSquare, Users, HelpCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,8 +35,8 @@ function extractAuthor(meta: Record<string, unknown> | null, message: string) {
 
 function buildBuckets(rows: EventLogRow[]): PulsePoint[] {
   const now = Date.now();
-  const buckets: PulsePoint[] = Array.from({ length: BUCKET_MINUTES }).map((_, idx) => {
-    const minsAgo = BUCKET_MINUTES - 1 - idx;
+  const buckets: PulsePoint[] = Array.from({ length: BUCKET_MINUTES }).map((_, index) => {
+    const minsAgo = BUCKET_MINUTES - 1 - index;
     return {
       time: minsAgo === 0 ? "now" : `-${minsAgo}m`,
       messages: 0,
@@ -48,21 +48,33 @@ function buildBuckets(rows: EventLogRow[]): PulsePoint[] {
 
   rows.forEach((row) => {
     if (!isChatEvent(row)) return;
-    const ts = new Date(row.created_at).getTime();
-    const diffMinutes = Math.floor((now - ts) / 60000);
-    const idx = BUCKET_MINUTES - 1 - diffMinutes;
-    if (idx < 0 || idx >= BUCKET_MINUTES) return;
+    const timestamp = new Date(row.created_at).getTime();
+    const diffMinutes = Math.floor((now - timestamp) / 60000);
+    const bucketIndex = BUCKET_MINUTES - 1 - diffMinutes;
+    if (bucketIndex < 0 || bucketIndex >= BUCKET_MINUTES) return;
 
-    buckets[idx].messages += 1;
+    buckets[bucketIndex].messages += 1;
     const author = extractAuthor(row.metadata, row.message || "");
-    if (author) authorSets[idx].add(author);
-    if (row.message?.includes("?")) buckets[idx].questions += 1;
+    if (author) authorSets[bucketIndex].add(author);
+    if (row.message?.includes("?")) buckets[bucketIndex].questions += 1;
   });
 
-  return buckets.map((b, i) => ({ ...b, authors: authorSets[i].size }));
+  return buckets.map((bucket, index) => ({ ...bucket, authors: authorSets[index].size }));
 }
 
-function ChartCard({ title, data, dataKey, color, icon: Icon }: { title: string; data: PulsePoint[]; dataKey: keyof PulsePoint; color: string; icon: typeof MessageSquare }) {
+function ChartCard({
+  title,
+  data,
+  dataKey,
+  color,
+  icon: Icon,
+}: {
+  title: string;
+  data: PulsePoint[];
+  dataKey: keyof PulsePoint;
+  color: string;
+  icon: typeof MessageSquare;
+}) {
   return (
     <Card className="card-glass">
       <CardHeader>
@@ -82,13 +94,15 @@ function ChartCard({ title, data, dataKey, color, icon: Icon }: { title: string;
             </defs>
             <Tooltip
               contentStyle={{
-                backgroundColor: "hsl(var(--background) / 0.8)",
+                backgroundColor: "hsl(var(--background) / 0.88)",
                 borderColor: "hsl(var(--border))",
+                borderRadius: "16px",
                 fontSize: "12px",
+                boxShadow: "0 18px 36px hsl(var(--shadow) / 0.32)",
               }}
             />
-            <XAxis dataKey="time" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
-            <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+            <XAxis dataKey="time" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} />
+            <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} />
             <Area type="monotone" dataKey={dataKey} stroke={color} strokeWidth={2} fill={`url(#color-${dataKey})`} />
           </AreaChart>
         </ResponsiveContainer>
@@ -137,9 +151,9 @@ export function ChatPulseCharts() {
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-      <ChartCard title="Вовлеченность (сообщ/мин)" data={data} dataKey="messages" color="hsl(var(--primary))" icon={MessageSquare} />
+      <ChartCard title="Сообщения в минуту" data={data} dataKey="messages" color="hsl(var(--primary))" icon={MessageSquare} />
       <ChartCard title="Уникальные авторы" data={data} dataKey="authors" color="hsl(var(--info))" icon={Users} />
-      <ChartCard title="Плотность вопросов" data={data} dataKey="questions" color="hsl(var(--warning))" icon={HelpCircle} />
+      <ChartCard title="Вопросы в чате" data={data} dataKey="questions" color="hsl(var(--warning))" icon={HelpCircle} />
     </div>
   );
 }

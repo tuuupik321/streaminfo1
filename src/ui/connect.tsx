@@ -1,9 +1,11 @@
-﻿import { useState } from "react";
+import { useState } from "react";
+import { Link } from "react-router-dom";
 import { PrimaryButton } from "./components";
 
 export function ConnectScreen({ onConnect }: { onConnect: (url: string) => void }) {
   const [url, setUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const isDev = import.meta.env.DEV;
 
   return (
     <div className="connect-screen">
@@ -53,8 +55,27 @@ export function ConnectScreen({ onConnect }: { onConnect: (url: string) => void 
             <span>Соберет рабочий дашборд без ручной настройки виджетов.</span>
           </article>
         </div>
+        {isDev ? (
+          <div className="connect-preview">
+            <div>
+              <strong>Локальный preview</strong>
+              <span>Открой изменяемую страницу сразу на localhost или зайди в demo-режим без ручного подключения канала.</span>
+            </div>
+            <div className="connect-preview-actions">
+              <Link to="/design-agent" className="connect-preview-link">
+                Открыть Design Agent
+              </Link>
+              <button
+                type="button"
+                className="connect-preview-link"
+                onClick={() => onConnect("https://twitch.tv/local-preview")}
+              >
+                Открыть demo dashboard
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );
 }
-

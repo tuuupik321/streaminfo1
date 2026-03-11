@@ -64,27 +64,27 @@ export function Dashboard({
     <div className={`dashboard${showSidebar ? "" : " embedded"}`}>
       {showSidebar ? (
         <aside className="sidebar">
-        <div className="brand">
-          <div className="brand-mark" />
-          <div className="brand-text">
-            <span>Stream Control</span>
-            <small>{theme.platform.toUpperCase()}</small>
+          <div className="brand">
+            <div className="brand-mark" />
+            <div className="brand-text">
+              <span>Stream Control</span>
+              <small>{theme.platform.toUpperCase()}</small>
+            </div>
           </div>
-        </div>
-        <nav className="sidebar-nav">
-          <SidebarItem label="Dashboard" active />
-          <SidebarItem label="Streams" />
-          <SidebarItem label="Notifications" />
-          <SidebarItem label="Settings" />
-        </nav>
-        <div className="sidebar-footer">
-          <div className="connected">
-            <span className="status-dot" />
-            Подключено: {profile.channel_name}
+          <nav className="sidebar-nav">
+            <SidebarItem label="Обзор" active />
+            <SidebarItem label="Эфиры" />
+            <SidebarItem label="Оповещения" />
+            <SidebarItem label="Настройки" />
+          </nav>
+          <div className="sidebar-footer">
+            <div className="connected">
+              <span className="status-dot" />
+              Подключено: {profile.channel_name}
+            </div>
+            <GhostButton onClick={onReconnect}>Переподключить канал</GhostButton>
           </div>
-          <GhostButton onClick={onReconnect}>Переподключить канал</GhostButton>
-        </div>
-      </aside>
+        </aside>
       ) : null}
       <main className="content">
         <header className="content-header">
@@ -110,22 +110,22 @@ export function Dashboard({
         <section className="stats">
           {profile.platform === "twitch" ? (
             <>
-              <StatCard label="Live viewers" value={`${viewers}`} trend={isOnline ? "В эфире" : "Оффлайн"} icon={<Users size={16} />} />
-              <StatCard label="Followers" value={`${followers}`} trend="по Twitch" icon={<Activity size={16} />} />
-              <StatCard label="Last stream" value="2ч 18м" trend="Пик 1 740" icon={<Flame size={16} />} />
+              <StatCard label="Зрители сейчас" value={`${viewers}`} trend={isOnline ? "В эфире" : "Оффлайн"} icon={<Users size={16} />} />
+              <StatCard label="Фолловеры" value={`${followers}`} trend="по Twitch" icon={<Activity size={16} />} />
+              <StatCard label="Последний эфир" value="2ч 18м" trend="Пик 1 740" icon={<Flame size={16} />} />
             </>
           ) : (
             <>
-              <StatCard label="Subscribers" value={`${subscribers}`} trend="по YouTube" icon={<Users size={16} />} />
-              <StatCard label="Last stream" value="1ч 04м" trend="Пик 2 030" icon={<Flame size={16} />} />
-              <StatCard label="Notifications" value="12" trend="за неделю" icon={<Bell size={16} />} />
+              <StatCard label="Подписчики" value={`${subscribers}`} trend="по YouTube" icon={<Users size={16} />} />
+              <StatCard label="Последний эфир" value="1ч 04м" trend="Пик 2 030" icon={<Flame size={16} />} />
+              <StatCard label="Оповещения" value="12" trend="за неделю" icon={<Bell size={16} />} />
             </>
           )}
         </section>
         <section className="sections">
-          <SectionCard title="Stream history" icon={<Activity size={16} />}> 
+          <SectionCard title="История эфиров" icon={<Activity size={16} />}>
             <div className="bar-chart">
-              {streamSeries.length === 0 ? <div className="empty">No data yet</div> : null}
+              {streamSeries.length === 0 ? <div className="empty">Данных пока нет</div> : null}
               {streamSeries.map((item) => (
                 <div key={item.date} className="bar">
                   <div className="bar-fill" style={{ height: `${(item.count / maxCount) * 100}%` }} />
@@ -134,36 +134,36 @@ export function Dashboard({
               ))}
             </div>
           </SectionCard>
-          <SectionCard title="Streams" icon={<Video size={16} />}> 
+          <SectionCard title="Эфиры" icon={<Video size={16} />}>
             <ul className="section-list">
-              {streams.length === 0 ? <li>No streams yet</li> : null}
+              {streams.length === 0 ? <li>Эфиров пока нет</li> : null}
               {streams.map((stream) => (
                 <li key={stream.url}>
                   <a className="link" href={stream.url} target="_blank" rel="noreferrer">
-                    {stream.title || "Stream"}
+                    {stream.title || "Эфир"}
                   </a>
                 </li>
               ))}
             </ul>
           </SectionCard>
-          <SectionCard title="Latest clips" icon={<Film size={16} />}> 
+          <SectionCard title="Последние клипы" icon={<Film size={16} />}>
             <ul className="section-list">
-              {clips.length === 0 ? <li>No clips yet</li> : null}
+              {clips.length === 0 ? <li>Клипов пока нет</li> : null}
               {clips.map((clip) => (
                 <li key={clip.url}>
                   <a className="link" href={clip.url} target="_blank" rel="noreferrer">
-                    {clip.title || "Clip"}
+                    {clip.title || "Клип"}
                   </a>
                 </li>
               ))}
             </ul>
           </SectionCard>
-          <SectionCard title="Notifications" icon={<Bell size={16} />}> 
+          <SectionCard title="Уведомления" icon={<Bell size={16} />}>
             <ul className="section-list">
-              {notifications.length === 0 ? <li>No notifications</li> : null}
+              {notifications.length === 0 ? <li>Уведомлений пока нет</li> : null}
               {notifications.map((note) => (
                 <li key={note.created_at}>
-                  {note.title} {note.body ? `— ${note.body}` : ""}
+                  {note.title} {note.body ? `- ${note.body}` : ""}
                 </li>
               ))}
             </ul>

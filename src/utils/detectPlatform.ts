@@ -1,10 +1,10 @@
-export type Platform = "twitch" | "youtube";
+п»їexport type Platform = "twitch" | "youtube";
 
 export function detectPlatform(url: string): Platform {
   const normalized = url.toLowerCase();
   if (normalized.includes("twitch.tv")) return "twitch";
   if (normalized.includes("youtube.com") || normalized.includes("youtu.be")) return "youtube";
-  throw new Error("Не удалось определить платформу");
+  throw new Error("РќРµ СѓРґР°Р»РѕСЃСЊ РѕРїСЂРµРґРµР»РёС‚СЊ РїР»Р°С‚С„РѕСЂРјСѓ");
 }
 
 export function extractChannelName(url: string): string {

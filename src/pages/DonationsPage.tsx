@@ -54,13 +54,13 @@ function ActivityRow({ item, index }: { item: ActivityItem; index: number }) {
       transition={{ delay: index * 0.08 }}
       className="group flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80 hover-lift"
     >
-        <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center shadow-[0_0_20px_rgba(145,70,255,0.45)]">
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 shadow-[0_0_20px_rgba(145,70,255,0.45)]">
           {item.kind === "donation" ? <DollarSign size={16} /> : item.kind === "gift" ? <Gift size={16} /> : <UserCheck size={16} />}
         </div>
         <p className="font-semibold">{item.text}</p>
       </div>
-      <div className="h-2 w-2 rounded-full bg-white/30 group-hover:bg-white/70 transition-all duration-300" />
+      <div className="h-2 w-2 rounded-full bg-white/30 transition-all duration-300 group-hover:bg-white/70" />
     </motion.div>
   );
 }
@@ -101,7 +101,6 @@ export default function DonationsPage() {
       .slice(0, 3);
   }, [data?.items]);
 
-
   const reduceMotion = useReducedMotion();
   const container = makeStagger(reduceMotion);
   const item = makeFadeUp(reduceMotion);
@@ -109,7 +108,7 @@ export default function DonationsPage() {
   if (isLoading) {
     return (
       <div className="mx-auto max-w-3xl p-4 md:p-8">
-        <motion.h1 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-5 text-xl font-black font-heading md:text-2xl">
+        <motion.h1 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-5 font-heading text-xl font-black md:text-2xl">
           {t("donations.title")}
         </motion.h1>
         <div className="space-y-4">
@@ -131,7 +130,7 @@ export default function DonationsPage() {
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="mx-auto max-w-3xl px-3 py-3 md:p-6">
-      <motion.h1 variants={item} className="mb-5 text-xl font-black font-heading md:text-2xl">
+      <motion.h1 variants={item} className="mb-5 font-heading text-xl font-black md:text-2xl">
         {t("donations.title")}
       </motion.h1>
 
@@ -141,16 +140,14 @@ export default function DonationsPage() {
             <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("donations.recent", "Recent Activity")}</p>
             <h2 className="mt-2 text-lg font-semibold">{t("donations.feedTitle", "Donations Feed")}</h2>
           </div>
-          <div className="h-10 w-10 rounded-2xl bg-white/10 flex items-center justify-center liquid-glow">
+          <div className="liquid-glow flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10">
             <DollarSign size={16} />
           </div>
         </div>
 
         <div className="mt-6 space-y-3">
           {activity.length ? (
-            activity.map((item, index) => (
-              <ActivityRow key={item.id} item={item} index={index} />
-            ))
+            activity.map((entry, index) => <ActivityRow key={entry.id} item={entry} index={index} />)
           ) : (
             <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/60">
               {t("donations.emptyFeed", "No donations yet. Your feed will appear here.")}
@@ -167,7 +164,9 @@ export default function DonationsPage() {
               topDonors.map((donor, index) => (
                 <div key={donor.donor} className="flex items-center gap-3">
                   <div className="h-8 w-8 rounded-full bg-white/10" />
-                  <span>{index + 1}. {donor.donor} — {new Intl.NumberFormat("ru-RU").format(donor.total)} {data?.items?.[0]?.currency || "RUB"}</span>
+                  <span>
+                    {index + 1}. {donor.donor} - {new Intl.NumberFormat("ru-RU").format(donor.total)} {data?.items?.[0]?.currency || "RUB"}
+                  </span>
                 </div>
               ))
             ) : (

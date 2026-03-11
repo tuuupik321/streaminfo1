@@ -1,16 +1,16 @@
-import type { PlatformTheme } from "../ui/themes";
+п»їimport type { PlatformTheme } from "../ui/themes";
 
 export const youtubeTheme: PlatformTheme = {
   platform: "youtube",
-  name: "YouTube Streaming Dashboard",
+  name: "YouTube Control Center",
   colors: {
     accent: "#FF0000",
     bg: "#0F0F0F",
   },
   sections: [
-    "Создать пост о стриме",
-    "Мои стримы",
-    "Статистика",
-    "Уведомления",
+    "РЎРѕР·РґР°С‚СЊ РїРѕСЃС‚ Рѕ СЃС‚СЂРёРјРµ",
+    "РњРѕРё СЌС„РёСЂС‹",
+    "РЎС‚Р°С‚РёСЃС‚РёРєР°",
+    "РЈРІРµРґРѕРјР»РµРЅРёСЏ",
   ],
 };

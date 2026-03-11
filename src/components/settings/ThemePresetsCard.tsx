@@ -1,5 +1,5 @@
-import { motion } from "framer-motion";
-import { Palette, Check } from "lucide-react";
+﻿import { motion } from "framer-motion";
+import { Check } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -25,17 +25,17 @@ const THEME_PRESETS: ThemePreset[] = [
   {
     id: "default",
     name: "Стандарт",
-    emoji: "💜",
+    emoji: "🌿",
     colors: {
-      background: "240 6% 4%",
-      foreground: "0 0% 95%",
-      card: "240 5% 8%",
-      primary: "264 67% 63%",
-      secondary: "240 4% 14%",
-      muted: "240 4% 14%",
-      mutedForeground: "240 5% 55%",
-      border: "240 4% 16%",
-      accent: "264 67% 63%",
+      background: "214 52% 8%",
+      foreground: "210 40% 98%",
+      card: "214 33% 13%",
+      primary: "162 63% 46%",
+      secondary: "216 27% 18%",
+      muted: "216 24% 15%",
+      mutedForeground: "214 18% 71%",
+      border: "216 24% 22%",
+      accent: "36 97% 66%",
     },
   },
   {
@@ -147,23 +147,21 @@ export function ThemePresetsCard() {
   const [activeTheme, setActiveTheme] = useState("default");
 
   useEffect(() => {
-    // Load saved theme
     const loadTheme = async () => {
       const { data } = await supabase.from("settings").select("value").eq("key", "theme_preset").maybeSingle();
       const saved = data?.value || localStorage.getItem("theme_preset") || "default";
       setActiveTheme(saved);
-      const preset = THEME_PRESETS.find((p) => p.id === saved);
+      const preset = THEME_PRESETS.find((item) => item.id === saved);
       if (preset) applyTheme(preset);
     };
-    loadTheme();
+
+    void loadTheme();
   }, []);
 
   const handleSelect = async (preset: ThemePreset) => {
     setActiveTheme(preset.id);
     applyTheme(preset);
     localStorage.setItem("theme_preset", preset.id);
-
-    // Save to DB
     await supabase.from("settings").upsert({ key: "theme_preset", value: preset.id }, { onConflict: "key" });
     toast.success(`Тема «${preset.name}» применена`);
   };
@@ -176,24 +174,23 @@ export function ThemePresetsCard() {
             key={preset.id}
             whileTap={{ scale: 0.95 }}
             onClick={() => handleSelect(preset)}
-            className={`relative rounded-xl p-3 border-2 transition-all text-center ${
+            className={`relative rounded-xl border-2 p-3 text-center transition-all ${
               activeTheme === preset.id
                 ? "border-primary bg-primary/10"
                 : "border-border/50 bg-secondary/20 hover:border-border"
             }`}
           >
-            {activeTheme === preset.id && (
-              <div className="absolute top-1.5 right-1.5">
+            {activeTheme === preset.id ? (
+              <div className="absolute right-1.5 top-1.5">
                 <Check size={12} className="text-primary" />
               </div>
-            )}
-            <span className="text-lg block mb-1">{preset.emoji}</span>
+            ) : null}
+            <span className="mb-1 block text-lg">{preset.emoji}</span>
             <span className="text-[10px] font-mono text-foreground">{preset.name}</span>
-            {/* Color preview dots */}
-            <div className="flex justify-center gap-1 mt-1.5">
-              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: `hsl(${preset.colors.primary})` }} />
-              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: `hsl(${preset.colors.background})` }} />
-              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: `hsl(${preset.colors.accent})` }} />
+            <div className="mt-1.5 flex justify-center gap-1">
+              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: `hsl(${preset.colors.primary})` }} />
+              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: `hsl(${preset.colors.background})` }} />
+              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: `hsl(${preset.colors.accent})` }} />
             </div>
           </motion.button>
         ))}
