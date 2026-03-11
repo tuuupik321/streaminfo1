@@ -174,14 +174,16 @@
   "sidebar.systemTheme": "Системна",
   "sidebar.adminCenter": "Адмін-центр",
   "sidebar.settings": "Налаштування",
-  "sidebar.support": "Підтримка",`n  "sidebar.dashboard": "Дашборд",
+  "sidebar.support": "Підтримка",
+  "sidebar.dashboard": "Дашборд",
   "sidebar.info": "Інформація",
   "sidebar.analytics": "Аналітика",
   "sidebar.donations": "Донати",
   "sidebar.announcements": "Анонси",
   "sidebar.integrations": "Інтеграції",
 
-  "bottomNav.dashboard": "Дашборд",`n  "bottomNav.info": "Інфо",
+  "bottomNav.dashboard": "Дашборд",
+  "bottomNav.info": "Інфо",
   "bottomNav.analytics": "Аналітика",
   "bottomNav.donations": "Донати",
   "bottomNav.announcements": "Анонси",
@@ -195,4 +197,5 @@
   "actions.close": "Закрити",
   "actions.continue": "Продовжити"
 }
+
 
