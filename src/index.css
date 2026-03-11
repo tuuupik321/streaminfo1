@@ -1041,6 +1041,8 @@
     padding: clamp(24px, 4vw, 40px);
     box-shadow: 0 34px 96px rgba(0, 0, 0, 0.56);
     animation: fade-lift 0.7s ease-out;
+    display: grid;
+    gap: 18px;
   }
 
   .connect-orbit {
@@ -1067,20 +1069,27 @@
     animation-delay: -4s;
   }
 
+  .connect-header {
+    display: grid;
+    gap: 8px;
+  }
+
   .connect-header h1 {
     font-size: clamp(2rem, 3vw, 2.55rem);
+    color: #f5fbff;
+    max-width: 14ch;
   }
 
   .connect-header p {
-    margin-top: 10px;
     max-width: 580px;
     font-size: 15px;
     line-height: 1.72;
+    color: rgba(219, 232, 245, 0.76);
   }
 
   .connect-badge {
     display: inline-flex;
-    margin-bottom: 12px;
+    width: fit-content;
     font-size: 11px;
     font-weight: 700;
     text-transform: uppercase;
@@ -1088,9 +1097,14 @@
     color: #8fd6cd;
   }
 
+  .connect-utility-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
   .input-label {
     display: block;
-    margin-top: 26px;
     margin-bottom: 10px;
     color: hsl(var(--muted-foreground));
     font-size: 13px;
@@ -1122,11 +1136,11 @@
     font-size: 13px;
   }
 
-  .connect-foot {
-    margin-top: 20px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
+  .connect-form-hint {
+    margin-top: 10px;
+    margin-bottom: 14px;
+    font-size: 12px;
+    color: rgba(188, 204, 220, 0.72);
   }
 
   .platform-pill {
@@ -1139,6 +1153,11 @@
     padding: 7px 12px;
     color: hsl(var(--muted-foreground));
     font-size: 12px;
+  }
+
+  .platform-pill.neutral {
+    color: #d5e3ef;
+    background: rgba(255, 255, 255, 0.05);
   }
 
   .platform-dot {
@@ -1156,10 +1175,87 @@
     background: #ff3f33;
   }
 
+  .neutral-dot {
+    background: #f7d774;
+  }
+
+  .connect-inline-note,
+  .connect-next-step {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    border-radius: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.04);
+    padding: 16px 18px;
+  }
+
+  .connect-inline-note strong,
+  .connect-next-step strong {
+    display: block;
+    margin-bottom: 6px;
+    color: #f3f8fd;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .connect-inline-note span,
+  .connect-next-step span {
+    display: block;
+    max-width: 560px;
+    font-size: 13px;
+    line-height: 1.65;
+    color: rgba(213, 226, 238, 0.72);
+  }
+
+  .connect-next-step {
+    background: linear-gradient(140deg, rgba(22, 34, 48, 0.95), rgba(13, 21, 32, 0.84));
+    border-color: rgba(143, 214, 205, 0.16);
+  }
+
+  .connect-next-step-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    flex-shrink: 0;
+    border-radius: 14px;
+    border: 1px solid rgba(143, 214, 205, 0.24);
+    background: rgba(143, 214, 205, 0.08);
+    padding: 0 14px;
+    color: #dffaf6;
+    font-size: 13px;
+    font-weight: 600;
+    transition:
+      transform 0.18s ease,
+      border-color 0.18s ease,
+      background 0.18s ease;
+  }
+
+  .connect-next-step-link:hover {
+    transform: translateY(-1px);
+    border-color: rgba(143, 214, 205, 0.38);
+    background: rgba(143, 214, 205, 0.14);
+  }
+
+  .connect-next-step-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 42px;
+    flex-shrink: 0;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    padding: 0 14px;
+    color: #d9e6f2;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
   .connect-highlights {
-    margin-top: 22px;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 12px;
   }
 
@@ -1408,5 +1504,15 @@
 
   .connect-screen {
     padding: 24px 14px;
+  }
+
+  .connect-inline-note,
+  .connect-next-step {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .connect-next-step-link {
+    width: 100%;
   }
 }

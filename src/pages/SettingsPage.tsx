@@ -154,6 +154,23 @@ export default function SettingsPage() {
 
   const themeLabel = theme === "system" ? "Системная" : theme === "dark" ? "Темная" : theme === "light" ? "Светлая" : "Неон";
   const languageLabel = language === "ru" ? "Русский" : "English";
+  const nextStep = connectedCount === 0
+    ? {
+        title: "Следующий шаг",
+        text: "Подключите первую платформу, чтобы открыть аналитику, историю эфиров и полезный оффлайн-режим.",
+        cta: "Подключить платформу",
+      }
+    : connectedCount < 3
+      ? {
+          title: "Что можно усилить",
+          text: "Добавьте Telegram или сервис донатов, чтобы публиковать ссылку на эфир и видеть поддержку в одном месте.",
+          cta: "Открыть интеграции",
+        }
+      : {
+          title: "Система почти собрана",
+          text: "Проверьте тему, язык и оставшиеся интеграции, чтобы mini app чувствовалась цельно на каждом экране.",
+          cta: "Проверить интеграции",
+        };
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="mx-auto max-w-4xl px-2.5 py-2.5 pb-24 sm:px-3 sm:py-3 md:p-6">
@@ -168,6 +185,18 @@ export default function SettingsPage() {
         <OverviewRow icon={Languages} title="Язык" description="язык интерфейса" value={`Язык: ${languageLabel}`} />
         <OverviewRow icon={Link2} title="Интеграции" description="платформы, донаты, уведомления" value={`Подключено: ${connectedCount} сервиса`} to="/integrations" />
         <OverviewRow icon={MessageSquare} title="Поддержка" description="помощь и обратная связь" value="Открыть" to="/support" />
+      </motion.div>
+
+      <motion.div variants={item} className="mt-5 rounded-[26px] border border-border/60 bg-card/70 p-4 shadow-[0_14px_30px_hsla(var(--shadow)/0.18)] backdrop-blur-xl sm:mt-6 sm:p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-foreground">{nextStep.title}</p>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{nextStep.text}</p>
+          </div>
+          <Button asChild className="shrink-0">
+            <Link to="/integrations">{nextStep.cta}</Link>
+          </Button>
+        </div>
       </motion.div>
 
       <div className="mt-5 space-y-4 sm:mt-6 sm:space-y-6">
