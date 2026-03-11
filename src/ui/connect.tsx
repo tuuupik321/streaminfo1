@@ -8,6 +8,8 @@ export function ConnectScreen({ onConnect }: { onConnect: (url: string) => void 
   return (
     <div className="connect-screen">
       <div className="connect-card">
+        <div className="connect-orbit connect-orbit-left" />
+        <div className="connect-orbit connect-orbit-right" />
         <div className="connect-header">
           <span className="connect-badge">Streamer Onboarding</span>
           <h1>Подключите ваш канал</h1>
@@ -40,6 +42,16 @@ export function ConnectScreen({ onConnect }: { onConnect: (url: string) => void 
         <div className="connect-foot">
           <span className="platform-pill twitch"><span className="platform-dot" />Twitch</span>
           <span className="platform-pill youtube"><span className="platform-dot" />YouTube</span>
+        </div>
+        <div className="connect-highlights">
+          <article className="connect-highlight">
+            <strong>Live Pulse</strong>
+            <span>Покажет активность чата и пиковые моменты в реальном времени.</span>
+          </article>
+          <article className="connect-highlight">
+            <strong>Auto Scenes</strong>
+            <span>Соберет рабочий дашборд без ручной настройки виджетов.</span>
+          </article>
         </div>
       </div>
     </div>
