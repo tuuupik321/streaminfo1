@@ -49,10 +49,10 @@ export function SettingsModal({ open, anchorRect, onClose }: SettingsModalProps)
     if (!isAnchored || !anchorRect || typeof window === "undefined") return undefined;
     const padding = 12;
     const panelWidth = Math.min(window.innerWidth * 0.92, 420);
-    const left = Math.min(
-      window.innerWidth - padding,
-      Math.max(panelWidth + padding, anchorRect.right),
-    );
+    const alignLeft = anchorRect.left < window.innerWidth / 2;
+    const left = alignLeft
+      ? Math.min(window.innerWidth - padding - panelWidth, Math.max(padding, anchorRect.left))
+      : Math.max(padding, anchorRect.right - panelWidth);
     const top = Math.min(
       window.innerHeight - padding - 24,
       Math.max(padding, anchorRect.top),
@@ -60,7 +60,7 @@ export function SettingsModal({ open, anchorRect, onClose }: SettingsModalProps)
     return { left, top };
   })();
   const panelClass = isAnchored
-    ? "fixed w-[min(92vw,420px)] max-h-[75vh] -translate-x-full -translate-y-3 origin-bottom-right overflow-y-auto rounded-[22px] border border-white/10 bg-[#0c0c12] shadow-[0_30px_80px_rgba(0,0,0,0.45)]"
+    ? "fixed w-[min(92vw,420px)] max-h-[75vh] -translate-y-3 overflow-y-auto rounded-[22px] border border-white/10 bg-[#0c0c12] shadow-[0_30px_80px_rgba(0,0,0,0.45)]"
     : "w-full max-w-4xl overflow-hidden rounded-[22px] border border-white/10 bg-[#0c0c12] shadow-[0_30px_80px_rgba(0,0,0,0.45)]";
   const containerClass = isAnchored
     ? "fixed inset-0 z-[90] bg-black/60"
