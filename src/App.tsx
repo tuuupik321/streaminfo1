@@ -1,254 +1,61 @@
-import { Suspense, lazy, useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { I18nProvider } from "@/lib/i18n.tsx";
-import { ThemeProvider } from "@/components/ThemeProvider";
-import { AppSidebar } from "./components/AppSidebar";
-import { CommandPalette } from "./components/CommandPalette";
-import { AppShellSkeleton } from "./components/AppShellSkeleton";
-import { PageTransition } from "./components/PageTransition";
-import { GlobalStatusBar } from "./components/GlobalStatusBar";
-import { BottomNav } from "./components/BottomNav";
-import { cn } from "./lib/utils";
-import { SplashScreen } from "./components/SplashScreen";
-import { SettingsModal } from "./components/SettingsModal";
-import { Cog } from "lucide-react";
-import { useSettingsStore } from "@/store/useSettingsStore";
+import { useEffect, useMemo, useState } from "react";
+import "./App.css";
+import { detectPlatform, extractChannelName } from "./utils/detectPlatform";
+import { clearUserProfile, getUserProfile, saveUserProfile, type UserProfile } from "./database/users";
+import { getThemeByPlatform } from "./ui/themes";
+import { ConnectScreen } from "./ui/connect";
+import { Dashboard } from "./ui/dashboard";
 
-const StreamInfoPage = lazy(() => import("./pages/StreamInfoPage"));
-const IntegrationsPage = lazy(() => import("./pages/IntegrationsPage"));
-const SettingsPage = lazy(() => import("./pages/SettingsPage"));
-const AdminPage = lazy(() => import("./pages/AdminPage"));
-const Analytics = lazy(() => import("./pages/Analytics"));
-const SupportPage = lazy(() => import("./pages/SupportPage"));
-const DonationsPage = lazy(() => import("./pages/DonationsPage"));
-const AnnouncementsPage = lazy(() => import("./pages/AnnouncementsPage"));
-const DesignAgentPage = lazy(() => import("./pages/DesignAgentPage"));
-const BridgeTransferPage = lazy(() => import("./pages/BridgeTransferPage"));
-const LiveDashboardPage = lazy(() => import("./pages/LiveDashboardPage"));
-const NotFound = lazy(() => import("./pages/NotFound"));
+const App = () => {
+  const [profile, setProfile] = useState<UserProfile | null>(() => getUserProfile());
+  const [error, setError] = useState<string | null>(null);
 
-const queryClient = new QueryClient();
+  const theme = useMemo(() => (profile ? getThemeByPlatform(profile.platform) : null), [profile]);
 
-type TelegramWebApp = {
-  ready: () => void;
-  expand: () => void;
-  enableClosingConfirmation?: () => void;
-  themeParams?: {
-    bg_color?: string;
-  };
-};
-
-type TelegramWindow = Window & {
-  Telegram?: {
-    WebApp?: TelegramWebApp;
-  };
-};
-
-function TelegramWebAppInit() {
   useEffect(() => {
-    const tg = (window as TelegramWindow).Telegram?.WebApp;
-    if (!tg) return;
-    tg.ready();
-    tg.expand();
-    tg.enableClosingConfirmation?.();
-    if (tg.themeParams?.bg_color) {
-      document.documentElement.style.setProperty("--tg-bg", tg.themeParams.bg_color);
+    if (!theme) return;
+    const root = document.documentElement;
+    root.style.setProperty("--accent", theme.colors.accent);
+    root.style.setProperty("--panel-bg", theme.colors.bg);
+  }, [theme]);
+
+  const handleConnect = (url: string) => {
+    try {
+      const platform = detectPlatform(url);
+      const channelName = extractChannelName(url);
+      const nextProfile: UserProfile = {
+        platform,
+        channel_url: url,
+        channel_name: channelName,
+        connected: true,
+      };
+      saveUserProfile(nextProfile);
+      setProfile(nextProfile);
+      setError(null);
+    } catch (err) {
+      setError((err as Error).message);
     }
-  }, []);
+  };
 
-  useEffect(() => {
-    const onAccent = (event: Event) => {
-      const custom = event as CustomEvent<{ accent?: string }>;
-      const accent = custom.detail?.accent;
-      if (!accent) return;
-      document.documentElement.style.setProperty("--primary", accent);
-    };
-    window.addEventListener("partner-accent", onAccent);
-    return () => window.removeEventListener("partner-accent", onAccent);
-  }, []);
-  return null;
-}
+  const handleReconnect = () => {
+    clearUserProfile();
+    setProfile(null);
+  };
 
-function AnimatedRoutes() {
-  const location = useLocation();
-  return (
-    <PageTransition>
-      <Routes location={location}>
-        <Route path="/" element={<StreamInfoPage />} />
-        <Route path="/analytics" element={<Analytics />} />
-        <Route path="/donations" element={<DonationsPage />} />
-        <Route path="/announcements" element={<AnnouncementsPage />} />
-        <Route path="/support" element={<SupportPage />} />
-        <Route path="/design-agent" element={<DesignAgentPage />} />
-        <Route path="/bridge" element={<BridgeTransferPage />} />
-        <Route path="/integrations" element={<IntegrationsPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/admin" element={<AdminPage />} />
-        <Route path="/live" element={<LiveDashboardPage />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </PageTransition>
-  );
-}
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider>
-      <TooltipProvider>
-        <I18nProvider>
-          <TelegramWebAppInit />
-          <Toaster />
-          <Sonner position="top-center" />
-          <BrowserRouter>
-            <CommandPalette />
-            <SidebarProvider>
-              <AppShellWithOverlays />
-            </SidebarProvider>
-          </BrowserRouter>
-        </I18nProvider>
-      </TooltipProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
-);
-
-function AppShellWithOverlays() {
-  const [showSplash, setShowSplash] = useState(true);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsAnchor, setSettingsAnchor] = useState<DOMRect | null>(null);
-  const [showVpnWarning, setShowVpnWarning] = useState(false);
-  const { language, glowIntensity, setLanguage, setGlowIntensity } = useSettingsStore();
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => setShowSplash(false), 1500);
-    return () => window.clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    const tg = (window as TelegramWindow).Telegram?.WebApp;
-    const userId = tg?.initDataUnsafe?.user?.id;
-    const initData = tg?.initData || "";
-    if (!userId || !initData) return;
-    const fetchPrefs = async () => {
-      try {
-        const res = await fetch(`/api/preferences?user_id=${userId}&init_data=${encodeURIComponent(initData)}`);
-        const data = await res.json().catch(() => ({}));
-        if (res.ok) {
-          if (data.language) setLanguage(data.language);
-          if (typeof data.liquid_glow === "number") setGlowIntensity(data.liquid_glow / 100);
-        }
-      } catch {
-        // ignore
-      }
-    };
-    void fetchPrefs();
-  }, [setLanguage, setGlowIntensity]);
-
-  useEffect(() => {
-    const tg = (window as TelegramWindow).Telegram?.WebApp;
-    const userId = tg?.initDataUnsafe?.user?.id;
-    const initData = tg?.initData || "";
-    if (!userId || !initData) return;
-    const timer = window.setTimeout(() => {
-      fetch("/api/preferences", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_id: userId,
-          language,
-          liquid_glow: Math.round(glowIntensity * 100),
-          init_data: initData,
-        }),
-      }).catch(() => undefined);
-    }, 400);
-    return () => window.clearTimeout(timer);
-  }, [language, glowIntensity]);
-
-  useEffect(() => {
-    const fetchVpn = async () => {
-      try {
-        const response = await fetch("https://ipinfo.io/json");
-        const data = await response.json();
-        const privacy = data?.privacy || {};
-        if (privacy.vpn || privacy.proxy || privacy.tor) {
-          setShowVpnWarning(true);
-          window.setTimeout(() => setShowVpnWarning(false), 5000);
-        }
-      } catch {
-        // ignore
-      }
-    };
-    void fetchVpn();
-  }, []);
+  if (!profile) {
+    return (
+      <div className="app-shell">
+        <ConnectScreen onConnect={handleConnect} />
+        {error ? <div className="global-error">{error}</div> : null}
+      </div>
+    );
+  }
 
   return (
-    <>
-      <div className="flex min-h-[100dvh] w-full app-shell grain-bg">
-                <div className="pointer-events-none absolute inset-0">
-                  <div className="hero-grid" />
-                  <div className="hero-orb left-[-120px] top-[-140px] h-[320px] w-[320px] bg-emerald-400/60" />
-                  <div className="hero-orb right-[-80px] top-[10%] h-[260px] w-[260px] bg-violet-500/50" />
-                  <div className="hero-orb left-[20%] bottom-[-160px] h-[360px] w-[360px] bg-cyan-400/40" />
-                </div>
-                <aside className={cn("relative z-10 hidden md:block", "glass-strong")}>
-                  <AppSidebar />
-                </aside>
-                <div className="relative z-10 flex w-full flex-col min-w-0">
-                  <header className={cn("sticky top-0 z-40 h-12 border-b border-white/10", "glass")}>
-                    <div className="mx-auto flex h-full w-full max-w-6xl items-center justify-between px-3 sm:px-4">
-                      <span className="text-sm font-bold font-heading text-gradient-primary">StreamInfo</span>
-                      <button
-                        type="button"
-                        onClick={() => setSettingsOpen(true)}
-                        className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-white/70 transition hover:border-white/30 hover:bg-white/10 md:flex"
-                        aria-label="Open settings"
-                      >
-                        <Cog size={14} />
-                        Settings
-                      </button>
-                    </div>
-                  </header>
-                  <GlobalStatusBar />
-                  <main className="flex-1 pb-20 md:pb-6">
-                    <Suspense fallback={<AppShellSkeleton />}>
-                      <AnimatedRoutes />
-                    </Suspense>
-                  </main>
-                  <BottomNav
-                    onOpenSettings={(anchor) => {
-                      setSettingsAnchor(anchor ?? null);
-                      setSettingsOpen(true);
-                    }}
-                  />
-                </div>
-              </div>
-      {showVpnWarning && (
-        <motion.div
-          initial={{ opacity: 0, y: -12 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0 }}
-          className="fixed right-4 top-16 z-[80] rounded-2xl border border-yellow-400/30 bg-yellow-500/10 px-4 py-3 text-xs text-yellow-100 shadow-[0_0_30px_rgba(245,158,11,0.45)]"
-        >
-          ⚠️ We detected that you are using a VPN. Streaming data may load slower.
-          <button className="ml-3 text-yellow-100/70" onClick={() => setShowVpnWarning(false)}>Close</button>
-        </motion.div>
-      )}
-      <SettingsModal
-        open={settingsOpen}
-        anchorRect={settingsAnchor}
-        onClose={() => {
-          setSettingsOpen(false);
-          setSettingsAnchor(null);
-        }}
-      />
-      <SplashScreen show={showSplash} />
-    </>
+    <div className="app-shell">
+      {theme ? <Dashboard theme={theme} profile={profile} onReconnect={handleReconnect} /> : null}
+    </div>
   );
-}
+};
 
 export default App;
