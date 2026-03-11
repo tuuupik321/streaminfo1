@@ -187,6 +187,21 @@ def log_event(event: str, **fields: Any):
     logger.info(json.dumps(payload, ensure_ascii=False))
 
 
+def _allow_rate(scope: str, key: str, *, limit: int, window_seconds: int) -> bool:
+    if limit <= 0 or window_seconds <= 0:
+        return True
+    now = time.time()
+    bucket_key = f"{scope}:{key}"
+    bucket = rate_limit_cache[bucket_key]
+    cutoff = now - window_seconds
+    while bucket and bucket[0] <= cutoff:
+        bucket.popleft()
+    if len(bucket) >= limit:
+        return False
+    bucket.append(now)
+    return True
+
+
 def validate_runtime_config() -> None:
     if OWNER_TELEGRAM_ID:
         try:
