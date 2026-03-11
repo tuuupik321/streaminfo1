@@ -9,7 +9,7 @@ import mimetypes
 from collections import defaultdict, deque
 from datetime import datetime, timezone, timedelta
 from typing import Any, Optional
-from urllib.parse import parse_qsl, quote_plus
+from urllib.parse import parse_qsl, quote_plus, urlencode, urlparse, urlunparse
 
 import aiohttp
 from aiogram import Bot, Dispatcher, F, types
@@ -19,7 +19,7 @@ from aiogram.types import WebAppInfo
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
 from pydantic import BaseModel, ValidationError
-from sqlalchemy import BigInteger, Boolean, Column, DateTime, Integer, String, and_, desc, func, select, text
+from sqlalchemy import BigInteger, Boolean, Column, DateTime, Integer, MetaData, String, and_, desc, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
@@ -52,17 +52,29 @@ def _normalize_webhook_path(path: Optional[str]) -> str:
     return result.rstrip("/") or "/telegram/webhook"
 
 
-def _normalize_db_url(raw_url: Optional[str]) -> Optional[str]:
+def _normalize_db_url(raw_url: Optional[str]) -> tuple[Optional[str], dict[str, Any]]:
+    connect_args: dict[str, Any] = {}
     if not raw_url:
-        return None
+        return None, connect_args
     raw_url = raw_url.strip()
     if raw_url.startswith("postgresql+asyncpg://"):
-        return raw_url
-    if raw_url.startswith("postgresql://"):
-        return raw_url.replace("postgresql://", "postgresql+asyncpg://", 1)
-    if raw_url.startswith("postgres://"):
-        return raw_url.replace("postgres://", "postgresql+asyncpg://", 1)
-    return f"postgresql+asyncpg://{raw_url}"
+        normalized = raw_url
+    elif raw_url.startswith("postgresql://"):
+        normalized = raw_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    elif raw_url.startswith("postgres://"):
+        normalized = raw_url.replace("postgres://", "postgresql+asyncpg://", 1)
+    else:
+        normalized = f"postgresql+asyncpg://{raw_url}"
+
+    parsed = urlparse(normalized)
+    query_params = dict(parse_qsl(parsed.query, keep_blank_values=True))
+    sslmode = query_params.pop("sslmode", None)
+    if sslmode and sslmode.lower() not in {"disable", "allow", "prefer"}:
+        # asyncpg expects "ssl" connect arg, not "sslmode"
+        connect_args["ssl"] = True
+    query_params.pop("channel_binding", None)
+    cleaned = parsed._replace(query=urlencode(query_params))
+    return urlunparse(cleaned), connect_args
 
 
 TOKEN = os.getenv("BOT_TOKEN")
@@ -87,9 +99,9 @@ OWNER_ADMIN_PASSWORD = os.getenv("OWNER_ADMIN_PASSWORD")
 ADMIN_TOKEN_TTL_SECONDS = _env_int("ADMIN_TOKEN_TTL_SECONDS", 43_200, min_value=300, max_value=604_800)
 
 
-DB_URL = _normalize_db_url(RAW_DB_URL)
+DB_URL, DB_CONNECT_ARGS = _normalize_db_url(RAW_DB_URL)
 
-Base = declarative_base()
+Base = declarative_base(metadata=MetaData(schema="public"))
 
 # Pydantic Models for API validation
 class SaveSettingsPayload(BaseModel):
@@ -218,7 +230,12 @@ class PartnerBannerMetric(Base):
     value = Column(Integer, nullable=False, default=0)
     updated_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
 
-engine = create_async_engine(DB_URL, pool_pre_ping=True, pool_recycle=1800) if DB_URL else None
+engine = create_async_engine(
+    DB_URL,
+    pool_pre_ping=True,
+    pool_recycle=1800,
+    connect_args=DB_CONNECT_ARGS,
+) if DB_URL else None
 async_session = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession) if engine else None
 logger = logging.getLogger("streamfly")
 logging.basicConfig(level=logging.INFO)
@@ -662,11 +679,56 @@ async def setup_database():
     if not engine:
         return
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
         try:
-            await conn.execute(text("ALTER TABLE users ADD COLUMN donationalerts_name VARCHAR"))
-        except Exception:
-            pass
+            await conn.run_sync(Base.metadata.create_all)
+        except Exception as error:
+            log_event("db_create_all_failed", error=str(error))
+            raise
+        try:
+            await conn.execute(text("ALTER TABLE public.users ADD COLUMN IF NOT EXISTS donationalerts_name VARCHAR"))
+        except Exception as error:
+            log_event("db_alter_users_failed", error=str(error))
+
+    required_tables = [
+        "users",
+        "streamers",
+        "stream_goals",
+        "donations",
+        "visual_settings",
+        "platform_stats",
+        "questions",
+        "live_banner",
+        "stream_sessions",
+        "admin_audit_logs",
+        "rate_limit_events",
+        "donation_events",
+        "partner_banner_metrics",
+    ]
+    missing_tables: list[str] = []
+    async with engine.connect() as conn:
+        for table_name in required_tables:
+            result = await conn.execute(text("SELECT to_regclass(:table_name)"), {"table_name": f"public.{table_name}"})
+            if result.scalar_one_or_none() is None:
+                missing_tables.append(table_name)
+    if missing_tables:
+        log_event("db_schema_missing", missing_tables=missing_tables)
+        async with engine.begin() as conn:
+            for table_name in missing_tables:
+                table_key = f"public.{table_name}"
+                table = Base.metadata.tables.get(table_key)
+                if table is None:
+                    continue
+                await conn.run_sync(table.create, checkfirst=True)
+        # Re-check after attempting to create missing tables
+        still_missing: list[str] = []
+        async with engine.connect() as conn:
+            for table_name in required_tables:
+                result = await conn.execute(text("SELECT to_regclass(:table_name)"), {"table_name": f"public.{table_name}"})
+                if result.scalar_one_or_none() is None:
+                    still_missing.append(table_name)
+        if still_missing:
+            log_event("db_schema_still_missing", missing_tables=still_missing)
+            raise RuntimeError(f"Missing database tables: {', '.join(still_missing)}")
 
 async def keep_database_warm():
     if not engine:
