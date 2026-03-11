@@ -61,10 +61,17 @@ export default function Analytics() {
     return max.time;
   }, [timeline]);
 
+  const lastStreamAt = useMemo(() => (data?.last_stream_at ? new Date(data.last_stream_at) : null), [data?.last_stream_at]);
+  const daysSinceLastStream = useMemo(() => {
+    if (!lastStreamAt) return null;
+    const diffMs = Date.now() - lastStreamAt.getTime();
+    return Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  }, [lastStreamAt]);
+
   const expectedViewers = useMemo(() => {
     const avg = data?.avg_peak ?? 0;
     const max = data?.max_peak ?? 0;
-    if (!avg && !max) return 320;
+    if (!avg && !max) return 0;
     return Math.max(avg, Math.round(max * 0.8));
   }, [data?.avg_peak, data?.max_peak]);
 
@@ -98,6 +105,7 @@ export default function Analytics() {
   };
 
   const hasData = !isLoading && timeline.length > 0;
+  const hasRecentStreams = (data?.streams_count ?? 0) > 0 && (daysSinceLastStream === null || daysSinceLastStream <= 2);
   const chartData = timeline.map((p, index) => ({
     time: p.time,
     viewers: p.viewers,
@@ -117,10 +125,6 @@ export default function Analytics() {
     { name: "YouTube", value: 27, color: "#FF0000" },
     { name: "Telegram", value: 15, color: "#00B2FF" },
   ];
-
-  if (error) {
-    return <EmptyState icon={PieChart} title={t("analytics.errorTitle", "Failed to load analytics")} description={t("analytics.errorDescription", "Check your connection and try again.")} />;
-  }
 
   const reduceMotion = useReducedMotion();
   const container = makeStagger(reduceMotion);
@@ -174,8 +178,14 @@ export default function Analytics() {
                 </div>
               ) : (
                 <>
-                  <p className="mt-3 text-sm text-white/70">{t("analytics.expectedViewers", "Expected viewers today")}: <span className="text-white font-semibold">{expectedViewers}</span></p>
-                  <p className="text-sm text-white/70">{t("analytics.peakTime", "Peak time")}: <span className="text-white font-semibold">{peakTime}</span></p>
+                  {hasRecentStreams ? (
+                    <>
+                      <p className="mt-3 text-sm text-white/70">{t("analytics.expectedViewers", "Expected viewers today")}: <span className="text-white font-semibold">{expectedViewers}</span></p>
+                      <p className="text-sm text-white/70">{t("analytics.peakTime", "Peak time")}: <span className="text-white font-semibold">{peakTime}</span></p>
+                    </>
+                  ) : (
+                    <p className="mt-3 text-sm text-white/60">{t("analytics.noRecentStreams", "No recent streams to build a forecast.")}</p>
+                  )}
                 </>
               )}
             </div>
@@ -191,8 +201,8 @@ export default function Analytics() {
                 </div>
               ) : (
                 <>
-                  <p className="mt-3 text-sm text-white/70">{t("analytics.currentStreak", "Current streak")}: <span className="text-white font-semibold">5 days</span></p>
-                  <p className="text-sm text-white/70">{t("analytics.longestStreak", "Longest streak")}: <span className="text-white font-semibold">14 days</span></p>
+                  <p className="mt-3 text-sm text-white/70">{t("analytics.currentStreak", "Current streak")}: <span className="text-white font-semibold">{data?.current_streak_days ?? 0} {t("analytics.days", "days")}</span></p>
+                  <p className="text-sm text-white/70">{t("analytics.longestStreak", "Longest streak")}: <span className="text-white font-semibold">{data?.longest_streak_days ?? 0} {t("analytics.days", "days")}</span></p>
                 </>
               )}
             </div>
@@ -252,9 +262,15 @@ export default function Analytics() {
             <Sparkles size={14} className="text-white/60" />
           </div>
           <div className="mt-4 space-y-2 text-sm text-white/70">
-            <p>{t("analytics.bestTime", "Best time to stream")}: <span className="text-white font-semibold">19:00</span></p>
-            <p>{t("analytics.bestPlatform", "Best platform today")}: <span className="text-white font-semibold">Twitch</span></p>
-            <p>{t("analytics.viewerPeak", "Viewer peak")}: <span className="text-white font-semibold">21:30</span></p>
+            {hasRecentStreams ? (
+              <>
+                <p>{t("analytics.bestTime", "Best time to stream")}: <span className="text-white font-semibold">{peakTime}</span></p>
+                <p>{t("analytics.bestPlatform", "Best platform today")}: <span className="text-white font-semibold">Twitch</span></p>
+                <p>{t("analytics.viewerPeak", "Viewer peak")}: <span className="text-white font-semibold">{peakTime}</span></p>
+              </>
+            ) : (
+              <p className="text-white/60">{t("analytics.noInsights", "No insights yet. Stream to generate analytics.")}</p>
+            )}
           </div>
         </div>
       </motion.div>
@@ -301,7 +317,7 @@ export default function Analytics() {
       </motion.div>
 
       <motion.div variants={item} className="mb-6">
-        {hasData ? <ActivityMap /> : <div className="saas-card text-sm text-muted-foreground">Нет данных для heatmap.</div>}
+        {hasData ? <ActivityMap /> : <div className="saas-card text-sm text-muted-foreground">{t("analytics.noHeatmap", "No data for heatmap yet.")}</div>}
       </motion.div>
 
       <motion.div variants={item} className="mb-8 grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -352,3 +368,6 @@ export default function Analytics() {
     </motion.div>
   );
 }
+  if (error) {
+    return <EmptyState icon={PieChart} title={t("analytics.errorTitle", "Failed to load analytics")} description={t("analytics.errorDescription", "Check your connection and try again.")} />;
+  }

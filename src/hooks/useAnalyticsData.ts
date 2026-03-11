@@ -7,6 +7,9 @@ type AnalyticsApiResponse = {
   avg_peak?: number;
   hours_streamed?: number;
   clicks?: number;
+  last_stream_at?: string | null;
+  current_streak_days?: number;
+  longest_streak_days?: number;
   timeline?: Array<{ time: string; viewers: number; event?: "start" | "end" | "tg" | "donate" | null }>;
 };
 

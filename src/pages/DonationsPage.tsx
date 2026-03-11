@@ -5,7 +5,6 @@ import { useI18n } from "@/lib/i18n";
 import { EmptyState } from "@/shared/ui/EmptyState";
 import { DollarSign, Gift, UserCheck } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
 import { makeFadeUp, makeStagger } from "@/shared/motion";
 
 type Donation = {
@@ -67,19 +66,30 @@ export default function DonationsPage() {
 
   const activity = useMemo<ActivityItem[]>(() => {
     if (!data?.items?.length) {
-      return [
-        { id: "demo-1", text: "John donated 750 ₽", kind: "donation" },
-        { id: "demo-2", text: "Mike subscribed", kind: "subscription" },
-        { id: "demo-3", text: "Alex gifted 5 subs", kind: "gift" },
-        { id: "demo-4", text: "Kate donated 420 ₽", kind: "donation" },
-      ];
+      return [];
     }
     return data.items.map((donation) => ({
       id: donation.id,
-      text: `${donation.donor} ${t("donations.donated", "donated")} ${donation.amount.toLocaleString()} ₽`,
+      text: `${donation.donor} ${t("donations.donated", "donated")} ${new Intl.NumberFormat("ru-RU").format(donation.amount)} ${donation.currency || "RUB"}`,
       kind: "donation",
     }));
   }, [data?.items, t]);
+
+  const topDonors = useMemo(() => {
+    if (!data?.items?.length) return [];
+    const totals = data.items.reduce<Record<string, number>>((acc, item) => {
+      acc[item.donor] = (acc[item.donor] || 0) + item.amount;
+      return acc;
+    }, {});
+    return Object.entries(totals)
+      .map(([donor, total]) => ({ donor, total }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 3);
+  }, [data?.items]);
+
+  const goalAmount = 20000;
+  const totalRaised = useMemo(() => (data?.items ?? []).reduce((sum, item) => sum + item.amount, 0), [data?.items]);
+  const goalPercent = Math.min(100, Math.round((totalRaised / goalAmount) * 100));
 
   const reduceMotion = useReducedMotion();
   const container = makeStagger(reduceMotion);
@@ -126,9 +136,15 @@ export default function DonationsPage() {
         </div>
 
         <div className="mt-6 space-y-3">
-          {activity.map((item, index) => (
-            <ActivityRow key={item.id} item={item} index={index} />
-          ))}
+          {activity.length ? (
+            activity.map((item, index) => (
+              <ActivityRow key={item.id} item={item} index={index} />
+            ))
+          ) : (
+            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/60">
+              {t("donations.emptyFeed", "No donations yet. Your feed will appear here.")}
+            </div>
+          )}
         </div>
       </motion.div>
 
@@ -136,33 +152,25 @@ export default function DonationsPage() {
         <div className="saas-card">
           <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("donations.topSupporters", "Top supporters")}</p>
           <div className="mt-4 space-y-3 text-sm text-white/70">
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-white/10" />
-              <span>1. Alex — 12 000 ₽</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-white/10" />
-              <span>2. Mike — 8 000 ₽</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-white/10" />
-              <span>3. Sam — 4 400 ₽</span>
-            </div>
+            {topDonors.length ? (
+              topDonors.map((donor, index) => (
+                <div key={donor.donor} className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-full bg-white/10" />
+                  <span>{index + 1}. {donor.donor} — {new Intl.NumberFormat("ru-RU").format(donor.total)} {data?.items?.[0]?.currency || "RUB"}</span>
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-white/50">{t("donations.noTopSupporters", "No donors yet.")}</p>
+            )}
           </div>
         </div>
         <div className="saas-card">
           <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("donations.goalTitle", "Donation goal")}</p>
-          <p className="mt-3 text-sm text-white/70">{t("donations.goalTarget", "Goal")}: 20 000 ₽</p>
-          <p className="text-sm text-white/70">{t("donations.goalProgress", "Progress")}: 12 400 ₽</p>
+          <p className="mt-3 text-sm text-white/70">{t("donations.goalTarget", "Goal")}: {new Intl.NumberFormat("ru-RU").format(goalAmount)} {data?.items?.[0]?.currency || "RUB"}</p>
+          <p className="text-sm text-white/70">{t("donations.goalProgress", "Progress")}: {new Intl.NumberFormat("ru-RU").format(totalRaised)} {data?.items?.[0]?.currency || "RUB"}</p>
           <div className="mt-3 h-2 rounded-full bg-white/10">
-            <div className="h-2 rounded-full bg-emerald-400" style={{ width: "62%" }} />
+            <div className="h-2 rounded-full bg-emerald-400" style={{ width: `${goalPercent}%` }} />
           </div>
-        </div>
-        <div className="saas-card">
-          <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("donations.obsWidget", "OBS Widget")}</p>
-          <p className="mt-3 text-sm text-white/70">{t("donations.obsCopy", "Copy OBS widget link")}</p>
-          <Button size="sm" variant="outline" className="mt-3 w-full">{t("donations.obsCopyButton", "Copy widget link")}</Button>
-          <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-white/60">{t("donations.obsPreview", "Preview widget")}</div>
         </div>
       </motion.div>
     </motion.div>

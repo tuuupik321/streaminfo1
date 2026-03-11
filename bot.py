@@ -7,7 +7,7 @@ import os
 import time
 import mimetypes
 from collections import defaultdict, deque
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Any, Optional
 from urllib.parse import parse_qsl, quote_plus
 
@@ -549,13 +549,13 @@ async def api_ping(request: web.Request):
 
 async def get_bot_info(request: web.Request):
     if not bot:
-        return web.json_response({"error": "telegram_bot_not_configured"}, status=500)
+        return web.json_response({"available": False, "username": None, "id": None})
     try:
         me = await bot.get_me()
-        return web.json_response({"username": me.username, "id": me.id})
+        return web.json_response({"available": True, "username": me.username, "id": me.id})
     except Exception as error:
         log_event("bot_info_failed", error=str(error))
-        return web.json_response({"error": "bot_info_failed"}, status=500)
+        return web.json_response({"available": False, "username": None, "id": None})
 
 # ... (security and other functions remain the same)
 async def _require_verified_user(request: web.Request):
@@ -1175,12 +1175,39 @@ async def get_analytics(request: web.Request):
     auth_error = await _require_verified_user(request)
     if auth_error: return auth_error
     uid = request.query.get("user_id")
+    period = (request.query.get("period") or "today").lower()
     if not uid: return web.json_response({"error": "no_uid"}, status=400)
     if REQUIRE_INIT_DATA and request.get("verified_user_id") and request["verified_user_id"] != str(uid): return web.json_response({"error": "user_mismatch"}, status=403)
     if not async_session: return web.json_response({"error": "db_not_configured"}, status=500)
     async with async_session() as session:
-        sessions_query = select(StreamSession).where(StreamSession.user_id == int(uid)).order_by(desc(StreamSession.started_at)).limit(50)
+        now = datetime.now(timezone.utc)
+        start = None
+        end = None
+        if period == "today":
+            start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        elif period == "yesterday":
+            start = (now - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+            end = start + timedelta(days=1)
+        elif period == "7d":
+            start = now - timedelta(days=7)
+        elif period == "30d":
+            start = now - timedelta(days=30)
+
+        base_query = select(StreamSession).where(StreamSession.user_id == int(uid))
+        if start:
+            base_query = base_query.where(StreamSession.started_at >= start)
+        if end:
+            base_query = base_query.where(StreamSession.started_at < end)
+        sessions_query = base_query.order_by(desc(StreamSession.started_at)).limit(50)
         sessions = (await session.execute(sessions_query)).scalars().all()
+
+        sessions_all_query = (
+            select(StreamSession)
+            .where(StreamSession.user_id == int(uid))
+            .order_by(desc(StreamSession.started_at))
+            .limit(365)
+        )
+        sessions_all = (await session.execute(sessions_all_query)).scalars().all()
         user = await session.get(User, int(uid))
         clicks = user.clicks if user else 0
         streams_count = len(sessions)
@@ -1188,7 +1215,37 @@ async def get_analytics(request: web.Request):
         avg_peak = int(sum((s.peak_viewers for s in sessions), 0) / streams_count) if streams_count else 0
         total_hours = sum((s.ended_at - s.started_at).total_seconds() / 3600.0 for s in sessions if s.started_at and s.ended_at)
         timeline = [{"time": s.started_at.isoformat(), "viewers": s.peak_viewers, "event": "start"} for s in sessions[:24] if s.started_at]
-        return web.json_response({"streams_count": streams_count, "max_peak": max_peak, "avg_peak": avg_peak, "hours_streamed": round(total_hours, 1), "clicks": clicks, "timeline": list(reversed(timeline))})
+
+        last_stream_at = sessions_all[0].started_at.isoformat() if sessions_all and sessions_all[0].started_at else None
+        stream_dates_set = {s.started_at.date() for s in sessions_all if s.started_at}
+        stream_dates = sorted(stream_dates_set)
+        longest_streak = 0
+        current = 0
+        prev = None
+        for day in stream_dates:
+            if prev and (day - prev).days == 1:
+                current += 1
+            else:
+                current = 1
+            longest_streak = max(longest_streak, current)
+            prev = day
+        today = datetime.now(timezone.utc).date()
+        current_streak = 0
+        day_cursor = today
+        while day_cursor in stream_dates_set:
+            current_streak += 1
+            day_cursor = day_cursor - timedelta(days=1)
+        return web.json_response({
+            "streams_count": streams_count,
+            "max_peak": max_peak,
+            "avg_peak": avg_peak,
+            "hours_streamed": round(total_hours, 1),
+            "clicks": clicks,
+            "timeline": list(reversed(timeline)),
+            "last_stream_at": last_stream_at,
+            "current_streak_days": current_streak,
+            "longest_streak_days": longest_streak,
+        })
 
 if __name__ == "__main__":
     try:
