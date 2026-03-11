@@ -952,10 +952,11 @@ async def cache_control_middleware(request, handler):
     response = await handler(request)
     if isinstance(response, web.FileResponse):
         path = request.path
-        if path == "/" or path.endswith(".html"):
-            response.headers["Cache-Control"] = "no-store, max-age=0"
-        elif path.startswith("/assets/"):
-            response.headers["Cache-Control"] = "no-store, max-age=0"
+        response.headers["Cache-Control"] = "no-store, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        if path.startswith("/assets/"):
+            response.headers["X-Content-Type-Options"] = "nosniff"
     return response
 
 
