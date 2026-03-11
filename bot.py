@@ -947,8 +947,20 @@ async def save_settings(request: web.Request):
 
 # ... (rest of the API endpoints remain the same)
 
+@web.middleware
+async def cache_control_middleware(request, handler):
+    response = await handler(request)
+    if isinstance(response, web.FileResponse):
+        path = request.path
+        if path == "/" or path.endswith(".html"):
+            response.headers["Cache-Control"] = "no-store, max-age=0"
+        elif path.startswith("/assets/"):
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    return response
+
+
 def build_app():
-    app = web.Application()
+    app = web.Application(middlewares=[cache_control_middleware])
     
     # Health check for cron-job
     app.router.add_get("/health", health_check)
