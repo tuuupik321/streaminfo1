@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Cog, MessageSquare, Palette, Languages, Sparkles } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,6 +16,15 @@ type SettingsModalProps = {
 };
 
 type Ripple = { id: number; x: number; y: number };
+type TelegramWindow = Window & {
+  Telegram?: {
+    WebApp?: {
+      HapticFeedback?: {
+        impactOccurred?: (style: "light" | "medium" | "heavy" | "rigid" | "soft") => void;
+      };
+    };
+  };
+};
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -36,9 +45,22 @@ export function SettingsModal({ open, anchorRect, onClose }: SettingsModalProps)
   const { glowIntensity, setGlowIntensity, setLanguage } = useSettingsStore();
   const [ripples, setRipples] = useState<Ripple[]>([]);
   const isAnchored = Boolean(anchorRect && typeof window !== "undefined" && window.innerWidth < 768);
-  const panelStyle = isAnchored && anchorRect ? { left: anchorRect.right, top: anchorRect.top } : undefined;
+  const panelStyle = (() => {
+    if (!isAnchored || !anchorRect || typeof window === "undefined") return undefined;
+    const padding = 12;
+    const panelWidth = Math.min(window.innerWidth * 0.92, 420);
+    const left = Math.min(
+      window.innerWidth - padding,
+      Math.max(panelWidth + padding, anchorRect.right),
+    );
+    const top = Math.min(
+      window.innerHeight - padding - 24,
+      Math.max(padding, anchorRect.top),
+    );
+    return { left, top };
+  })();
   const panelClass = isAnchored
-    ? "fixed w-[min(92vw,420px)] -translate-x-full -translate-y-3 origin-bottom-right overflow-hidden rounded-[22px] border border-white/10 bg-[#0c0c12] shadow-[0_30px_80px_rgba(0,0,0,0.45)]"
+    ? "fixed w-[min(92vw,420px)] max-h-[75vh] -translate-x-full -translate-y-3 origin-bottom-right overflow-y-auto rounded-[22px] border border-white/10 bg-[#0c0c12] shadow-[0_30px_80px_rgba(0,0,0,0.45)]"
     : "w-full max-w-4xl overflow-hidden rounded-[22px] border border-white/10 bg-[#0c0c12] shadow-[0_30px_80px_rgba(0,0,0,0.45)]";
   const containerClass = isAnchored
     ? "fixed inset-0 z-[90] bg-black/60"
@@ -54,6 +76,12 @@ export function SettingsModal({ open, anchorRect, onClose }: SettingsModalProps)
       setRipples((prev) => prev.filter((r) => r.id !== id));
     }, 500);
   };
+
+  useEffect(() => {
+    if (!open) return;
+    const tg = (window as TelegramWindow).Telegram?.WebApp;
+    tg?.HapticFeedback?.impactOccurred?.("light");
+  }, [open]);
 
   return (
     <AnimatePresence>
