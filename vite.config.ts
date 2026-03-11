@@ -43,6 +43,20 @@ function manualChunks(id: string) {
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  optimizeDeps: {
+    include: [
+      "react",
+      "react-dom",
+      "react/jsx-runtime",
+      "react/jsx-dev-runtime",
+      "use-callback-ref",
+      "react-remove-scroll",
+      "react-remove-scroll-bar",
+      "react-style-singleton",
+      "use-sidecar",
+      "vaul",
+    ],
+  },
   build: {
     sourcemap: true,
     rollupOptions: {
@@ -69,6 +83,7 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+    dedupe: ["react", "react-dom"],
   },
   envPrefix: "VITE_",
 }));
