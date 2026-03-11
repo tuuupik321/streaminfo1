@@ -97,6 +97,8 @@ class SaveSettingsPayload(BaseModel):
     twitch_name: Optional[str] = None
     yt_channel_id: Optional[str] = None
     donationalerts_name: Optional[str] = None
+    kick_name: Optional[str] = None
+    telegram_channel: Optional[str] = None
 
 class VerifyChannelPayload(BaseModel):
     user_id: int
@@ -110,6 +112,50 @@ class User(Base):
     twitch_name = Column(String, nullable=True)
     yt_channel_id = Column(String, nullable=True)
     donationalerts_name = Column(String, nullable=True)
+
+class Streamer(Base):
+    __tablename__ = "streamers"
+    id = Column(BigInteger, primary_key=True)
+    username = Column(String(50), nullable=True)
+    twitch_connected = Column(Boolean, default=False)
+    youtube_connected = Column(Boolean, default=False)
+    telegram_channel = Column(String(100), nullable=True)
+    telegram_connected = Column(Boolean, default=False)
+    kick_connected = Column(Boolean, default=False)
+    kick_name = Column(String(50), nullable=True)
+    language = Column(String(5), default="ru")
+
+class StreamGoal(Base):
+    __tablename__ = "stream_goals"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    streamer_id = Column(BigInteger, index=True, nullable=False)
+    goal_type = Column(String, nullable=False)
+    current_value = Column(Integer, default=0)
+    target_value = Column(Integer, nullable=False)
+
+class Donation(Base):
+    __tablename__ = "donations"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    streamer_id = Column(BigInteger, index=True, nullable=False)
+    donor_name = Column(String(50), nullable=False)
+    amount = Column(Integer, nullable=False)
+    timestamp = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+
+class VisualSetting(Base):
+    __tablename__ = "visual_settings"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    streamer_id = Column(BigInteger, index=True, nullable=False)
+    liquid_glow = Column(Integer, default=50)
+
+class PlatformStat(Base):
+    __tablename__ = "platform_stats"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    streamer_id = Column(BigInteger, index=True, nullable=False)
+    platform = Column(String(20), nullable=False)
+    followers = Column(Integer, default=0)
+    views = Column(Integer, default=0)
+    streams = Column(Integer, default=0)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
 
 class Question(Base):
     __tablename__ = "questions"
@@ -218,6 +264,32 @@ async def write_audit_log(telegram_id: str, action: str, details: Optional[str] 
             await session.commit()
     except Exception as error:
         log_event("audit_log_failed", error=str(error), action=action, telegram_id=telegram_id)
+
+
+async def ensure_streamer(session: AsyncSession, user_id: int, username: Optional[str]) -> Streamer:
+    streamer = await session.get(Streamer, user_id)
+    if streamer:
+        if username and streamer.username != username:
+            streamer.username = username
+        return streamer
+    streamer = Streamer(id=user_id, username=username or None)
+    session.add(streamer)
+    await session.commit()
+    return streamer
+
+
+async def upsert_platform_stat(session: AsyncSession, streamer_id: int, platform: str, followers: int = 0, views: int = 0, streams: int = 0) -> None:
+    query = select(PlatformStat).where(PlatformStat.streamer_id == streamer_id, PlatformStat.platform == platform)
+    row = (await session.execute(query)).scalars().first()
+    if not row:
+        row = PlatformStat(streamer_id=streamer_id, platform=platform, followers=followers, views=views, streams=streams)
+        session.add(row)
+    else:
+        row.followers = followers
+        row.views = views
+        row.streams = streams
+        row.updated_at = datetime.now(timezone.utc)
+    await session.commit()
 
 
 def validate_runtime_config() -> None:
@@ -582,6 +654,7 @@ async def _require_verified_user(request: web.Request):
 
     log_event("auth_success", user_id=verified.get("user_id"))
     request["verified_user_id"] = str(verified["user_id"])
+    request["verified_user"] = verified.get("user") or {}
     return None
 
 
@@ -804,6 +877,13 @@ async def verify_channel(request: web.Request):
                 subscribers = await bot.get_chat_member_count(f"@{username}")
             except TelegramAPIError:
                 subscribers = None
+            try:
+                me = await bot.get_me()
+                member = await bot.get_chat_member(f"@{username}", me.id)
+                if member.status not in {"administrator", "creator"}:
+                    return web.json_response({"error": "bot_not_admin"}, status=403)
+            except TelegramAPIError:
+                return web.json_response({"error": "bot_not_admin"}, status=403)
             return web.json_response({
                 "status": "ok",
                 "platform": "telegram",
@@ -814,6 +894,18 @@ async def verify_channel(request: web.Request):
             })
         except TelegramAPIError:
             return web.json_response({"error": "telegram_not_found"}, status=404)
+
+    if platform == "kick":
+        username = _extract_username(channel_raw)
+        if not username:
+            return web.json_response({"error": "kick_not_found"}, status=404)
+        return web.json_response({
+            "status": "ok",
+            "platform": "kick",
+            "name": username,
+            "url": f"https://kick.com/{username}",
+            "channel": username,
+        })
 
     if platform == "donatealerts":
         username = _extract_username(channel_raw)
@@ -877,6 +969,17 @@ async def donations_webhook(request: web.Request):
                         source=event["source"],
                     )
                 )
+                if OWNER_TELEGRAM_ID:
+                    try:
+                        session.add(
+                            Donation(
+                                streamer_id=int(OWNER_TELEGRAM_ID),
+                                donor_name=event["donor"],
+                                amount=int(event["amount"]),
+                            )
+                        )
+                    except Exception:
+                        pass
                 await session.commit()
         except Exception as error:
             log_event("donation_event_persist_failed", error=str(error))
@@ -909,6 +1012,163 @@ async def get_donations_live(request: web.Request):
     return web.json_response({"items": items, "configured": configured})
 
 
+async def get_donations(request: web.Request):
+    auth_error = await _require_verified_user(request)
+    if auth_error:
+        return auth_error
+    uid = request.query.get("user_id")
+    if not uid:
+        return web.json_response({"error": "no_uid"}, status=400)
+    if REQUIRE_INIT_DATA and request.get("verified_user_id") and request["verified_user_id"] != str(uid):
+        return web.json_response({"error": "user_mismatch"}, status=403)
+    if not async_session:
+        return web.json_response({"error": "db_not_configured"}, status=500)
+    items: list[dict[str, Any]] = []
+    async with async_session() as session:
+        query = select(Donation).where(Donation.streamer_id == int(uid)).order_by(desc(Donation.timestamp)).limit(50)
+        rows = (await session.execute(query)).scalars().all()
+        items = [
+            {
+                "id": str(row.id),
+                "donor": row.donor_name,
+                "amount": row.amount,
+                "currency": "RUB",
+                "message": "",
+                "source": "donation",
+                "createdAt": row.timestamp.isoformat(),
+            }
+            for row in rows
+        ]
+    return web.json_response({"items": items, "configured": bool(DONATALERTS_ACCESS_TOKEN)})
+
+
+async def get_stream_goals(request: web.Request):
+    auth_error = await _require_verified_user(request)
+    if auth_error:
+        return auth_error
+    uid = request.query.get("user_id")
+    if not uid:
+        return web.json_response({"error": "no_uid"}, status=400)
+    if REQUIRE_INIT_DATA and request.get("verified_user_id") and request["verified_user_id"] != str(uid):
+        return web.json_response({"error": "user_mismatch"}, status=403)
+    if not async_session:
+        return web.json_response({"error": "db_not_configured"}, status=500)
+    async with async_session() as session:
+        goals = (await session.execute(select(StreamGoal).where(StreamGoal.streamer_id == int(uid)))).scalars().all()
+        return web.json_response([
+            {
+                "id": g.id,
+                "goal_type": g.goal_type,
+                "current_value": g.current_value,
+                "target_value": g.target_value,
+            }
+            for g in goals
+        ])
+
+
+async def generate_stream_goals(request: web.Request):
+    auth_error = await _require_verified_user(request)
+    if auth_error:
+        return auth_error
+    uid = request.query.get("user_id")
+    if not uid:
+        try:
+            payload = await request.json()
+            uid = str(payload.get("user_id") or "")
+        except Exception:
+            uid = ""
+    if not uid:
+        return web.json_response({"error": "no_uid"}, status=400)
+    if REQUIRE_INIT_DATA and request.get("verified_user_id") and request["verified_user_id"] != str(uid):
+        return web.json_response({"error": "user_mismatch"}, status=403)
+    if not async_session:
+        return web.json_response({"error": "db_not_configured"}, status=500)
+    defaults = {
+        "followers": 50,
+        "online": 100,
+        "subscriptions": 10,
+    }
+    async with async_session() as session:
+        existing = (await session.execute(select(StreamGoal).where(StreamGoal.streamer_id == int(uid)))).scalars().all()
+        if existing:
+            return web.json_response({"status": "ok"})
+        for goal_type, target in defaults.items():
+            session.add(StreamGoal(streamer_id=int(uid), goal_type=goal_type, current_value=0, target_value=target))
+        await session.commit()
+    return web.json_response({"status": "ok"})
+
+
+async def get_preferences(request: web.Request):
+    auth_error = await _require_verified_user(request)
+    if auth_error:
+        return auth_error
+    uid = request.query.get("user_id")
+    if not uid:
+        return web.json_response({"error": "no_uid"}, status=400)
+    if REQUIRE_INIT_DATA and request.get("verified_user_id") and request["verified_user_id"] != str(uid):
+        return web.json_response({"error": "user_mismatch"}, status=403)
+    if not async_session:
+        return web.json_response({"error": "db_not_configured"}, status=500)
+    async with async_session() as session:
+        streamer = await ensure_streamer(session, int(uid), (request.get("verified_user") or {}).get("username"))
+        visual = (await session.execute(select(VisualSetting).where(VisualSetting.streamer_id == int(uid)))).scalars().first()
+        return web.json_response({
+            "language": streamer.language,
+            "liquid_glow": visual.liquid_glow if visual else 50,
+        })
+
+
+async def save_preferences(request: web.Request):
+    auth_error = await _require_verified_user(request)
+    if auth_error:
+        return auth_error
+    try:
+        payload = await request.json()
+    except Exception:
+        return web.json_response({"error": "bad_request"}, status=400)
+    uid = payload.get("user_id")
+    if not uid:
+        return web.json_response({"error": "no_uid"}, status=400)
+    if REQUIRE_INIT_DATA and request.get("verified_user_id") and request["verified_user_id"] != str(uid):
+        return web.json_response({"error": "user_mismatch"}, status=403)
+    if not async_session:
+        return web.json_response({"error": "db_not_configured"}, status=500)
+    language = payload.get("language")
+    liquid_glow = payload.get("liquid_glow")
+    async with async_session() as session:
+        streamer = await ensure_streamer(session, int(uid), (request.get("verified_user") or {}).get("username"))
+        if language:
+            streamer.language = str(language)
+        visual = (await session.execute(select(VisualSetting).where(VisualSetting.streamer_id == int(uid)))).scalars().first()
+        if not visual:
+            visual = VisualSetting(streamer_id=int(uid), liquid_glow=int(liquid_glow or 50))
+            session.add(visual)
+        else:
+            if liquid_glow is not None:
+                visual.liquid_glow = int(liquid_glow)
+        await session.commit()
+    return web.json_response({"status": "ok"})
+
+
+async def get_platforms(request: web.Request):
+    auth_error = await _require_verified_user(request)
+    if auth_error:
+        return auth_error
+    uid = request.query.get("user_id")
+    if not uid:
+        return web.json_response({"error": "no_uid"}, status=400)
+    if REQUIRE_INIT_DATA and request.get("verified_user_id") and request["verified_user_id"] != str(uid):
+        return web.json_response({"error": "user_mismatch"}, status=403)
+    if not async_session:
+        return web.json_response({"error": "db_not_configured"}, status=500)
+    async with async_session() as session:
+        stats = (await session.execute(select(PlatformStat).where(PlatformStat.streamer_id == int(uid)))).scalars().all()
+        return web.json_response([
+            {"platform": s.platform, "followers": s.followers, "views": s.views, "streams": s.streams}
+            for s in stats
+        ])
+
+
 async def save_settings(request: web.Request):
     auth_error = await _require_verified_user(request)
     if auth_error:
@@ -931,6 +1191,8 @@ async def save_settings(request: web.Request):
     twitch_name = payload.twitch_name
     yt_channel_id = payload.yt_channel_id
     donationalerts_name = payload.donationalerts_name
+    kick_name = payload.kick_name
+    telegram_channel = payload.telegram_channel
 
     if twitch_name:
         if not all([TWITCH_ID, TWITCH_SECRET]):
@@ -963,6 +1225,7 @@ async def save_settings(request: web.Request):
 
     try:
         async with async_session() as session:
+            streamer = await ensure_streamer(session, payload.user_id, (request.get("verified_user") or {}).get("username"))
             user = await session.get(User, payload.user_id)
             if not user:
                 user = User(user_id=payload.user_id)
@@ -971,6 +1234,17 @@ async def save_settings(request: web.Request):
             user.twitch_name = twitch_name
             user.yt_channel_id = yt_channel_id
             user.donationalerts_name = donationalerts_name
+
+            if twitch_name is not None:
+                streamer.twitch_connected = bool(twitch_name)
+            if yt_channel_id is not None:
+                streamer.youtube_connected = bool(yt_channel_id)
+            if telegram_channel is not None:
+                streamer.telegram_channel = telegram_channel
+                streamer.telegram_connected = bool(telegram_channel)
+            if kick_name is not None:
+                streamer.kick_connected = bool(kick_name)
+                streamer.kick_name = kick_name
             await session.commit()
     except Exception as error:
         log_event("save_settings_failed", error=str(error))
@@ -988,6 +1262,8 @@ async def save_settings(request: web.Request):
             "twitch_name": twitch_name,
             "yt_channel_id": yt_channel_id,
             "donationalerts_name": donationalerts_name,
+            "kick_name": kick_name,
+            "telegram_channel": telegram_channel,
         }
     )
 
@@ -1027,6 +1303,11 @@ def build_app():
     app.router.add_get("/api/stats", get_all_stats)
     app.router.add_get("/api/settings", get_settings)
     app.router.add_get("/api/analytics", get_analytics)
+    app.router.add_get("/api/stream_goals", get_stream_goals)
+    app.router.add_post("/api/stream_goals/generate", generate_stream_goals)
+    app.router.add_get("/api/preferences", get_preferences)
+    app.router.add_post("/api/preferences", save_preferences)
+    app.router.add_get("/api/platforms", get_platforms)
     app.router.add_get("/api/questions", get_questions)
     app.router.add_post("/api/questions/answer", answer_question)
     app.router.add_post("/api/live_banner", set_live_banner)
@@ -1035,6 +1316,7 @@ def build_app():
     app.router.add_post("/api/save_settings", save_settings)
     app.router.add_post("/api/donations/webhook", donations_webhook)
     app.router.add_get("/api/donations/live", get_donations_live)
+    app.router.add_get("/api/donations", get_donations)
     # ... (add other api routes here)
 
     if bot and WEBHOOK_ENABLED:
@@ -1139,6 +1421,7 @@ async def get_all_stats(request: web.Request):
     if REQUIRE_INIT_DATA and request.get("verified_user_id") and request["verified_user_id"] != str(uid): return web.json_response({"error": "user_mismatch"}, status=403)
     if not async_session: return web.json_response({"error": "db_not_configured"}, status=500)
     async with async_session() as session:
+        streamer = await ensure_streamer(session, int(uid), (request.get("verified_user") or {}).get("username"))
         user = await session.get(User, int(uid))
         if not user: return web.json_response({"is_linked": False, "clicks": 0, "twitch": {"online": False, "viewers": 0}, "youtube": {"subscribers": 0}})
         twitch_data = await fetch_twitch(user.twitch_name)
@@ -1149,7 +1432,24 @@ async def get_all_stats(request: web.Request):
             if profile.get("views") is not None:
                 twitch_data["views"] = profile.get("views")
             twitch_data["url"] = f"https://twitch.tv/{user.twitch_name}"
+            await upsert_platform_stat(
+                session,
+                streamer.id,
+                "twitch",
+                followers=int(profile.get("followers") or 0) if profile else 0,
+                views=int(profile.get("views") or 0) if profile else 0,
+                streams=0,
+            )
         youtube_data = await fetch_youtube(user.yt_channel_id)
+        if user.yt_channel_id:
+            await upsert_platform_stat(
+                session,
+                streamer.id,
+                "youtube",
+                followers=int(youtube_data.get("subscribers") or 0),
+                views=0,
+                streams=0,
+            )
         await update_stream_history(session, int(uid), bool(twitch_data.get("online")), int(twitch_data.get("viewers", 0)))
         await session.commit()
         return web.json_response({"is_linked": True, "clicks": user.clicks, "twitch": twitch_data, "youtube": youtube_data})
@@ -1162,13 +1462,28 @@ async def get_settings(request: web.Request):
     if REQUIRE_INIT_DATA and request.get("verified_user_id") and request["verified_user_id"] != str(uid): return web.json_response({"error": "user_mismatch"}, status=403)
     if not async_session: return web.json_response({"error": "db_not_configured"}, status=500)
     async with async_session() as session:
+        streamer = await ensure_streamer(session, int(uid), (request.get("verified_user") or {}).get("username"))
         user = await session.get(User, int(uid))
-        if not user: return web.json_response({"is_linked": False, "twitch_name": None, "yt_channel_id": None, "donationalerts_name": None})
+        if not user:
+            return web.json_response({
+                "is_linked": False,
+                "twitch_name": None,
+                "yt_channel_id": None,
+                "donationalerts_name": None,
+                "telegram_channel": streamer.telegram_channel,
+                "kick_connected": streamer.kick_connected,
+                "kick_name": streamer.kick_name,
+                "language": streamer.language,
+            })
         return web.json_response({
-            "is_linked": bool(user.twitch_name or user.yt_channel_id),
+            "is_linked": bool(user.twitch_name or user.yt_channel_id or streamer.kick_connected or streamer.telegram_connected),
             "twitch_name": user.twitch_name,
             "yt_channel_id": user.yt_channel_id,
             "donationalerts_name": user.donationalerts_name,
+            "telegram_channel": streamer.telegram_channel,
+            "kick_connected": streamer.kick_connected,
+            "kick_name": streamer.kick_name,
+            "language": streamer.language,
         })
 
 async def get_analytics(request: web.Request):

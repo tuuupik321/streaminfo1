@@ -29,8 +29,17 @@ type ActivityItem = {
   kind: "donation" | "subscription" | "gift";
 };
 
-const fetchDonations = async (): Promise<DonationsApiResponse> => {
-  const response = await fetch("/api/donations/live");
+type TelegramWindow = Window & {
+  Telegram?: {
+    WebApp?: {
+      initData?: string;
+      initDataUnsafe?: { user?: { id?: number } };
+    };
+  };
+};
+
+const fetchDonations = async (userId: number, initData: string): Promise<DonationsApiResponse> => {
+  const response = await fetch(`/api/donations?user_id=${userId}&init_data=${encodeURIComponent(initData)}`);
   if (!response.ok) {
     throw new Error("Failed to fetch donations");
   }
@@ -58,9 +67,14 @@ function ActivityRow({ item, index }: { item: ActivityItem; index: number }) {
 
 export default function DonationsPage() {
   const { t } = useI18n();
+  const tg = (window as TelegramWindow).Telegram?.WebApp;
+  const userId = tg?.initDataUnsafe?.user?.id;
+  const initData = tg?.initData || "";
+
   const { data, isLoading, error } = useQuery<DonationsApiResponse, Error>({
     queryKey: ["donations"],
-    queryFn: fetchDonations,
+    queryFn: () => fetchDonations(userId!, initData),
+    enabled: !!userId && !!initData,
     refetchInterval: 15_000,
   });
 
@@ -87,9 +101,6 @@ export default function DonationsPage() {
       .slice(0, 3);
   }, [data?.items]);
 
-  const goalAmount = 20000;
-  const totalRaised = useMemo(() => (data?.items ?? []).reduce((sum, item) => sum + item.amount, 0), [data?.items]);
-  const goalPercent = Math.min(100, Math.round((totalRaised / goalAmount) * 100));
 
   const reduceMotion = useReducedMotion();
   const container = makeStagger(reduceMotion);
@@ -148,7 +159,7 @@ export default function DonationsPage() {
         </div>
       </motion.div>
 
-      <motion.div variants={item} className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+      <motion.div variants={item} className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="saas-card">
           <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("donations.topSupporters", "Top supporters")}</p>
           <div className="mt-4 space-y-3 text-sm text-white/70">
@@ -162,14 +173,6 @@ export default function DonationsPage() {
             ) : (
               <p className="text-xs text-white/50">{t("donations.noTopSupporters", "No donors yet.")}</p>
             )}
-          </div>
-        </div>
-        <div className="saas-card">
-          <p className="text-xs uppercase tracking-[0.3em] text-white/50">{t("donations.goalTitle", "Donation goal")}</p>
-          <p className="mt-3 text-sm text-white/70">{t("donations.goalTarget", "Goal")}: {new Intl.NumberFormat("ru-RU").format(goalAmount)} {data?.items?.[0]?.currency || "RUB"}</p>
-          <p className="text-sm text-white/70">{t("donations.goalProgress", "Progress")}: {new Intl.NumberFormat("ru-RU").format(totalRaised)} {data?.items?.[0]?.currency || "RUB"}</p>
-          <div className="mt-3 h-2 rounded-full bg-white/10">
-            <div className="h-2 rounded-full bg-emerald-400" style={{ width: `${goalPercent}%` }} />
           </div>
         </div>
       </motion.div>

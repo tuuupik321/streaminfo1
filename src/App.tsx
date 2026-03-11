@@ -18,6 +18,7 @@ import { cn } from "./lib/utils";
 import { SplashScreen } from "./components/SplashScreen";
 import { SettingsModal } from "./components/SettingsModal";
 import { Cog } from "lucide-react";
+import { useSettingsStore } from "@/store/useSettingsStore";
 
 const StreamInfoPage = lazy(() => import("./pages/StreamInfoPage"));
 const IntegrationsPage = lazy(() => import("./pages/IntegrationsPage"));
@@ -121,11 +122,52 @@ function AppShellWithOverlays() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsAnchor, setSettingsAnchor] = useState<DOMRect | null>(null);
   const [showVpnWarning, setShowVpnWarning] = useState(false);
+  const { language, glowIntensity, setLanguage, setGlowIntensity } = useSettingsStore();
 
   useEffect(() => {
     const timer = window.setTimeout(() => setShowSplash(false), 1500);
     return () => window.clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    const tg = (window as TelegramWindow).Telegram?.WebApp;
+    const userId = tg?.initDataUnsafe?.user?.id;
+    const initData = tg?.initData || "";
+    if (!userId || !initData) return;
+    const fetchPrefs = async () => {
+      try {
+        const res = await fetch(`/api/preferences?user_id=${userId}&init_data=${encodeURIComponent(initData)}`);
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) {
+          if (data.language) setLanguage(data.language);
+          if (typeof data.liquid_glow === "number") setGlowIntensity(data.liquid_glow / 100);
+        }
+      } catch {
+        // ignore
+      }
+    };
+    void fetchPrefs();
+  }, [setLanguage, setGlowIntensity]);
+
+  useEffect(() => {
+    const tg = (window as TelegramWindow).Telegram?.WebApp;
+    const userId = tg?.initDataUnsafe?.user?.id;
+    const initData = tg?.initData || "";
+    if (!userId || !initData) return;
+    const timer = window.setTimeout(() => {
+      fetch("/api/preferences", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: userId,
+          language,
+          liquid_glow: Math.round(glowIntensity * 100),
+          init_data: initData,
+        }),
+      }).catch(() => undefined);
+    }, 400);
+    return () => window.clearTimeout(timer);
+  }, [language, glowIntensity]);
 
   useEffect(() => {
     const fetchVpn = async () => {

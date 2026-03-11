@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { Twitch, Youtube, Send, Heart, Sparkles } from "lucide-react";
+import { Twitch, Youtube, Send, Heart, Sparkles, Flame } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { makeFadeUp, makeStagger } from "@/shared/motion";
 
 type Ripple = { id: number; x: number; y: number };
-type Platform = "twitch" | "youtube" | "telegram" | "donatealerts";
+type Platform = "twitch" | "youtube" | "telegram" | "donatealerts" | "kick";
 
 type PlatformConfig = {
   key: Platform;
@@ -42,6 +42,7 @@ const platforms: PlatformConfig[] = [
   { key: "youtube", label: "YouTube", color: "#FF0000", placeholder: "https://youtube.com/@channel", icon: Youtube },
   { key: "telegram", label: "Telegram", color: "#00B2FF", placeholder: "@channel", icon: Send },
   { key: "donatealerts", label: "DonateAlerts", color: "#F57B20", placeholder: "https://donationalerts.com/r/username", icon: Heart },
+  { key: "kick", label: "Kick", color: "#53FC18", placeholder: "https://kick.com/username", icon: Flame },
 ];
 
 const buildChannelStats = (platform: Platform, data: VerifyResult, t: (key: string, fallback?: string) => string) => {
@@ -88,6 +89,9 @@ const extractHandle = (value: string) => {
   }
   if (raw.includes("donationalerts.com/r/")) {
     return raw.split("donationalerts.com/r/")[1].split(/[/?#]/)[0];
+  }
+  if (raw.includes("kick.com/")) {
+    return raw.split("kick.com/")[1].split(/[/?#]/)[0];
   }
   return raw;
 };
@@ -205,6 +209,7 @@ export default function IntegrationsPage() {
     youtube: null,
     telegram: null,
     donatealerts: null,
+    kick: null,
   });
   const [botUsername, setBotUsername] = useState<string | null>(null);
   const [loadingSaved, setLoadingSaved] = useState(false);
@@ -212,7 +217,7 @@ export default function IntegrationsPage() {
     return platforms.reduce<Record<Platform, string>>((acc, p) => {
       acc[p.key] = p.label;
       return acc;
-    }, { twitch: "Twitch", youtube: "YouTube", telegram: "Telegram", donatealerts: "DonateAlerts" });
+    }, { twitch: "Twitch", youtube: "YouTube", telegram: "Telegram", donatealerts: "DonateAlerts", kick: "Kick" });
   }, []);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successData, setSuccessData] = useState<VerifyResult | null>(null);
@@ -329,6 +334,20 @@ export default function IntegrationsPage() {
             }),
           );
         }
+        if (data?.telegram_channel) {
+          tasks.push(
+            hydrateConnection("telegram", data.telegram_channel).then((payload) => {
+              next.telegram = payload;
+            }),
+          );
+        }
+        if (data?.kick_name) {
+          tasks.push(
+            hydrateConnection("kick", data.kick_name).then((payload) => {
+              next.kick = payload;
+            }),
+          );
+        }
         await Promise.all(tasks);
         if (Object.keys(next).length) {
           setConnected((prev) => ({ ...prev, ...next }));
@@ -430,6 +449,22 @@ export default function IntegrationsPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ user_id: userId, donationalerts_name: donatealertsName, init_data: initData }),
+        });
+      }
+      if (result.platform === "telegram") {
+        const channel = extractHandle(result.channel || result.name);
+        await fetch("/api/save_settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: userId, telegram_channel: channel.startsWith("@") ? channel : `@${channel}`, init_data: initData }),
+        });
+      }
+      if (result.platform === "kick") {
+        const kickName = extractHandle(result.url || result.name);
+        await fetch("/api/save_settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: userId, kick_name: kickName, init_data: initData }),
         });
       }
     }

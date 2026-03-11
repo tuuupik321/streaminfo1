@@ -16,6 +16,23 @@ import { Bar, BarChart, Brush, Cell, Line, LineChart, Pie, PieChart as RePieChar
 import { makeFadeUp, makeStagger } from "@/shared/motion";
 import { cn } from "@/lib/utils";
 import { ActivityMap } from "@/components/dashboard/ActivityMap";
+import { useQuery } from "@tanstack/react-query";
+
+type TelegramWindow = Window & {
+  Telegram?: {
+    WebApp?: {
+      initData?: string;
+      initDataUnsafe?: { user?: { id?: number } };
+    };
+  };
+};
+
+type PlatformStat = {
+  platform: string;
+  followers: number;
+  views: number;
+  streams: number;
+};
 
 type TimelineItem = {
   time: string;
@@ -52,6 +69,20 @@ export default function Analytics() {
   const [activeChart, setActiveChart] = useState<ChartType>("clicks");
 
   const { data, isLoading, error } = useAnalyticsData(period);
+  const tg = (window as TelegramWindow).Telegram?.WebApp;
+  const userId = tg?.initDataUnsafe?.user?.id;
+  const initData = tg?.initData || "";
+
+  const { data: platformStats } = useQuery<PlatformStat[], Error>({
+    queryKey: ["platforms", userId],
+    queryFn: async () => {
+      const res = await fetch(`/api/platforms?user_id=${userId}&init_data=${encodeURIComponent(initData)}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!userId && !!initData,
+    refetchInterval: 60_000,
+  });
 
   const timeline = useMemo(() => mapTimeline(data?.timeline), [data?.timeline]);
   const peak = useMemo(() => Math.max(...timeline.map((p) => p.viewers), 0), [timeline]);
@@ -114,16 +145,26 @@ export default function Analytics() {
     followers: Math.max(0, Math.round((p.viewers + index) / 8)),
   }));
 
+  const platformMap = useMemo(() => {
+    const map: Record<string, PlatformStat> = {};
+    (platformStats || []).forEach((stat) => {
+      map[stat.platform] = stat;
+    });
+    return map;
+  }, [platformStats]);
+
   const platformComparison = [
-    { name: "Twitch", value: Math.max(20, (data?.clicks ?? 40) * 0.6) },
-    { name: "YouTube", value: Math.max(10, (data?.clicks ?? 40) * 0.25) },
-    { name: "Telegram", value: Math.max(5, (data?.clicks ?? 40) * 0.15) },
+    { name: "Twitch", value: platformMap.twitch?.followers ?? 0 },
+    { name: "YouTube", value: platformMap.youtube?.followers ?? 0 },
+    { name: "Kick", value: platformMap.kick?.followers ?? 0 },
+    { name: "Trovo", value: platformMap.trovo?.followers ?? 0 },
   ];
 
   const donutData = [
-    { name: "Twitch", value: 58, color: "#9146FF" },
-    { name: "YouTube", value: 27, color: "#FF0000" },
-    { name: "Telegram", value: 15, color: "#00B2FF" },
+    { name: "Twitch", value: platformMap.twitch?.views ?? 0, color: "#9146FF" },
+    { name: "YouTube", value: platformMap.youtube?.views ?? 0, color: "#FF0000" },
+    { name: "Kick", value: platformMap.kick?.views ?? 0, color: "#53FC18" },
+    { name: "Trovo", value: platformMap.trovo?.views ?? 0, color: "#00B2FF" },
   ];
 
   const reduceMotion = useReducedMotion();

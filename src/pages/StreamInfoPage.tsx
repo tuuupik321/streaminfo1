@@ -34,12 +34,40 @@ type DonationsApiResponse = {
 
 type ActivityItem = { id: string; text: string; time: string };
 
-const fetchDonations = async (): Promise<DonationsApiResponse> => {
-  const response = await fetch("/api/donations/live");
+type StreamGoal = {
+  id: number;
+  goal_type: "followers" | "online" | "subscriptions";
+  current_value: number;
+  target_value: number;
+};
+
+type TelegramWindow = Window & {
+  Telegram?: {
+    WebApp?: {
+      initData?: string;
+      initDataUnsafe?: { user?: { id?: number } };
+    };
+  };
+};
+
+const fetchDonations = async (userId: number, initData: string): Promise<DonationsApiResponse> => {
+  const response = await fetch(`/api/donations?user_id=${userId}&init_data=${encodeURIComponent(initData)}`);
   if (!response.ok) {
     throw new Error("Failed to fetch donations");
   }
   return response.json();
+};
+
+const fetchGoals = async (userId: number, initData: string): Promise<StreamGoal[]> => {
+  const response = await fetch(`/api/stream_goals?user_id=${userId}&init_data=${encodeURIComponent(initData)}`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch goals");
+  }
+  const data = await response.json();
+  if (Array.isArray(data) && data.length === 0) {
+    await fetch(`/api/stream_goals/generate?user_id=${userId}&init_data=${encodeURIComponent(initData)}`, { method: "POST" });
+  }
+  return Array.isArray(data) ? data : [];
 };
 
 export default function StreamInfoPage() {
@@ -47,11 +75,22 @@ export default function StreamInfoPage() {
   const { t } = useI18n();
   const [period, setPeriod] = useState("today");
   const { data, isLoading, isRefetching, refetch, error } = useStreamInfo(period);
+  const tg = (window as TelegramWindow).Telegram?.WebApp;
+  const userId = tg?.initDataUnsafe?.user?.id;
+  const initData = tg?.initData || "";
 
   const { data: donationsData } = useQuery<DonationsApiResponse, Error>({
     queryKey: ["donations"],
-    queryFn: fetchDonations,
+    queryFn: () => fetchDonations(userId!, initData),
+    enabled: !!userId && !!initData,
     refetchInterval: 15_000,
+  });
+
+  const { data: goalsData } = useQuery<StreamGoal[], Error>({
+    queryKey: ["stream-goals", userId],
+    queryFn: () => fetchGoals(userId!, initData),
+    enabled: !!userId && !!initData,
+    refetchInterval: 60_000,
   });
 
   const currentTelegramId = getCurrentTelegramId();
@@ -68,6 +107,13 @@ export default function StreamInfoPage() {
   const viewersNow = data?.twitch?.viewers ?? 0;
   const clicksToday = data?.clicks ?? 0;
   const followers = data?.twitch?.followers ?? 0;
+  const goalsMap = useMemo(() => {
+    const map: Record<string, StreamGoal> = {};
+    (goalsData || []).forEach((goal) => {
+      map[goal.goal_type] = goal;
+    });
+    return map;
+  }, [goalsData]);
 
   const donationsToday = useMemo(() => {
     const items = donationsData?.items ?? [];
@@ -86,7 +132,7 @@ export default function StreamInfoPage() {
     for (const donation of donationsData?.items ?? []) {
       items.push({
         id: `don-${donation.id}`,
-        text: `${donation.donor} ${t("donations.donated", "donated")} ${donation.amount.toLocaleString()} ₽`,
+        text: `${donation.donor} ${t("donations.donated", "donated")} ${donation.amount.toLocaleString()} ${donation.currency || "RUB"}`,
         time: donation.createdAt,
       });
     }
@@ -263,21 +309,21 @@ export default function StreamInfoPage() {
               <h3 className="text-sm font-semibold">{t("dashboard.streamGoals", "Stream Goals")}</h3>
               <div className="mt-4 space-y-3 text-xs text-white/70">
                 <div>
-                  <div className="flex justify-between"><span>{t("dashboard.goalStream", "Stream goal")}</span><span>{clicksToday}/50</span></div>
+                  <div className="flex justify-between"><span>{t("dashboard.goalStream", "Stream goal")}</span><span>{viewersNow} / {(goalsMap.online?.target_value ?? 100)}</span></div>
                   <div className="mt-2 h-2 rounded-full bg-white/10">
-                    <div className="h-2 rounded-full bg-primary" style={{ width: `${Math.min(100, (clicksToday / 50) * 100)}%` }} />
+                    <div className="h-2 rounded-full bg-primary" style={{ width: `${Math.min(100, (viewersNow / (goalsMap.online?.target_value ?? 100)) * 100)}%` }} />
                   </div>
                 </div>
                 <div>
-                  <div className="flex justify-between"><span>{t("dashboard.goalDonations", "Donation goal")}</span><span>{donationsToday.toLocaleString()} / 20 000 ₽</span></div>
+                  <div className="flex justify-between"><span>{t("dashboard.goalFollowers", "Follower goal")}</span><span>{followers} / {(goalsMap.followers?.target_value ?? 50)}</span></div>
                   <div className="mt-2 h-2 rounded-full bg-white/10">
-                    <div className="h-2 rounded-full bg-emerald-400" style={{ width: `${Math.min(100, (donationsToday / 20000) * 100)}%` }} />
+                    <div className="h-2 rounded-full bg-blue-400" style={{ width: `${Math.min(100, (followers / (goalsMap.followers?.target_value ?? 50)) * 100)}%` }} />
                   </div>
                 </div>
                 <div>
-                  <div className="flex justify-between"><span>{t("dashboard.goalFollowers", "Follower goal")}</span><span>{followers} / 40</span></div>
+                  <div className="flex justify-between"><span>{t("dashboard.goalSubscriptions", "Subscription goal")}</span><span>{(goalsMap.subscriptions?.current_value ?? 0)} / {(goalsMap.subscriptions?.target_value ?? 10)}</span></div>
                   <div className="mt-2 h-2 rounded-full bg-white/10">
-                    <div className="h-2 rounded-full bg-blue-400" style={{ width: `${Math.min(100, (followers / 40) * 100)}%` }} />
+                    <div className="h-2 rounded-full bg-emerald-400" style={{ width: `${Math.min(100, ((goalsMap.subscriptions?.current_value ?? 0) / (goalsMap.subscriptions?.target_value ?? 10)) * 100)}%` }} />
                   </div>
                 </div>
               </div>
