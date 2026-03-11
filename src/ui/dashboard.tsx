@@ -39,6 +39,7 @@ export function Dashboard({
   streams,
   clips,
   notifications,
+  streamSeries,
   onReconnect,
 }: {
   theme: PlatformTheme;
@@ -47,12 +48,14 @@ export function Dashboard({
   streams: StreamItem[];
   clips: ClipItem[];
   notifications: NotificationItem[];
+  streamSeries: Array<{ date: string; count: number }>;
   onReconnect: () => void;
 }) {
   const viewers = stats?.viewers ?? 0;
   const followers = stats?.followers ?? 0;
   const subscribers = stats?.subscribers ?? 0;
   const isOnline = stats?.online ?? false;
+  const maxCount = Math.max(1, ...streamSeries.map((item) => item.count));
 
   return (
     <div className="dashboard">
@@ -105,33 +108,44 @@ export function Dashboard({
           )}
         </section>
         <section className="sections">
-          <SectionCard title="Мои стримы">
+          <SectionCard title="Stream history">
+            <div className="bar-chart">
+              {streamSeries.length === 0 ? <div className="empty">No data yet</div> : null}
+              {streamSeries.map((item) => (
+                <div key={item.date} className="bar">
+                  <div className="bar-fill" style={{ height: `${(item.count / maxCount) * 100}%` }} />
+                  <span>{item.date.slice(5)}</span>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+          <SectionCard title="Streams">
             <ul className="section-list">
-              {streams.length === 0 ? <li>Нет данных по стримам</li> : null}
+              {streams.length === 0 ? <li>No streams yet</li> : null}
               {streams.map((stream) => (
                 <li key={stream.url}>
                   <a className="link" href={stream.url} target="_blank" rel="noreferrer">
-                    {stream.title || "Стрим"}
+                    {stream.title || "Stream"}
                   </a>
                 </li>
               ))}
             </ul>
           </SectionCard>
-          <SectionCard title="Последние клипы">
+          <SectionCard title="Latest clips">
             <ul className="section-list">
-              {clips.length === 0 ? <li>Клипов пока нет</li> : null}
+              {clips.length === 0 ? <li>No clips yet</li> : null}
               {clips.map((clip) => (
                 <li key={clip.url}>
                   <a className="link" href={clip.url} target="_blank" rel="noreferrer">
-                    {clip.title || "Клип"}
+                    {clip.title || "Clip"}
                   </a>
                 </li>
               ))}
             </ul>
           </SectionCard>
-          <SectionCard title="Уведомления">
+          <SectionCard title="Notifications">
             <ul className="section-list">
-              {notifications.length === 0 ? <li>Нет новых уведомлений</li> : null}
+              {notifications.length === 0 ? <li>No notifications</li> : null}
               {notifications.map((note) => (
                 <li key={note.created_at}>
                   {note.title} {note.body ? `— ${note.body}` : ""}

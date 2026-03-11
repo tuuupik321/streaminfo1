@@ -25,6 +25,7 @@ const App = () => {
   const [streams, setStreams] = useState<StreamItem[]>([]);
   const [clips, setClips] = useState<ClipItem[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [streamSeries, setStreamSeries] = useState<Array<{ date: string; count: number }>>([]);
   const userId = useMemo(() => getOrCreateUserId(), []);
 
   const theme = useMemo(() => (profile ? getThemeByPlatform(profile.platform) : null), [profile]);
@@ -78,6 +79,11 @@ const App = () => {
           const payload = (await notesRes.json()) as NotificationItem[];
           if (active) setNotifications(payload);
         }
+        const historyRes = await fetch(`/api/stream_history?user_id=${userId}`);
+        if (historyRes.ok) {
+          const payload = (await historyRes.json()) as { series?: Array<{ date: string; count: number }> };
+          if (active && payload.series) setStreamSeries(payload.series);
+        }
       } catch {
         // ignore
       }
@@ -130,6 +136,7 @@ const App = () => {
     setStreams([]);
     setClips([]);
     setNotifications([]);
+    setStreamSeries([]);
   };
 
   if (!profile) {
@@ -151,6 +158,7 @@ const App = () => {
           streams={streams}
           clips={clips}
           notifications={notifications}
+          streamSeries={streamSeries}
           onReconnect={handleReconnect}
         />
       ) : null}

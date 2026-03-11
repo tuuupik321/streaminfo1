@@ -359,3 +359,32 @@ button, input {
     align-items: flex-start;
   }
 }
+.bar-chart {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(32px, 1fr));
+  gap: 10px;
+  height: 140px;
+  align-items: end;
+}
+
+.bar {
+  display: grid;
+  gap: 6px;
+  align-items: end;
+  justify-items: center;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.bar-fill {
+  width: 100%;
+  background: linear-gradient(180deg, var(--accent), transparent 120%);
+  border-radius: 10px 10px 6px 6px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.35);
+}
+
+.empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: var(--text-muted);
+}

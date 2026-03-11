@@ -1228,7 +1228,11 @@ async def get_dashboard_stats(request: web.Request):
         user = await session.get(User, int(user_id))
         platform = connection.platform
         stats: dict[str, Any] = {"platform": platform}
+        had_open = False
         if platform == "twitch":
+            open_query = select(StreamSession).where(StreamSession.user_id == int(user_id), StreamSession.ended_at == None).order_by(desc(StreamSession.started_at)).limit(1)
+            open_session = (await session.execute(open_query)).scalars().first()
+            had_open = bool(open_session)
             twitch_data = await fetch_twitch(user.twitch_name if user else None)
             profile = await fetch_twitch_profile(user.twitch_name if user else None)
             stats.update({
@@ -1237,26 +1241,41 @@ async def get_dashboard_stats(request: web.Request):
                 "followers": int(profile.get("followers") or 0) if profile else 0,
                 "views": int(profile.get("views") or 0) if profile else 0,
             })
+            await update_stream_history(session, int(user_id), bool(stats.get("online")), int(stats.get("viewers", 0)))
         if platform == "youtube":
             yt_data = await fetch_youtube(user.yt_channel_id if user else None)
             stats.update({
                 "subscribers": int(yt_data.get("subscribers") or 0),
             })
-                note_title = "Stream live" if stats.get("online") else "Stream offline"
-        existing = await session.execute(
-            select(Notification)
-            .where(Notification.user_id == int(user_id), Notification.title == note_title)
-            .order_by(desc(Notification.created_at))
-            .limit(1)
-        )
-        last_note = existing.scalars().first()
-        if not last_note or (datetime.now(timezone.utc) - last_note.created_at).total_seconds() > 600:
-            notification = Notification(user_id=int(user_id), title=note_title, body=f"Platform: {platform}")
-            session.add(notification)
-            await session.commit()
+        if platform == "twitch":
+            open_query = select(StreamSession).where(StreamSession.user_id == int(user_id), StreamSession.ended_at == None).order_by(desc(StreamSession.started_at)).limit(1)
+            open_session = (await session.execute(open_query)).scalars().first()
+            has_open = bool(open_session)
+            if had_open != has_open:
+                note_title = "Stream started" if has_open else "Stream ended"
+                notification = Notification(user_id=int(user_id), title=note_title, body=f"Platform: {platform}")
+                session.add(notification)
+        await session.commit()
         return web.json_response(stats)
 
-async def get_streams(request: web.Request):
+async def get_stream_history(request: web.Request):
+    user_id = request.query.get("user_id")
+    if not user_id:
+        return web.json_response({"error": "no_uid"}, status=400)
+    if not async_session:
+        return web.json_response({"error": "db_not_configured"}, status=500)
+    async with async_session() as session:
+        cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+        query = select(StreamSession).where(StreamSession.user_id == int(user_id), StreamSession.started_at >= cutoff)
+        rows = (await session.execute(query)).scalars().all()
+        buckets: dict[str, int] = {}
+        for item in rows:
+            day = item.started_at.date().isoformat() if item.started_at else None
+            if not day:
+                continue
+            buckets[day] = buckets.get(day, 0) + 1
+        series = [{"date": key, "count": buckets[key]} for key in sorted(buckets.keys())]
+        return web.json_response({"series": series})`n`nasync def get_streams(request: web.Request):
     user_id = request.query.get("user_id")
     if not user_id:
         return web.json_response({"error": "no_uid"}, status=400)
@@ -1702,7 +1721,7 @@ def build_app():
     app.router.add_post("/api/verify_channel", verify_channel)
     app.router.add_post("/api/channel/connect", connect_channel)
     app.router.add_get("/api/channel", get_channel)
-    app.router.add_get("/api/dashboard_stats", get_dashboard_stats)
+    app.router.add_get("/api/dashboard_stats", get_dashboard_stats)`n    app.router.add_get("/api/stream_history", get_stream_history)
     app.router.add_get("/api/streams", get_streams)
     app.router.add_get("/api/clips", get_clips)
     app.router.add_get("/api/notifications", get_notifications)
@@ -1963,6 +1982,11 @@ if __name__ == "__main__":
         print(f"!!! Startup error: {error}")
 
 # Force update
+
+
+
+
+
 
 
 
