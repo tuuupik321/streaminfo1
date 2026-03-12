@@ -25,7 +25,15 @@ services:
         sync: false
       - key: YOUTUBE_API_KEY
         sync: false
+      - key: GOOGLE_OAUTH_CLIENT_ID
+        sync: false
+      - key: GOOGLE_OAUTH_CLIENT_SECRET
+        sync: false
       - key: DONATALERTS_ACCESS_TOKEN
+        sync: false
+      - key: DONATALERTS_CLIENT_ID
+        sync: false
+      - key: DONATALERTS_CLIENT_SECRET
         sync: false
       - key: DONATALERTS_API_BASE
         value: "https://www.donationalerts.com/api/v1"
