@@ -6,6 +6,7 @@
 
 :root {
   color-scheme: dark;
+  --safe-top: env(safe-area-inset-top);
   --safe-bottom: env(safe-area-inset-bottom);
   --background: 214 52% 8%;
   --foreground: 210 40% 98%;
@@ -814,6 +815,7 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
+    min-height: 46px;
     border: none;
     border-radius: 16px;
     padding: 12px 20px;
@@ -1130,6 +1132,10 @@
     background: rgba(255, 255, 255, 0.06);
   }
 
+  .connect-card form .btn-primary {
+    width: 100%;
+  }
+
   .form-error {
     margin-top: 10px;
     color: #ff9883;
@@ -1340,7 +1346,7 @@
   @layer components {
     .saas-card {
       border-radius: 1.25rem;
-      padding: 0.95rem;
+      padding: 0.9rem;
       box-shadow:
         0 12px 28px hsl(var(--shadow) / 0.28),
         inset 0 1px 0 hsl(0 0% 100% / 0.04);
@@ -1362,6 +1368,39 @@
       min-width: min(92vw, 320px);
       padding: 10px 14px;
       font-size: 12px;
+    }
+
+    .connect-card {
+      gap: 16px;
+      padding: 20px 16px;
+      border-radius: 22px;
+    }
+
+    .connect-header h1 {
+      max-width: none;
+      font-size: 1.72rem;
+      line-height: 1.12;
+    }
+
+    .connect-header p {
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .connect-utility-row {
+      gap: 8px;
+    }
+
+    .connect-form-hint {
+      margin-bottom: 10px;
+    }
+
+    .connect-inline-note,
+    .connect-next-step,
+    .connect-highlight,
+    .connect-preview {
+      border-radius: 18px;
+      padding: 14px;
     }
   }
 }
@@ -1458,7 +1497,7 @@
 @media (max-width: 640px) {
   .dashboard.embedded .content,
   .content {
-    padding: 14px 12px calc(102px + env(safe-area-inset-bottom));
+    padding: 12px 12px calc(106px + env(safe-area-inset-bottom));
   }
 
   .stats,
@@ -1493,9 +1532,14 @@
     font-size: 1.7rem;
   }
 
+  .content-header p {
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
   .card {
-    border-radius: 24px;
-    padding: 16px;
+    border-radius: 22px;
+    padding: 15px;
   }
 
   .bar-chart {

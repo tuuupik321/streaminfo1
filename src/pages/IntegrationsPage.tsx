@@ -280,7 +280,7 @@ function IntegrationCard({
       whileHover={{ y: -4, scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
-      className="group relative flex h-[15.5rem] w-full items-start justify-between overflow-hidden rounded-3xl border border-white/10 bg-[#0b0b0f] p-5 text-left shadow-[0_18px_50px_rgba(0,0,0,0.35)] hover-lift"
+      className="group relative flex min-h-[13.5rem] w-full items-start justify-between overflow-hidden rounded-[1.55rem] border border-white/10 bg-[#0b0b0f] p-4 text-left shadow-[0_18px_50px_rgba(0,0,0,0.35)] hover-lift sm:min-h-[15.5rem] sm:rounded-3xl sm:p-5"
     >
       <motion.div
         className="absolute -inset-8 opacity-70 blur-3xl"
@@ -301,12 +301,12 @@ function IntegrationCard({
 
       <div className="relative z-10 flex w-full flex-col justify-between gap-4">
         <div className="flex items-start justify-between gap-3">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/6 shadow-[0_0_28px_rgba(0,0,0,0.24)]">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/6 shadow-[0_0_28px_rgba(0,0,0,0.24)] sm:h-14 sm:w-14">
             <motion.div
               animate={{ x: [0, 1.5, 0, -1.5, 0], y: [0, -1.5, 0, 1.5, 0] }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
             >
-              <Icon size={34} color="#ffffff" />
+              <Icon size={30} color="#ffffff" />
             </motion.div>
           </div>
           <span className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${connected ? "bg-white/10 text-white/80 shadow-[0_0_18px_rgba(0,178,255,0.35)]" : "border border-white/10 bg-black/20 text-white/55"}`}>
@@ -315,12 +315,12 @@ function IntegrationCard({
         </div>
 
         <div>
-          <p className="text-lg font-semibold text-white">{label}</p>
-          <p className="mt-2 max-w-[16rem] text-sm leading-6 text-white/62">{description}</p>
+          <p className="text-base font-semibold text-white sm:text-lg">{label}</p>
+          <p className="mt-2 max-w-[16rem] text-sm leading-5 text-white/62 sm:leading-6">{description}</p>
         </div>
 
         <div className="flex items-center justify-between gap-3">
-          <span className="text-xs uppercase tracking-[0.24em] text-white/42">{connected ? connectedLabel : "Не подключено"}</span>
+          <span className="text-[11px] uppercase tracking-[0.18em] text-white/42 sm:text-xs sm:tracking-[0.24em]">{connected ? connectedLabel : "Не подключено"}</span>
           <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/72">
             {actionLabel}
             <ArrowRight size={12} />
@@ -719,12 +719,12 @@ export default function IntegrationsPage() {
             </div>
           </div>
 
-          <div className="flex min-w-[220px] flex-col gap-3">
-            <Button onClick={() => openPlatform(primaryPlatform)} className="gap-2">
+          <div className="flex min-w-0 flex-col gap-3 lg:min-w-[220px]">
+            <Button onClick={() => openPlatform(primaryPlatform)} className="w-full gap-2 lg:w-auto">
               Подключить платформу
               <ArrowRight size={14} />
             </Button>
-            <Button variant="outline" onClick={() => openPlatform(platforms.find((platform) => platform.key === "telegram") || platforms[0])} className="gap-2">
+            <Button variant="outline" onClick={() => openPlatform(platforms.find((platform) => platform.key === "telegram") || platforms[0])} className="w-full gap-2 lg:w-auto">
               Подключить Telegram
             </Button>
             {loadingSaved ? <p className="text-xs text-white/50">{t("integrations.loadingSaved", "Загружаем сохранённые подключения...")}</p> : null}
@@ -741,7 +741,7 @@ export default function IntegrationsPage() {
                 <p className="mt-1 text-sm text-white/55">{group.description}</p>
               </div>
             </div>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
               {group.items.map((platform) => {
                 const isConnected = Boolean(connected[platform.key]);
                 const statusText = isConnected ? "Подключено" : botInfoError && platform.key === "telegram" ? "Проверить" : "Не подключено";
@@ -767,7 +767,7 @@ export default function IntegrationsPage() {
       </motion.div>
 
       {Object.values(connected).some(Boolean) && (
-        <motion.div variants={item} className="mt-10 grid w-full grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <motion.div variants={item} className="mt-8 grid w-full grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">
           {Object.entries(connected).map(([key, value]) =>
             value ? (
               <div key={key} className="rounded-3xl border border-white/10 bg-white/5 p-4 text-sm text-white/80 shadow-[0_0_40px_rgba(0,0,0,0.35)]">
@@ -784,7 +784,7 @@ export default function IntegrationsPage() {
                     <p className="text-xs text-white/60">{value.channel || value.name}</p>
                   </div>
                 </div>
-                <div className="mt-4 grid grid-cols-3 gap-2 text-xs text-white/60">
+                <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-white/60 sm:grid-cols-3">
                   {buildChannelStats(value.platform, value, t).map((stat) => (
                     <div key={stat.label} className="rounded-xl border border-white/10 bg-white/5 p-2 text-center">
                       <p className="text-[10px] uppercase">{stat.label}</p>
@@ -901,7 +901,7 @@ export default function IntegrationsPage() {
   return (
     <AnimatePresence>
       <motion.div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-4"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -913,7 +913,7 @@ export default function IntegrationsPage() {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 20, scale: 0.96 }}
           transition={{ duration: 0.35, ease: "easeOut" }}
-          className="relative w-full max-w-md overflow-hidden rounded-[24px] border border-white/10 bg-[#0c0c12] p-6 text-white shadow-[0_30px_80px_rgba(0,0,0,0.45)]"
+          className="relative w-full max-w-md max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-[22px] border border-white/10 bg-[#0c0c12] p-4 text-white shadow-[0_30px_80px_rgba(0,0,0,0.45)] sm:max-h-[calc(100dvh-2rem)] sm:rounded-[24px] sm:p-6"
           style={{ boxShadow: glow }}
         >
           <div className="absolute -top-20 left-1/2 h-40 w-40 -translate-x-1/2 rounded-full opacity-40 blur-3xl" style={{ background: `${color}` }} />
@@ -931,7 +931,7 @@ export default function IntegrationsPage() {
             {key === "telegram" && (
               <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-white/70">
                 <p className="font-semibold text-white">{t("integrations.telegramSteps", "Connect Telegram")}</p>
-                <div className="mt-3 grid grid-cols-2 gap-2">
+                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <button
                     type="button"
                     onClick={onOpenAddChannel}
@@ -1057,7 +1057,7 @@ export default function IntegrationsPage() {
                       <p className="text-xs text-white/60">{result.url || t("integrations.verified", "Verified")}</p>
                     </div>
                   </div>
-                  <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-white/60">
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-white/60 sm:grid-cols-3">
                     {stats.map((stat) => (
                       <div key={stat.label} className="rounded-xl border border-white/10 bg-white/5 p-2 text-center">
                         <p className="text-[10px] uppercase">{stat.label}</p>
@@ -1123,7 +1123,7 @@ function SuccessModal({
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.96 }}
           transition={{ duration: 0.3, ease: "easeOut" }}
-          className="relative w-full max-w-sm overflow-hidden rounded-[24px] border border-white/10 bg-[#0c0c12] p-6 text-white"
+          className="relative w-full max-w-sm overflow-hidden rounded-[22px] border border-white/10 bg-[#0c0c12] p-5 text-white sm:rounded-[24px] sm:p-6"
           style={{ boxShadow: `0 0 80px ${glowColor}55` }}
         >
           <div className="absolute inset-0 opacity-40" style={{ background: `radial-gradient(circle at 50% 20%, ${glowColor}55, transparent 70%)` }} />

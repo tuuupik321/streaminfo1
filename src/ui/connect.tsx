@@ -30,9 +30,9 @@ export function ConnectScreen({ onConnect }: { onConnect: (url: string) => void 
 
         <div className="connect-header">
           <span className="connect-badge">Быстрый старт</span>
-          <h1>Подключите канал и получите рабочий экран за минуту</h1>
+          <h1>Подключите канал и соберите стартовый экран за минуту</h1>
           <p>
-            Вставьте ссылку на Twitch или YouTube. Мы соберём стартовый дашборд, историю эфиров и базовые сценарии без ручной настройки.
+            Вставьте ссылку на Twitch или YouTube. Мы сразу соберём главную, подготовку к эфиру и базовую аналитику без ручной настройки.
           </p>
         </div>
 
@@ -68,7 +68,7 @@ export function ConnectScreen({ onConnect }: { onConnect: (url: string) => void 
           <input
             id="channel-url"
             className="input"
-            placeholder="twitch.tv/... или youtube.com/..."
+            placeholder="twitch.tv/username или youtube.com/@channel"
             value={url}
             onChange={(event) => setUrl(event.target.value)}
           />
@@ -80,7 +80,7 @@ export function ConnectScreen({ onConnect }: { onConnect: (url: string) => void 
         <div className="connect-inline-note">
           <div>
             <strong>Что появится после подключения</strong>
-            <span>Главная с оффлайн-помощью, история эфиров, анонсы и базовая аналитика для старта.</span>
+            <span>Главная с оффлайн-помощью, подготовка к эфиру, история запусков и первые рабочие сценарии для старта.</span>
           </div>
         </div>
 

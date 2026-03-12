@@ -41,7 +41,7 @@ function OverviewRow({
   to?: string;
 }) {
   const content = (
-    <div className="flex items-center justify-between gap-3 rounded-[26px] border border-border/60 bg-card/70 px-4 py-4 shadow-[0_14px_30px_hsla(var(--shadow)/0.18)] backdrop-blur-xl transition hover:-translate-y-[1px] hover:border-primary/35 sm:px-5">
+    <div className="flex flex-col items-start gap-3 rounded-[24px] border border-border/60 bg-card/70 px-4 py-4 shadow-[0_14px_30px_hsla(var(--shadow)/0.18)] backdrop-blur-xl transition hover:-translate-y-[1px] hover:border-primary/35 sm:flex-row sm:items-center sm:justify-between sm:rounded-[26px] sm:px-5">
       <div className="flex items-center gap-3">
         <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-white/80">
           <Icon size={18} />
@@ -51,7 +51,7 @@ function OverviewRow({
           <p className="text-xs text-muted-foreground">{description}</p>
         </div>
       </div>
-      <div className="text-right text-sm text-white/80">{value}</div>
+      <div className="text-left text-sm text-white/80 sm:text-right">{value}</div>
     </div>
   );
 
@@ -188,12 +188,12 @@ export default function SettingsPage() {
       </motion.div>
 
       <motion.div variants={item} className="mt-5 rounded-[26px] border border-border/60 bg-card/70 p-4 shadow-[0_14px_30px_hsla(var(--shadow)/0.18)] backdrop-blur-xl sm:mt-6 sm:p-5">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-sm font-semibold text-foreground">{nextStep.title}</p>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{nextStep.text}</p>
           </div>
-          <Button asChild className="shrink-0">
+          <Button asChild className="w-full shrink-0 sm:w-auto">
             <Link to="/integrations">{nextStep.cta}</Link>
           </Button>
         </div>

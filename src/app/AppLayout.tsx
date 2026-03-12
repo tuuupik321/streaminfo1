@@ -123,13 +123,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="min-h-svh w-full">
         <AppSidebar />
         <SidebarInset>
-          <header className="sticky top-0 z-40 px-2.5 pt-2.5 md:px-4 md:pt-4">
-            <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 rounded-[24px] border border-white/8 bg-background/78 px-3.5 py-2.5 shadow-[0_18px_42px_rgba(3,12,24,0.24)] backdrop-blur-2xl md:px-4 md:py-3">
+          <header className="sticky top-0 z-40 px-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] md:px-4 md:pt-4">
+            <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 rounded-[22px] border border-white/8 bg-background/78 px-3.5 py-2.5 shadow-[0_18px_42px_rgba(3,12,24,0.24)] backdrop-blur-2xl md:rounded-[24px] md:px-4 md:py-3">
               <div className="flex items-center gap-3">
                 <SidebarTrigger />
                 <div>
                   <div className="text-[10px] font-medium uppercase tracking-[0.24em] text-muted-foreground">{headerContent.eyebrow}</div>
                   <div className="text-sm font-semibold text-foreground">{headerContent.title}</div>
+                  <div className="mt-1 text-[11px] text-muted-foreground md:hidden">{headerContent.chip}</div>
                   <div className="hidden text-xs text-muted-foreground md:block">{headerContent.description}</div>
                 </div>
               </div>
@@ -140,7 +141,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          <div className="mx-auto w-full max-w-6xl px-2.5 pb-28 pt-2.5 md:px-4 md:pb-28 md:pt-4">
+          <div className="mx-auto w-full max-w-6xl px-2.5 pb-[calc(6.75rem+env(safe-area-inset-bottom))] pt-2.5 md:px-4 md:pb-28 md:pt-4">
             <GlobalStatusBar />
             <PageTransition>{children}</PageTransition>
           </div>

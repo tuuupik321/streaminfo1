@@ -147,19 +147,19 @@ export default function Analytics() {
             Сначала короткий итог, потом лучшие часы для запуска, сравнение платформ и подсказка, что делать дальше.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex gap-2 overflow-x-auto pb-1 md:flex-wrap md:overflow-visible md:pb-0">
           {periods.map((option) => (
             <Button
               key={option.value}
               size="sm"
               variant={period === option.value ? "default" : "outline"}
               onClick={() => setPeriod(option.value)}
-              className="gap-2"
+              className="shrink-0 gap-2"
             >
               <CalendarDays size={14} /> {option.label}
             </Button>
           ))}
-          <Button size="sm" variant="ghost" onClick={exportCsv} className="gap-2 text-muted-foreground">
+          <Button size="sm" variant="ghost" onClick={exportCsv} className="hidden shrink-0 gap-2 text-muted-foreground sm:inline-flex">
             <Download size={14} /> CSV
           </Button>
         </div>
@@ -183,9 +183,9 @@ export default function Analytics() {
                 <p className="mt-3 text-sm text-white/65">
                   После этого вы увидите средний онлайн, рост зрителей, heatmap по времени и AI-рекомендации.
                 </p>
-                <div className="mt-5 flex flex-wrap gap-3">
-                  <Button onClick={() => navigate("/integrations")}>Подключить платформу</Button>
-                  <Button variant="outline" onClick={() => navigate("/info")}>Как это работает</Button>
+                <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                  <Button className="w-full sm:w-auto" onClick={() => navigate("/integrations")}>Подключить платформу</Button>
+                  <Button className="w-full sm:w-auto" variant="outline" onClick={() => navigate("/info")}>Как это работает</Button>
                 </div>
               </div>
               <div className="grid min-w-[240px] gap-3 rounded-[28px] border border-white/10 bg-white/5 p-4 lg:w-[320px]">
@@ -227,7 +227,7 @@ export default function Analytics() {
 
       {hasData ? (
         <>
-          <motion.div variants={item} className="mb-5 grid grid-cols-1 gap-3 md:grid-cols-3 md:gap-5 sm:mb-8">
+          <motion.div variants={item} className="mb-5 grid grid-cols-1 gap-3 sm:mb-8 md:grid-cols-3 md:gap-5">
             <div className="saas-card">
               <p className="text-xs uppercase tracking-[0.28em] text-white/45">Средний онлайн</p>
               <div className="mt-4 text-3xl font-bold text-white">{averageOnline.toLocaleString("ru-RU")}</div>
@@ -254,7 +254,7 @@ export default function Analytics() {
                 </div>
                 <TrendingUp size={16} className="text-white/55" />
               </div>
-              <div className="mt-5 h-72">
+              <div className="mt-5 h-64 sm:h-72">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={timeline}>
                     <XAxis dataKey="time" stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
@@ -293,7 +293,7 @@ export default function Analytics() {
                 </div>
                 <BarChart3 size={16} className="text-white/55" />
               </div>
-              <div className="mt-5 rounded-[24px] border border-white/8 bg-white/[0.03] p-4">
+              <div className="mt-5 rounded-[24px] border border-white/8 bg-white/[0.03] p-3 sm:p-4">
                 {(data?.streams_count ?? 0) >= 2 ? <ActivityMap /> : <HeatmapPreview />}
               </div>
               <p className="mt-4 text-sm text-white/60">
@@ -331,7 +331,7 @@ export default function Analytics() {
                 </div>
                 <BarChart3 size={16} className="text-white/55" />
               </div>
-              <div className="mt-5 h-64">
+              <div className="mt-5 h-56 sm:h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={platformComparison}>
                     <XAxis dataKey="name" stroke="rgba(255,255,255,0.4)" tickLine={false} axisLine={false} />
@@ -352,7 +352,7 @@ export default function Analytics() {
                 </div>
                 <PieChart size={16} className="text-white/55" />
               </div>
-              <div className="mt-5 h-64">
+              <div className="mt-5 h-56 sm:h-64">
                 {donutData.length ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <RePieChart>

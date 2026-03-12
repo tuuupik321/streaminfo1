@@ -256,10 +256,10 @@ export default function StreamInfoPage() {
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="mx-auto max-w-6xl px-2.5 py-2.5 pb-24 sm:px-3 sm:py-3 md:p-6">
-      <motion.section variants={item} className={cn("saas-card relative overflow-hidden", isLive ? "pulse-live" : "")}> 
+      <motion.section variants={item} className={cn("saas-card relative overflow-hidden", isLive ? "pulse-live" : "")}>
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
           <div className="max-w-3xl">
-            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.28em] text-white/45">
+            <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-white/45 sm:text-xs sm:tracking-[0.28em]">
               <span className={cn("h-2 w-2 rounded-full", isLive ? "bg-red-500" : "bg-white/30")} />
               {offlineStatus}
             </div>
@@ -267,25 +267,25 @@ export default function StreamInfoPage() {
             <p className="mt-2 text-sm text-white/65">
               Здесь собраны ключевые действия перед стартом: анонс, ссылка, Telegram, цели и быстрый контроль того, что ещё нужно проверить.
             </p>
-            <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-4 grid grid-cols-2 gap-2 xl:grid-cols-4">
               {workflowSteps.map((step, index) => (
-                <div key={step} className={cn("rounded-2xl border px-3 py-3 text-sm text-white/78", index === 0 ? "border-primary/40 bg-primary/10 shadow-[0_0_24px_rgba(145,70,255,0.18)]" : "border-white/10 bg-white/5")}>{step}</div>
+                <div key={step} className={cn("rounded-2xl border px-3 py-3 text-xs leading-5 text-white/78 sm:text-sm", index === 0 ? "border-primary/40 bg-primary/10 shadow-[0_0_24px_rgba(145,70,255,0.18)]" : "border-white/10 bg-white/5")}>{step}</div>
               ))}
             </div>
           </div>
 
-          <div className="grid min-w-[220px] gap-2 sm:grid-cols-2 md:grid-cols-1">
-            <Button size="sm" onClick={() => navigate("/announcements")} className="gap-2">
+          <div className="grid min-w-0 gap-2 sm:grid-cols-2 md:grid-cols-1 lg:min-w-[220px]">
+            <Button size="sm" onClick={() => navigate("/announcements")} className="min-h-11 justify-start gap-2 sm:justify-center md:justify-start">
               <Megaphone size={14} /> Подготовить анонс
             </Button>
-            <Button size="sm" variant="outline" onClick={handleCopyLink} className="gap-2">
+            <Button size="sm" variant="outline" onClick={handleCopyLink} className="min-h-11 justify-start gap-2 sm:justify-center md:justify-start">
               <Copy size={14} /> Скопировать ссылку
             </Button>
-            <Button size="sm" variant="outline" onClick={() => navigate("/integrations")} className="gap-2">
+            <Button size="sm" variant="outline" onClick={() => navigate("/integrations")} className="min-h-11 justify-start gap-2 sm:justify-center md:justify-start">
               <Send size={14} /> Отправить в Telegram
             </Button>
             {canSeeAdmin ? (
-              <Button size="sm" variant="ghost" onClick={() => navigate("/admin")} className="gap-2 text-white/70">
+              <Button size="sm" variant="ghost" onClick={() => navigate("/admin")} className="min-h-11 justify-start gap-2 text-white/70 sm:justify-center md:justify-start">
                 <ArrowRight size={14} /> Открыть админ-панель
               </Button>
             ) : null}
@@ -298,19 +298,19 @@ export default function StreamInfoPage() {
           <h1 className="text-gradient-primary text-xl">Центр стрима</h1>
           <p className="mt-1 text-xs text-muted-foreground">Один экран для подготовки, оффлайн-подсказок и контроля действий перед эфиром.</p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex w-full gap-2 overflow-x-auto pb-1 md:w-auto md:flex-wrap md:overflow-visible md:pb-0">
           {periodOptions.map((option) => (
             <Button
               key={option.value}
               size="sm"
               variant={period === option.value ? "default" : "outline"}
               onClick={() => setPeriod(option.value)}
-              className="gap-2"
+              className="shrink-0 gap-2"
             >
               <CalendarDays size={14} /> {option.label}
             </Button>
           ))}
-          <Button size="sm" variant="ghost" onClick={() => refetch()} disabled={isRefetching}>
+          <Button size="sm" variant="ghost" onClick={() => refetch()} disabled={isRefetching} className="shrink-0">
             {isRefetching ? "Обновляем..." : t("streamInfo.refresh", "Обновить")}
           </Button>
         </div>

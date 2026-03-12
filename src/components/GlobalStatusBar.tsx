@@ -42,8 +42,8 @@ export function GlobalStatusBar() {
   }, []);
 
   return (
-    <div className="mb-4 grid grid-cols-3 gap-2 rounded-[24px] border border-white/8 bg-[hsl(var(--card))/0.72] p-2 shadow-[0_18px_40px_rgba(6,16,31,0.22)] backdrop-blur-xl">
-      <div className="flex min-h-[58px] items-center gap-3 rounded-[18px] bg-white/[0.04] px-3 py-2">
+    <div className="mb-4 grid grid-cols-2 gap-2 rounded-[22px] border border-white/8 bg-[hsl(var(--card))/0.72] p-2 shadow-[0_16px_34px_rgba(6,16,31,0.2)] backdrop-blur-xl sm:grid-cols-3 sm:rounded-[24px]">
+      <div className="col-span-2 flex min-h-[54px] items-center gap-3 rounded-[18px] bg-white/[0.04] px-3 py-2 sm:col-span-1 sm:min-h-[58px]">
         <motion.span
           animate={isLive ? { scale: [1, 1.15, 1] } : { scale: 1 }}
           transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
@@ -55,17 +55,17 @@ export function GlobalStatusBar() {
           <Radio size={16} className={cn(isLive && "fill-current")} />
         </motion.span>
         <div>
-          <div className="text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">Статус</div>
+          <div className="text-[9px] font-medium uppercase tracking-[0.2em] text-muted-foreground sm:text-[10px] sm:tracking-[0.22em]">Статус</div>
           <div className={cn("text-sm font-semibold", isLive ? "text-emerald-300" : "text-foreground")}>{isLive ? "В эфире" : "Оффлайн"}</div>
         </div>
       </div>
 
-      <div className="flex min-h-[58px] items-center gap-3 rounded-[18px] bg-white/[0.04] px-3 py-2">
+      <div className="flex min-h-[54px] items-center gap-3 rounded-[18px] bg-white/[0.04] px-3 py-2 sm:min-h-[58px]">
         <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.06] text-foreground/85">
           <Eye size={16} />
         </span>
         <div>
-          <div className="text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">Сейчас</div>
+          <div className="text-[9px] font-medium uppercase tracking-[0.2em] text-muted-foreground sm:text-[10px] sm:tracking-[0.22em]">Сейчас</div>
           <div className="text-sm font-semibold text-foreground">{viewers.toLocaleString("ru-RU")}</div>
         </div>
       </div>
@@ -73,7 +73,7 @@ export function GlobalStatusBar() {
       <button
         type="button"
         onClick={() => setHasNewEvent(false)}
-        className="flex min-h-[58px] items-center gap-3 rounded-[18px] bg-white/[0.04] px-3 py-2 text-left transition-colors duration-200 hover:bg-white/[0.06]"
+        className="flex min-h-[54px] items-center gap-3 rounded-[18px] bg-white/[0.04] px-3 py-2 text-left transition-colors duration-200 hover:bg-white/[0.06] sm:min-h-[58px]"
       >
         <span className={cn(
           "relative flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.06] text-foreground/85",
@@ -83,7 +83,7 @@ export function GlobalStatusBar() {
           {hasNewEvent ? <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.7)]" /> : null}
         </span>
         <div>
-          <div className="text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">События</div>
+          <div className="text-[9px] font-medium uppercase tracking-[0.2em] text-muted-foreground sm:text-[10px] sm:tracking-[0.22em]">События</div>
           <div className="text-sm font-semibold text-foreground">{hasNewEvent ? "Есть новые" : "Тихо"}</div>
         </div>
       </button>
