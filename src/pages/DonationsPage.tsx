@@ -126,7 +126,7 @@ export default function DonationsPage() {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-4xl px-2.5 py-2.5 pb-24 sm:px-3 sm:py-3 md:p-8">
+      <div className="mx-auto max-w-[1520px] px-2.5 py-2.5 pb-24 sm:px-4 sm:py-3 md:px-6 md:py-6">
         <motion.h1 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-4 font-heading text-xl font-black md:text-2xl">
           {t("donations.title")}
         </motion.h1>
@@ -145,7 +145,7 @@ export default function DonationsPage() {
 
   if (!data?.configured) {
     return (
-      <motion.div variants={container} initial="hidden" animate="show" className="mx-auto max-w-3xl px-2.5 py-2.5 pb-24 sm:px-3 sm:py-3 md:p-6">
+      <motion.div variants={container} initial="hidden" animate="show" className="mx-auto max-w-4xl px-2.5 py-2.5 pb-24 sm:px-4 sm:py-3 md:px-6 md:py-6">
         <motion.div variants={item} className="saas-card text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-white/80">
             <WalletCards size={24} />
@@ -161,7 +161,7 @@ export default function DonationsPage() {
   }
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="mx-auto max-w-4xl px-2.5 py-2.5 pb-24 sm:px-3 sm:py-3 md:p-6">
+    <motion.div variants={container} initial="hidden" animate="show" className="mx-auto max-w-[1520px] px-2.5 py-2.5 pb-24 sm:px-4 sm:py-3 md:px-6 md:py-6">
       <motion.div variants={item} className="mb-4 sm:mb-6">
         <h1 className="font-heading text-xl font-black md:text-2xl">Донаты</h1>
         <p className="mt-2 text-sm text-muted-foreground">Здесь собраны история поддержки, средний донат и зрители, которые помогают чаще всего.</p>

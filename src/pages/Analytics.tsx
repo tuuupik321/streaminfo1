@@ -138,7 +138,7 @@ export default function Analytics() {
   }
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="mx-auto max-w-[1440px] px-2.5 py-2.5 pb-24 sm:px-3 sm:py-3 md:px-6 md:py-6 lg:px-8">
+    <motion.div variants={container} initial="hidden" animate="show" className="mx-auto max-w-[1520px] px-2.5 py-2.5 pb-24 sm:px-4 sm:py-3 md:px-6 md:py-6 lg:px-8">
       <motion.div variants={item} className="mb-5 flex flex-col gap-3 sm:mb-8 md:flex-row md:items-end md:justify-between">
         <div>
           <div className="text-[11px] font-medium uppercase tracking-[0.28em] text-muted-foreground">Аналитика</div>

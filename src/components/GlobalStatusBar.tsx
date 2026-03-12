@@ -11,6 +11,13 @@ export function GlobalStatusBar() {
 
   const isLive = data?.twitch?.online ?? false;
   const viewers = data?.twitch?.viewers ?? 0;
+  const statusTitle = isLive ? "В эфире" : "Оффлайн";
+  const statusHint = isLive ? `Сейчас на стриме ${viewers.toLocaleString("ru-RU")} зрителей` : "Лучшее окно сегодня: 19:30-21:00";
+  const focusLabel = isLive ? "Онлайн" : "Следующий шаг";
+  const focusValue = isLive ? viewers.toLocaleString("ru-RU") : "Подготовить анонс";
+  const focusHint = isLive ? "Зрителей прямо сейчас" : "Соберите ссылку и включите уведомления";
+  const eventsValue = hasNewEvent ? "Есть новые" : "Всё спокойно";
+  const eventsHint = hasNewEvent ? "Проверьте последние события и уведомления" : "Новых сигналов и событий пока нет";
 
   useEffect(() => {
     let alive = true;
@@ -42,7 +49,7 @@ export function GlobalStatusBar() {
   }, []);
 
   return (
-    <div className="mb-4 grid grid-cols-2 gap-2 rounded-[22px] border border-white/8 bg-[hsl(var(--card))/0.72] p-2 shadow-[0_16px_34px_rgba(6,16,31,0.2)] backdrop-blur-xl sm:grid-cols-3 sm:rounded-[24px]">
+    <div className="mb-4 grid grid-cols-2 gap-2 rounded-[22px] border border-white/8 bg-[linear-gradient(180deg,rgba(15,24,39,0.74),rgba(12,20,33,0.62))] p-2 shadow-[0_18px_42px_rgba(6,16,31,0.24)] backdrop-blur-xl sm:grid-cols-3 sm:rounded-[24px]">
       <div className="col-span-2 flex min-h-[54px] items-center gap-3 rounded-[18px] bg-white/[0.04] px-3 py-2 sm:col-span-1 sm:min-h-[58px]">
         <motion.span
           animate={isLive ? { scale: [1, 1.15, 1] } : { scale: 1 }}
@@ -56,7 +63,8 @@ export function GlobalStatusBar() {
         </motion.span>
         <div>
           <div className="text-[9px] font-medium uppercase tracking-[0.2em] text-muted-foreground sm:text-[10px] sm:tracking-[0.22em]">Статус</div>
-          <div className={cn("text-sm font-semibold", isLive ? "text-emerald-300" : "text-foreground")}>{isLive ? "В эфире" : "Оффлайн"}</div>
+          <div className={cn("text-sm font-semibold", isLive ? "text-emerald-300" : "text-foreground")}>{statusTitle}</div>
+          <div className="mt-0.5 text-[11px] text-muted-foreground">{statusHint}</div>
         </div>
       </div>
 
@@ -65,8 +73,9 @@ export function GlobalStatusBar() {
           <Eye size={16} />
         </span>
         <div>
-          <div className="text-[9px] font-medium uppercase tracking-[0.2em] text-muted-foreground sm:text-[10px] sm:tracking-[0.22em]">Сейчас</div>
-          <div className="text-sm font-semibold text-foreground">{viewers.toLocaleString("ru-RU")}</div>
+          <div className="text-[9px] font-medium uppercase tracking-[0.2em] text-muted-foreground sm:text-[10px] sm:tracking-[0.22em]">{focusLabel}</div>
+          <div className="text-sm font-semibold text-foreground">{focusValue}</div>
+          <div className="mt-0.5 text-[11px] text-muted-foreground">{focusHint}</div>
         </div>
       </div>
 
@@ -84,7 +93,8 @@ export function GlobalStatusBar() {
         </span>
         <div>
           <div className="text-[9px] font-medium uppercase tracking-[0.2em] text-muted-foreground sm:text-[10px] sm:tracking-[0.22em]">События</div>
-          <div className="text-sm font-semibold text-foreground">{hasNewEvent ? "Есть новые" : "Тихо"}</div>
+          <div className="text-sm font-semibold text-foreground">{eventsValue}</div>
+          <div className="mt-0.5 text-[11px] text-muted-foreground">{eventsHint}</div>
         </div>
       </button>
     </div>

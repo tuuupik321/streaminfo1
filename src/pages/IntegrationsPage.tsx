@@ -1,18 +1,21 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { Twitch, Youtube, Send, Heart, Sparkles, Flame } from "lucide-react";
+import { Twitch, Youtube, Send, Heart, Sparkles, Flame, ArrowRight, Link2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { makeFadeUp, makeStagger } from "@/shared/motion";
 
 type Ripple = { id: number; x: number; y: number };
 type Platform = "twitch" | "youtube" | "telegram" | "donatealerts" | "kick";
+type IntegrationCategory = "platforms" | "donations" | "notifications";
 
 type PlatformConfig = {
   key: Platform;
   label: string;
   color: string;
   placeholder: string;
+  description: string;
+  category: IntegrationCategory;
   icon: typeof Twitch;
 };
 
@@ -246,6 +249,7 @@ function IntegrationCard({
   statusText,
   actionLabel,
   connectedLabel,
+  disabled = false,
 }: {
   label: string;
   description: string;
@@ -256,6 +260,7 @@ function IntegrationCard({
   statusText: string;
   actionLabel: string;
   connectedLabel: string;
+  disabled?: boolean;
 }) {
   const [ripples, setRipples] = useState<Ripple[]>([]);
 
@@ -274,13 +279,15 @@ function IntegrationCard({
     <motion.button
       type="button"
       onClick={(event) => {
+        if (disabled) return;
         handleRipple(event);
         onOpen();
       }}
-      whileHover={{ y: -4, scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
+      whileHover={disabled ? undefined : { y: -4, scale: 1.02 }}
+      whileTap={disabled ? undefined : { scale: 0.98 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
-      className="group relative flex min-h-[13.5rem] w-full items-start justify-between overflow-hidden rounded-[1.55rem] border border-white/10 bg-[#0b0b0f] p-4 text-left shadow-[0_18px_50px_rgba(0,0,0,0.35)] hover-lift sm:min-h-[15.5rem] sm:rounded-3xl sm:p-5"
+      disabled={disabled}
+      className="group relative flex min-h-[13.75rem] w-full items-start justify-between overflow-hidden rounded-[1.55rem] border border-white/10 bg-[#0b0b0f] p-4 text-left shadow-[0_18px_50px_rgba(0,0,0,0.35)] hover-lift disabled:cursor-not-allowed disabled:opacity-75 sm:min-h-[15.75rem] sm:rounded-3xl sm:p-5"
     >
       <motion.div
         className="absolute -inset-8 opacity-70 blur-3xl"
@@ -404,6 +411,7 @@ export default function IntegrationsPage() {
   const tg = (window as TelegramWindow).Telegram?.WebApp;
   const userId = tg?.initDataUnsafe?.user?.id;
   const initData = tg?.initData || "";
+  const canManageIntegrations = Boolean(userId && initData);
 
   const openTelegramLink = (url: string) => {
     if (tg?.openTelegramLink) {
@@ -692,12 +700,14 @@ export default function IntegrationsPage() {
     [connected],
   );
 
-  const primaryNextStep = connected.twitch || connected.youtube || connected.kick
-    ? "Подключите ещё одну площадку, чтобы видеть общую аналитику по платформам."
-    : "Подключите платформу, чтобы открыть аналитику, историю эфиров и AI-рекомендации.";
+  const primaryNextStep = !canManageIntegrations
+    ? "Откройте приложение через Telegram, чтобы подтверждать подключения и выбирать каналы для публикации."
+    : connected.twitch || connected.youtube || connected.kick
+      ? "Подключите ещё одну площадку, чтобы видеть общую аналитику по платформам."
+      : "Подключите платформу, чтобы открыть аналитику, историю эфиров и AI-рекомендации.";
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="relative mx-auto flex min-h-[70dvh] max-w-6xl flex-col px-3 py-6 md:py-10">
+    <motion.div variants={container} initial="hidden" animate="show" className="relative mx-auto flex min-h-[70dvh] max-w-[1520px] flex-col px-2.5 py-5 sm:px-4 md:px-6 md:py-9">
       <motion.section variants={item} className="saas-card mb-6 overflow-hidden">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="max-w-2xl">
@@ -717,14 +727,24 @@ export default function IntegrationsPage() {
                 </div>
               </div>
             </div>
+            {!canManageIntegrations ? (
+              <div className="mt-4 rounded-[22px] border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">
+                Откройте этот экран через Telegram Mini App, чтобы подтверждать каналы, сохранять подключения и видеть найденные чаты.
+              </div>
+            ) : null}
           </div>
 
           <div className="flex min-w-0 flex-col gap-3 lg:min-w-[220px]">
-            <Button onClick={() => openPlatform(primaryPlatform)} className="w-full gap-2 lg:w-auto">
+            <Button onClick={() => openPlatform(primaryPlatform)} className="w-full gap-2 lg:w-auto" disabled={!canManageIntegrations}>
               Подключить платформу
               <ArrowRight size={14} />
             </Button>
-            <Button variant="outline" onClick={() => openPlatform(platforms.find((platform) => platform.key === "telegram") || platforms[0])} className="w-full gap-2 lg:w-auto">
+            <Button
+              variant="outline"
+              onClick={() => openPlatform(platforms.find((platform) => platform.key === "telegram") || platforms[0])}
+              className="w-full gap-2 lg:w-auto"
+              disabled={!canManageIntegrations}
+            >
               Подключить Telegram
             </Button>
             {loadingSaved ? <p className="text-xs text-white/50">{t("integrations.loadingSaved", "Загружаем сохранённые подключения...")}</p> : null}
@@ -754,9 +774,10 @@ export default function IntegrationsPage() {
                     color={platform.color}
                     icon={platform.icon}
                     connected={isConnected}
-                    statusText={statusText}
-                    actionLabel={actionLabel}
-                    connectedLabel={t("integrations.connected", "Connected")}
+                    statusText={!canManageIntegrations ? "Mini App" : statusText}
+                    actionLabel={!canManageIntegrations ? "Открыть в Telegram" : actionLabel}
+                    connectedLabel={t("integrations.connected", "Уже подключено")}
+                    disabled={!canManageIntegrations}
                     onOpen={() => openPlatform(platform)}
                   />
                 );
@@ -767,10 +788,10 @@ export default function IntegrationsPage() {
       </motion.div>
 
       {Object.values(connected).some(Boolean) && (
-        <motion.div variants={item} className="mt-8 grid w-full grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <motion.div variants={item} className="mt-8 grid w-full grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2 xl:grid-cols-3">
           {Object.entries(connected).map(([key, value]) =>
             value ? (
-              <div key={key} className="rounded-3xl border border-white/10 bg-white/5 p-4 text-sm text-white/80 shadow-[0_0_40px_rgba(0,0,0,0.35)]">
+              <div key={key} className="rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03))] p-4 text-sm text-white/80 shadow-[0_0_40px_rgba(0,0,0,0.35)]">
                 <div className="flex items-center gap-3">
                   <div className="h-12 w-12 overflow-hidden rounded-2xl bg-white/10">
                     {value.avatar ? (
@@ -913,7 +934,7 @@ export default function IntegrationsPage() {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 20, scale: 0.96 }}
           transition={{ duration: 0.35, ease: "easeOut" }}
-          className="relative w-full max-w-md max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-[22px] border border-white/10 bg-[#0c0c12] p-4 text-white shadow-[0_30px_80px_rgba(0,0,0,0.45)] sm:max-h-[calc(100dvh-2rem)] sm:rounded-[24px] sm:p-6"
+          className="relative w-full max-w-lg max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-[22px] border border-white/10 bg-[#0c0c12] p-4 text-white shadow-[0_30px_80px_rgba(0,0,0,0.45)] sm:max-h-[calc(100dvh-2rem)] sm:rounded-[24px] sm:p-6"
           style={{ boxShadow: glow }}
         >
           <div className="absolute -top-20 left-1/2 h-40 w-40 -translate-x-1/2 rounded-full opacity-40 blur-3xl" style={{ background: `${color}` }} />
@@ -993,12 +1014,12 @@ export default function IntegrationsPage() {
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder={placeholder}
-                className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm outline-none transition focus:border-white/30"
+                className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3.5 text-sm outline-none transition focus:border-white/30"
               />
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 onClick={onVerify}
-                className="relative w-full overflow-hidden rounded-2xl px-4 py-3 text-sm font-semibold"
+                className="relative w-full overflow-hidden rounded-2xl px-4 py-3.5 text-sm font-semibold"
                 style={{
                   background: status === "verifying" ? `${color}66` : `${color}`,
                   boxShadow: `0 0 40px ${color}66`,

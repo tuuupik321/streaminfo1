@@ -1,5 +1,5 @@
 ﻿import { Suspense, lazy, useEffect, useMemo, useState } from "react";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "./App.css";
 import { detectPlatform, extractChannelName } from "./utils/detectPlatform";
@@ -187,7 +187,7 @@ const App = () => {
       />
       <Route path="/design-agent" element={<DesignAgentPage />} />
       <Route path="/legacy" element={<Index />} />
-      <Route path="*" element={<NotFound />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 
