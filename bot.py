@@ -1,4 +1,5 @@
 import asyncio
+import html
 import hashlib
 import hmac
 import json
@@ -126,10 +127,15 @@ RAW_DB_URL = os.getenv("DATABASE_URL")
 TWITCH_ID = os.getenv("TWITCH_CLIENT_ID")
 TWITCH_SECRET = os.getenv("TWITCH_SECRET")
 YT_KEY = os.getenv("YOUTUBE_API_KEY")
+GOOGLE_OAUTH_CLIENT_ID = os.getenv("GOOGLE_OAUTH_CLIENT_ID") or os.getenv("YOUTUBE_OAUTH_CLIENT_ID")
+GOOGLE_OAUTH_CLIENT_SECRET = os.getenv("GOOGLE_OAUTH_CLIENT_SECRET") or os.getenv("YOUTUBE_OAUTH_CLIENT_SECRET")
 YT_HANDOFF_WEBHOOK_URL = os.getenv("YT_HANDOFF_WEBHOOK_URL")
 DONATALERTS_ACCESS_TOKEN = os.getenv("DONATALERTS_ACCESS_TOKEN")
 DONATALERTS_API_BASE = os.getenv("DONATALERTS_API_BASE", "https://www.donationalerts.com/api/v1").rstrip("/")
+DONATALERTS_CLIENT_ID = os.getenv("DONATALERTS_CLIENT_ID")
+DONATALERTS_CLIENT_SECRET = os.getenv("DONATALERTS_CLIENT_SECRET")
 DONATIONS_WEBHOOK_SECRET = os.getenv("DONATIONS_WEBHOOK_SECRET")
+APP_DEEP_LINK_SCHEME = (os.getenv("APP_DEEP_LINK_SCHEME") or "streamfly").strip() or "streamfly"
 LOCAL_DEV_MODE = _env_bool("LOCAL_DEV_MODE", False)
 WEBHOOK_ENABLED = _env_bool("WEBHOOK_ENABLED", not LOCAL_DEV_MODE)
 WEBHOOK_PATH = _normalize_webhook_path(os.getenv("WEBHOOK_PATH"))
@@ -139,6 +145,7 @@ SELF_PING_INTERVAL_SECONDS = _env_int("SELF_PING_INTERVAL_SECONDS", 600, min_val
 OWNER_TELEGRAM_ID = os.getenv("OWNER_TELEGRAM_ID")
 OWNER_ADMIN_PASSWORD = os.getenv("OWNER_ADMIN_PASSWORD")
 ADMIN_TOKEN_TTL_SECONDS = _env_int("ADMIN_TOKEN_TTL_SECONDS", 43_200, min_value=300, max_value=604_800)
+OAUTH_STATE_TTL_SECONDS = _env_int("OAUTH_STATE_TTL_SECONDS", 900, min_value=120, max_value=3_600)
 
 
 DB_URL, DB_CONNECT_ARGS = _normalize_db_url(RAW_DB_URL)
@@ -410,8 +417,10 @@ def validate_runtime_config() -> None:
         db_configured=bool(DB_URL),
         twitch_configured=bool(TWITCH_ID and TWITCH_SECRET),
         youtube_configured=bool(YT_KEY),
+        youtube_oauth_configured=bool(GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET),
         yt_handoff_configured=bool(YT_HANDOFF_WEBHOOK_URL),
         donationalerts_configured=bool(DONATALERTS_ACCESS_TOKEN),
+        donationalerts_oauth_configured=bool(DONATALERTS_CLIENT_ID and DONATALERTS_CLIENT_SECRET),
         owner_id_set=bool(OWNER_TELEGRAM_ID),
         owner_password_set=bool(OWNER_ADMIN_PASSWORD),
     )
@@ -455,6 +464,209 @@ def parse_and_verify_init_data(init_data: Optional[str]) -> Optional[dict[str, A
         log_event("init_data_parse_failed", error=str(error))
         return None
 
+
+def _sanitize_return_path(value: Optional[str]) -> str:
+    raw = (value or "/integrations").strip()
+    if not raw.startswith("/"):
+        return "/integrations"
+    if raw.startswith("//"):
+        return "/integrations"
+    return raw or "/integrations"
+
+
+def _oauth_provider_config() -> dict[str, bool]:
+    return {
+        "twitch": bool(TWITCH_ID and TWITCH_SECRET),
+        "youtube": bool(GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET and YT_KEY),
+        "donatealerts": bool(DONATALERTS_CLIENT_ID and DONATALERTS_CLIENT_SECRET),
+    }
+
+
+def _cleanup_expired_oauth_states() -> None:
+    now = time.time()
+    expired = [key for key, payload in oauth_state_store.items() if now - float(payload.get("created_at", 0)) > OAUTH_STATE_TTL_SECONDS]
+    for key in expired:
+        oauth_state_store.pop(key, None)
+
+
+def _create_oauth_state(payload: dict[str, Any]) -> str:
+    _cleanup_expired_oauth_states()
+    state = uuid.uuid4().hex
+    oauth_state_store[state] = {"created_at": time.time(), **payload}
+    return state
+
+
+def _pop_oauth_state(state: Optional[str]) -> Optional[dict[str, Any]]:
+    if not state:
+        return None
+    _cleanup_expired_oauth_states()
+    payload = oauth_state_store.pop(state, None)
+    if not payload:
+        return None
+    if time.time() - float(payload.get("created_at", 0)) > OAUTH_STATE_TTL_SECONDS:
+        return None
+    return payload
+
+
+def _build_oauth_callback_url(platform: str) -> str:
+    app_url = get_public_app_url()
+    if not app_url:
+        raise RuntimeError("APP_URL_or_RENDER_EXTERNAL_URL_not_set")
+    return f"{app_url}/api/oauth/{platform}/callback"
+
+
+def _build_native_result_url(payload: dict[str, Any]) -> str:
+    params = urlencode({key: "" if value is None else str(value) for key, value in payload.items()})
+    return f"{APP_DEEP_LINK_SCHEME}://oauth?{params}"
+
+
+def _build_oauth_result_payload(
+    *,
+    platform: str,
+    status: str,
+    return_path: str,
+    primary: bool,
+    message: Optional[str] = None,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "oauth_status": status,
+        "oauth_platform": platform,
+        "return_path": return_path,
+        "oauth_primary": "1" if primary else "0",
+    }
+    if message:
+        payload["oauth_message"] = message
+    return payload
+
+
+def _oauth_result_response(
+    request: web.Request,
+    *,
+    platform: str,
+    status: str,
+    return_path: str,
+    primary: bool,
+    mode: str,
+    message: Optional[str] = None,
+) -> web.Response:
+    payload = _build_oauth_result_payload(
+        platform=platform,
+        status=status,
+        return_path=return_path,
+        primary=primary,
+        message=message,
+    )
+    if mode == "native":
+        raise web.HTTPFound(_build_native_result_url(payload))
+
+    redirect_path = payload.get("return_path") or "/integrations"
+    redirect_payload = {key: value for key, value in payload.items() if key != "return_path"}
+    redirect_url = f"{redirect_path}?{urlencode(redirect_payload)}"
+    payload_json = json.dumps(payload, ensure_ascii=False)
+    title = "Подключение готово" if status == "success" else "Подключение не завершено"
+    subtitle = message or ("Можно вернуться в приложение и продолжить работу." if status == "success" else "Попробуйте ещё раз или проверьте настройки OAuth.")
+    html_body = f"""<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>{html.escape(title)}</title>
+    <style>
+      :root {{
+        color-scheme: dark;
+        font-family: Inter, system-ui, sans-serif;
+      }}
+      body {{
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background:
+          radial-gradient(circle at top, rgba(0,178,255,0.22), transparent 42%),
+          radial-gradient(circle at bottom, rgba(145,70,255,0.18), transparent 40%),
+          #05070b;
+        color: #f5f7fb;
+      }}
+      .card {{
+        width: min(92vw, 28rem);
+        border-radius: 1.5rem;
+        border: 1px solid rgba(255,255,255,0.08);
+        background: rgba(10,14,22,0.92);
+        box-shadow: 0 24px 80px rgba(0,0,0,0.42);
+        padding: 1.5rem;
+      }}
+      .eyebrow {{
+        font-size: 0.72rem;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: rgba(255,255,255,0.48);
+      }}
+      h1 {{
+        margin: 0.8rem 0 0.35rem;
+        font-size: 1.45rem;
+      }}
+      p {{
+        margin: 0;
+        line-height: 1.55;
+        color: rgba(255,255,255,0.72);
+      }}
+      a {{
+        display: inline-flex;
+        margin-top: 1.1rem;
+        color: #fff;
+        text-decoration: none;
+        padding: 0.85rem 1.1rem;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.1);
+      }}
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="eyebrow">StreamFly OAuth</div>
+      <h1>{html.escape(title)}</h1>
+      <p>{html.escape(subtitle)}</p>
+      <a href="{html.escape(redirect_url)}">Вернуться в приложение</a>
+    </div>
+    <script>
+      (function() {{
+        const payload = {payload_json};
+        const redirectUrl = {json.dumps(redirect_url)};
+        try {{
+          if (window.opener && !window.opener.closed) {{
+            window.opener.postMessage({{ type: "streamfly-oauth-result", payload }}, window.location.origin);
+            window.close();
+            return;
+          }}
+        }} catch (error) {{
+          console.error("streamfly_oauth_postmessage_failed", error);
+        }}
+        window.location.replace(redirectUrl);
+      }})();
+    </script>
+  </body>
+</html>"""
+    return web.Response(text=html_body, content_type="text/html")
+
+
+def _resolve_oauth_user(request: web.Request) -> tuple[Optional[int], dict[str, Any], Optional[web.Response]]:
+    init_data = request.query.get("init_data")
+    verified = parse_and_verify_init_data(init_data) if init_data else None
+    verified_user_id = _parse_int64((verified or {}).get("user_id"))
+    raw_user_id = request.query.get("user_id")
+    public_user_id = _parse_int64(raw_user_id)
+
+    if verified_user_id is not None:
+        if public_user_id is not None and public_user_id != verified_user_id:
+            return None, {}, web.json_response({"error": "user_mismatch"}, status=403)
+        return verified_user_id, (verified or {}).get("user") or {}, None
+
+    if public_user_id is not None:
+        return public_user_id, {}, None
+
+    return None, {}, web.json_response({"error": "invalid_user_id"}, status=400)
+
 _twitch_token: Optional[str] = None
 _twitch_token_expiry: float = 0.0
 _twitch_stats_cache: dict[str, tuple[float, dict[str, Any]]] = {}
@@ -462,6 +674,7 @@ _twitch_profile_cache: dict[str, tuple[float, dict[str, Any]]] = {}
 _youtube_stats_cache: dict[str, tuple[float, dict[str, Any]]] = {}
 STATS_CACHE_TTL_SECONDS = _env_int("STATS_CACHE_TTL_SECONDS", 30, min_value=5, max_value=600)
 PROFILE_CACHE_TTL_SECONDS = _env_int("PROFILE_CACHE_TTL_SECONDS", 180, min_value=30, max_value=1800)
+oauth_state_store: dict[str, dict[str, Any]] = {}
 
 async def _get_twitch_app_token() -> Optional[str]:
     global _twitch_token, _twitch_token_expiry
@@ -631,6 +844,235 @@ async def fetch_youtube_channel_details(channel_id: str) -> Optional[dict[str, A
     except Exception as error:
         log_event("youtube_channel_error", error=str(error))
         return None
+
+
+async def _exchange_twitch_oauth_code(code: str, redirect_uri: str) -> Optional[dict[str, Any]]:
+    if not TWITCH_ID or not TWITCH_SECRET:
+        return None
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                "https://id.twitch.tv/oauth2/token",
+                data={
+                    "client_id": TWITCH_ID,
+                    "client_secret": TWITCH_SECRET,
+                    "code": code,
+                    "grant_type": "authorization_code",
+                    "redirect_uri": redirect_uri,
+                },
+                timeout=15,
+            ) as resp:
+                data = await resp.json()
+                if resp.status != 200:
+                    log_event("twitch_oauth_exchange_failed", status=resp.status, body=str(data)[:200])
+                    return None
+                return data
+    except Exception as error:
+        log_event("twitch_oauth_exchange_error", error=str(error))
+        return None
+
+
+async def _exchange_google_oauth_code(code: str, redirect_uri: str) -> Optional[dict[str, Any]]:
+    if not GOOGLE_OAUTH_CLIENT_ID or not GOOGLE_OAUTH_CLIENT_SECRET:
+        return None
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                "https://oauth2.googleapis.com/token",
+                data={
+                    "code": code,
+                    "client_id": GOOGLE_OAUTH_CLIENT_ID,
+                    "client_secret": GOOGLE_OAUTH_CLIENT_SECRET,
+                    "redirect_uri": redirect_uri,
+                    "grant_type": "authorization_code",
+                },
+                timeout=15,
+            ) as resp:
+                data = await resp.json()
+                if resp.status != 200:
+                    log_event("google_oauth_exchange_failed", status=resp.status, body=str(data)[:200])
+                    return None
+                return data
+    except Exception as error:
+        log_event("google_oauth_exchange_error", error=str(error))
+        return None
+
+
+async def _exchange_donatealerts_oauth_code(code: str, redirect_uri: str) -> Optional[dict[str, Any]]:
+    if not DONATALERTS_CLIENT_ID or not DONATALERTS_CLIENT_SECRET:
+        return None
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                "https://www.donationalerts.com/oauth/token",
+                data={
+                    "grant_type": "authorization_code",
+                    "client_id": DONATALERTS_CLIENT_ID,
+                    "client_secret": DONATALERTS_CLIENT_SECRET,
+                    "redirect_uri": redirect_uri,
+                    "code": code,
+                },
+                timeout=15,
+            ) as resp:
+                data = await resp.json()
+                if resp.status != 200:
+                    log_event("donatealerts_oauth_exchange_failed", status=resp.status, body=str(data)[:200])
+                    return None
+                return data
+    except Exception as error:
+        log_event("donatealerts_oauth_exchange_error", error=str(error))
+        return None
+
+
+async def _fetch_twitch_oauth_identity(access_token: str) -> Optional[dict[str, Any]]:
+    if not TWITCH_ID:
+        return None
+    try:
+        headers = {"Client-ID": TWITCH_ID, "Authorization": f"Bearer {access_token}"}
+        async with aiohttp.ClientSession() as session:
+            async with session.get("https://api.twitch.tv/helix/users", headers=headers, timeout=15) as resp:
+                data = await resp.json()
+                if resp.status != 200:
+                    log_event("twitch_oauth_identity_failed", status=resp.status, body=str(data)[:200])
+                    return None
+                users = data.get("data") or []
+                if not users:
+                    return None
+                user = users[0]
+        followers = None
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    f"https://api.twitch.tv/helix/channels/followers?broadcaster_id={quote_plus(user.get('id', ''))}",
+                    headers=headers,
+                    timeout=15,
+                ) as resp:
+                    follower_data = await resp.json()
+                    if resp.status == 200:
+                        followers = follower_data.get("total")
+        except Exception as error:
+            log_event("twitch_oauth_followers_error", error=str(error))
+        return {
+            "login": user.get("login"),
+            "name": user.get("display_name") or user.get("login"),
+            "url": f"https://twitch.tv/{user.get('login')}",
+            "avatar": user.get("profile_image_url"),
+            "followers": followers,
+            "views": user.get("view_count"),
+        }
+    except Exception as error:
+        log_event("twitch_oauth_identity_error", error=str(error))
+        return None
+
+
+async def _fetch_youtube_oauth_identity(access_token: str) -> Optional[dict[str, Any]]:
+    try:
+        headers = {"Authorization": f"Bearer {access_token}"}
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                "https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true",
+                headers=headers,
+                timeout=15,
+            ) as resp:
+                data = await resp.json()
+                if resp.status != 200:
+                    log_event("youtube_oauth_identity_failed", status=resp.status, body=str(data)[:200])
+                    return None
+                items = data.get("items") or []
+                if not items:
+                    return None
+                item = items[0]
+                snippet = item.get("snippet") or {}
+                stats = item.get("statistics") or {}
+                return {
+                    "channel_id": item.get("id"),
+                    "name": snippet.get("title") or item.get("id"),
+                    "url": f"https://youtube.com/channel/{item.get('id')}",
+                    "avatar": ((snippet.get("thumbnails") or {}).get("medium") or {}).get("url"),
+                    "subscribers": int(stats.get("subscriberCount", 0)) if stats.get("subscriberCount") else None,
+                    "videos": int(stats.get("videoCount", 0)) if stats.get("videoCount") else None,
+                    "views": int(stats.get("viewCount", 0)) if stats.get("viewCount") else None,
+                }
+    except Exception as error:
+        log_event("youtube_oauth_identity_error", error=str(error))
+        return None
+
+
+async def _fetch_donatealerts_oauth_identity(access_token: str) -> Optional[dict[str, Any]]:
+    try:
+        headers = {"Authorization": f"Bearer {access_token}"}
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"{DONATALERTS_API_BASE}/user/oauth", headers=headers, timeout=15) as resp:
+                data = await resp.json()
+                if resp.status != 200:
+                    log_event("donatealerts_oauth_identity_failed", status=resp.status, body=str(data)[:200])
+                    return None
+                profile = data.get("data") or {}
+                code = profile.get("code") or profile.get("username")
+                if not code:
+                    return None
+                return {
+                    "code": code,
+                    "name": profile.get("name") or code,
+                    "url": f"https://www.donationalerts.com/r/{code}",
+                    "avatar": profile.get("avatar"),
+                }
+    except Exception as error:
+        log_event("donatealerts_oauth_identity_error", error=str(error))
+        return None
+
+
+async def _save_oauth_connection(
+    *,
+    user_id: int,
+    platform: str,
+    profile_data: dict[str, Any],
+    verified_user: Optional[dict[str, Any]] = None,
+    primary: bool = False,
+) -> bool:
+    if not async_session:
+        return False
+    async with async_session() as session:
+        streamer = await ensure_streamer(session, user_id, (verified_user or {}).get("username"))
+        user = await session.get(User, user_id)
+        if not user:
+            user = User(user_id=user_id)
+            session.add(user)
+
+        if platform == "twitch":
+            twitch_name = str(profile_data.get("login") or "").strip() or None
+            user.twitch_name = twitch_name
+            streamer.twitch_connected = bool(twitch_name)
+        elif platform == "youtube":
+            yt_channel_id = str(profile_data.get("channel_id") or "").strip() or None
+            user.yt_channel_id = yt_channel_id
+            streamer.youtube_connected = bool(yt_channel_id)
+        elif platform == "donatealerts":
+            donationalerts_name = str(profile_data.get("code") or "").strip() or None
+            user.donationalerts_name = donationalerts_name
+
+        if platform in {"twitch", "youtube"}:
+            connection = await session.get(ChannelConnection, user_id)
+            should_update_primary = primary or connection is None or not bool(connection.connected)
+            if should_update_primary:
+                if not connection:
+                    connection = ChannelConnection(
+                        user_id=user_id,
+                        platform=platform,
+                        channel_url=str(profile_data.get("url") or ""),
+                        channel_name=str(profile_data.get("name") or profile_data.get("login") or profile_data.get("channel_id") or ""),
+                        connected=True,
+                    )
+                    session.add(connection)
+                else:
+                    connection.platform = platform
+                    connection.channel_url = str(profile_data.get("url") or "")
+                    connection.channel_name = str(profile_data.get("name") or profile_data.get("login") or profile_data.get("channel_id") or "")
+                    connection.connected = True
+                    connection.updated_at = datetime.now(timezone.utc)
+
+        await session.commit()
+    return True
 
 async def fetch_twitch(login: Optional[str]) -> dict[str, Any]:
     if not login:
@@ -1215,6 +1657,247 @@ async def get_live_banner(request: web.Request):
             "image_url": banner.image_url,
             "link_url": banner.link_url,
         })
+
+
+async def get_oauth_providers(request: web.Request):
+    return web.json_response(_oauth_provider_config())
+
+
+async def oauth_start(request: web.Request):
+    raw_platform = (request.match_info.get("platform") or "").strip().lower()
+    platform = "donatealerts" if raw_platform in {"donatealerts", "donationalerts"} else raw_platform
+    user_id, verified_user, user_error = _resolve_oauth_user(request)
+    if user_error:
+        return user_error
+    if user_id is None:
+        return web.json_response({"error": "invalid_user_id"}, status=400)
+
+    return_path = _sanitize_return_path(request.query.get("return_path"))
+    mode = (request.query.get("mode") or "popup").strip().lower()
+    if mode not in {"popup", "redirect", "native"}:
+        mode = "popup"
+    primary = (request.query.get("primary") or "").strip().lower() in {"1", "true", "yes", "on"}
+
+    provider_config = _oauth_provider_config()
+    if not provider_config.get(platform):
+        return _oauth_result_response(
+            request,
+            platform=platform,
+            status="error",
+            return_path=return_path,
+            primary=primary,
+            mode=mode,
+            message="Подключение пока не настроено на сервере. Нужны OAuth client id и client secret.",
+        )
+
+    try:
+        callback_url = _build_oauth_callback_url(platform)
+    except RuntimeError:
+        return _oauth_result_response(
+            request,
+            platform=platform,
+            status="error",
+            return_path=return_path,
+            primary=primary,
+            mode=mode,
+            message="На сервере не задан публичный APP_URL, поэтому OAuth пока не может завершиться.",
+        )
+
+    state = _create_oauth_state(
+        {
+            "platform": platform,
+            "user_id": user_id,
+            "mode": mode,
+            "primary": primary,
+            "return_path": return_path,
+            "verified_user": verified_user,
+        }
+    )
+
+    if platform == "twitch":
+        authorize_url = (
+            "https://id.twitch.tv/oauth2/authorize?"
+            + urlencode(
+                {
+                    "client_id": TWITCH_ID,
+                    "redirect_uri": callback_url,
+                    "response_type": "code",
+                    "scope": "user:read:email",
+                    "force_verify": "true",
+                    "state": state,
+                }
+            )
+        )
+    elif platform == "youtube":
+        authorize_url = (
+            "https://accounts.google.com/o/oauth2/v2/auth?"
+            + urlencode(
+                {
+                    "client_id": GOOGLE_OAUTH_CLIENT_ID,
+                    "redirect_uri": callback_url,
+                    "response_type": "code",
+                    "scope": "https://www.googleapis.com/auth/youtube.readonly",
+                    "access_type": "offline",
+                    "include_granted_scopes": "true",
+                    "prompt": "consent",
+                    "state": state,
+                }
+            )
+        )
+    elif platform == "donatealerts":
+        authorize_url = (
+            "https://www.donationalerts.com/oauth/authorize?"
+            + urlencode(
+                {
+                    "client_id": DONATALERTS_CLIENT_ID,
+                    "redirect_uri": callback_url,
+                    "response_type": "code",
+                    "scope": "oauth-user-show",
+                    "state": state,
+                }
+            )
+        )
+    else:
+        return _oauth_result_response(
+            request,
+            platform=platform,
+            status="error",
+            return_path=return_path,
+            primary=primary,
+            mode=mode,
+            message="Для этой платформы OAuth пока не поддерживается.",
+        )
+
+    log_event("oauth_start", platform=platform, user_id=user_id, mode=mode, primary=primary)
+    raise web.HTTPFound(authorize_url)
+
+
+async def oauth_callback(request: web.Request):
+    raw_platform = (request.match_info.get("platform") or "").strip().lower()
+    platform = "donatealerts" if raw_platform in {"donatealerts", "donationalerts"} else raw_platform
+    state_value = request.query.get("state")
+    state_payload = _pop_oauth_state(state_value)
+    if not state_payload:
+        return _oauth_result_response(
+            request,
+            platform=platform,
+            status="error",
+            return_path="/integrations",
+            primary=False,
+            mode="redirect",
+            message="Сессия подключения истекла. Запустите подключение ещё раз.",
+        )
+
+    mode = str(state_payload.get("mode") or "popup")
+    return_path = _sanitize_return_path(state_payload.get("return_path"))
+    primary = bool(state_payload.get("primary"))
+    user_id = _parse_int64(state_payload.get("user_id"))
+    verified_user = state_payload.get("verified_user") if isinstance(state_payload.get("verified_user"), dict) else {}
+
+    provider_error = request.query.get("error")
+    if provider_error:
+        description = request.query.get("error_description") or provider_error
+        log_event("oauth_callback_error", platform=platform, error=provider_error, description=description)
+        return _oauth_result_response(
+            request,
+            platform=platform,
+            status="error",
+            return_path=return_path,
+            primary=primary,
+            mode=mode,
+            message="Подключение отменено или не завершилось. Попробуйте ещё раз.",
+        )
+
+    code = request.query.get("code")
+    if not code or user_id is None:
+        return _oauth_result_response(
+            request,
+            platform=platform,
+            status="error",
+            return_path=return_path,
+            primary=primary,
+            mode=mode,
+            message="Провайдер не вернул код авторизации. Попробуйте ещё раз.",
+        )
+
+    try:
+        callback_url = _build_oauth_callback_url(platform)
+    except RuntimeError:
+        return _oauth_result_response(
+            request,
+            platform=platform,
+            status="error",
+            return_path=return_path,
+            primary=primary,
+            mode=mode,
+            message="На сервере не задан публичный APP_URL, поэтому OAuth пока не может завершиться.",
+        )
+
+    profile_data: Optional[dict[str, Any]] = None
+    if platform == "twitch":
+        token_data = await _exchange_twitch_oauth_code(code, callback_url)
+        access_token = (token_data or {}).get("access_token")
+        profile_data = await _fetch_twitch_oauth_identity(str(access_token)) if access_token else None
+    elif platform == "youtube":
+        token_data = await _exchange_google_oauth_code(code, callback_url)
+        access_token = (token_data or {}).get("access_token")
+        profile_data = await _fetch_youtube_oauth_identity(str(access_token)) if access_token else None
+    elif platform == "donatealerts":
+        token_data = await _exchange_donatealerts_oauth_code(code, callback_url)
+        access_token = (token_data or {}).get("access_token")
+        profile_data = await _fetch_donatealerts_oauth_identity(str(access_token)) if access_token else None
+
+    if not profile_data:
+        return _oauth_result_response(
+            request,
+            platform=platform,
+            status="error",
+            return_path=return_path,
+            primary=primary,
+            mode=mode,
+            message="Не удалось получить данные профиля у провайдера. Попробуйте ещё раз.",
+        )
+
+    saved = await _save_oauth_connection(
+        user_id=user_id,
+        platform=platform,
+        profile_data=profile_data,
+        verified_user=verified_user,
+        primary=primary,
+    )
+    if not saved:
+        return _oauth_result_response(
+            request,
+            platform=platform,
+            status="error",
+            return_path=return_path,
+            primary=primary,
+            mode=mode,
+            message="Не удалось сохранить подключение на сервере.",
+        )
+
+    await write_audit_log(
+        str(user_id),
+        f"oauth_connect_{platform}",
+        json.dumps(
+            {
+                "primary": primary,
+                "name": profile_data.get("name"),
+                "url": profile_data.get("url"),
+            },
+            ensure_ascii=False,
+        ),
+    )
+    log_event("oauth_callback_success", platform=platform, user_id=user_id, primary=primary)
+    return _oauth_result_response(
+        request,
+        platform=platform,
+        status="success",
+        return_path=return_path,
+        primary=primary,
+        mode=mode,
+        message=f"{profile_data.get('name') or platform} успешно подключен.",
+    )
 
 def _extract_username(value: str) -> str:
     raw = (value or "").strip()
@@ -1993,6 +2676,9 @@ def build_app():
     # API routes
     app.router.add_post("/api/ping", api_ping)
     app.router.add_get("/api/bot_info", get_bot_info)
+    app.router.add_get("/api/oauth/providers", get_oauth_providers)
+    app.router.add_get("/api/oauth/{platform}/start", oauth_start)
+    app.router.add_get("/api/oauth/{platform}/callback", oauth_callback)
     app.router.add_get("/api/telegram_targets", get_telegram_targets)
     app.router.add_get("/api/stats", get_all_stats)
     app.router.add_get("/api/settings", get_settings)
@@ -2155,10 +2841,11 @@ async def get_all_stats(request: web.Request):
         return web.json_response({"is_linked": True, "clicks": user.clicks, "twitch": twitch_data, "youtube": youtube_data})
 
 async def get_settings(request: web.Request):
-    auth_error = await _require_verified_user(request)
-    if auth_error: return auth_error
-    user_id, user_error = _resolve_user_id(request, allow_verified_fallback=True)
-    if user_error: return user_error
+    user_id, _, user_error = _resolve_oauth_user(request)
+    if user_error:
+        return user_error
+    if user_id is None:
+        return web.json_response({"error": "invalid_user_id"}, status=400)
     if not async_session: return web.json_response({"error": "db_not_configured"}, status=500)
     async with async_session() as session:
         streamer = await ensure_streamer(session, user_id, (request.get("verified_user") or {}).get("username"))

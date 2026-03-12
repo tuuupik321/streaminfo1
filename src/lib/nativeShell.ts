@@ -1,6 +1,9 @@
 import { Capacitor } from "@capacitor/core";
 import { App } from "@capacitor/app";
+import { Browser } from "@capacitor/browser";
 import { StatusBar, Style } from "@capacitor/status-bar";
+
+import { storeOAuthResult, type OAuthResult } from "./oauth";
 
 let initialized = false;
 
@@ -44,11 +47,58 @@ async function setupAndroidBackButton() {
   });
 }
 
+async function setupAppUrlHandling() {
+  await App.addListener("appUrlOpen", async ({ url }) => {
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== "streamfly:" || parsed.host !== "oauth") {
+        return;
+      }
+
+      const status = parsed.searchParams.get("oauth_status");
+      const platform = parsed.searchParams.get("oauth_platform");
+      if ((status !== "success" && status !== "error") || !platform) {
+        return;
+      }
+
+      const result: OAuthResult = {
+        status,
+        platform: platform as OAuthResult["platform"],
+        message: parsed.searchParams.get("oauth_message") || "",
+        primary: parsed.searchParams.get("oauth_primary") === "1",
+      };
+
+      storeOAuthResult(result);
+
+      try {
+        await Browser.close();
+      } catch {
+        // ignore browser close failures
+      }
+
+      const returnPath = parsed.searchParams.get("return_path") || "/integrations";
+      const target = new URL(window.location.origin);
+      target.pathname = returnPath.startsWith("/") ? returnPath : "/integrations";
+      target.searchParams.set("oauth_status", result.status);
+      target.searchParams.set("oauth_platform", result.platform);
+      if (result.message) {
+        target.searchParams.set("oauth_message", result.message);
+      }
+      target.searchParams.set("oauth_primary", result.primary ? "1" : "0");
+
+      window.location.replace(target.toString());
+    } catch {
+      // ignore malformed deep links
+    }
+  });
+}
+
 export async function initNativeShell() {
   if (initialized || !Capacitor.isNativePlatform()) return;
 
   initialized = true;
   markNativeShell();
   await setupStatusBar();
+  await setupAppUrlHandling();
   await setupAndroidBackButton();
 }

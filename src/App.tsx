@@ -1,4 +1,4 @@
-﻿import { Suspense, lazy, useEffect, useMemo, useState } from "react";
+﻿import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "./App.css";
@@ -46,7 +46,7 @@ function RouteLoadingState() {
 }
 
 type TelegramWebAppUser = { id?: number };
-type TelegramWebApp = { initDataUnsafe?: { user?: TelegramWebAppUser } };
+type TelegramWebApp = { initData?: string; initDataUnsafe?: { user?: TelegramWebAppUser } };
 
 const App = () => {
   const [profile, setProfile] = useState<UserProfile | null>(() => getUserProfile());
@@ -60,6 +60,7 @@ const App = () => {
     () => (window as Window & { Telegram?: { WebApp?: TelegramWebApp } }).Telegram?.WebApp?.initDataUnsafe?.user?.id,
     [],
   );
+  const telegramInitData = useMemo(() => (window as Window & { Telegram?: { WebApp?: TelegramWebApp } }).Telegram?.WebApp?.initData || "", []);
   const userId = useMemo(() => getOrCreateUserId(telegramUserId), [telegramUserId]);
   const queryClient = useMemo(() => new QueryClient(), []);
 
@@ -72,22 +73,24 @@ const App = () => {
     root.style.setProperty("--panel-bg", theme.colors.bg);
   }, [theme]);
 
-  useEffect(() => {
-    const loadProfile = async () => {
-      try {
-        const res = await fetch(`/api/channel?user_id=${userId}`);
-        if (!res.ok) return;
-        const data = (await res.json()) as UserProfile;
-        if (data?.connected) {
-          saveUserProfile(data);
-          setProfile(data);
-        }
-      } catch {
-        // ignore
+  const refreshProfileFromServer = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/channel?user_id=${userId}`);
+      if (!res.ok) return;
+      const data = (await res.json()) as UserProfile;
+      if (data?.connected) {
+        saveUserProfile(data);
+        setProfile(data);
+        setError(null);
       }
-    };
-    void loadProfile();
+    } catch {
+      // ignore
+    }
   }, [userId]);
+
+  useEffect(() => {
+    void refreshProfileFromServer();
+  }, [refreshProfileFromServer]);
 
   useEffect(() => {
     if (!profile) return;
@@ -180,7 +183,7 @@ const App = () => {
         path="/"
         element={
           <div className="app-shell">
-            <ConnectScreen onConnect={handleConnect} />
+            <ConnectScreen onConnect={handleConnect} onOAuthConnected={refreshProfileFromServer} userId={userId} initData={telegramInitData} />
             {error ? <div className="global-error">{error}</div> : null}
           </div>
         }

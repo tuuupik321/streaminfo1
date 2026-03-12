@@ -4,10 +4,28 @@ import { Twitch, Youtube, Send, Heart, Sparkles, Flame, ArrowRight, Link2 } from
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { makeFadeUp, makeStagger } from "@/shared/motion";
+import { getOrCreateUserId } from "@/database/users";
+import {
+  consumeOAuthResultFromLocation,
+  fetchOAuthProviderConfig,
+  popStoredOAuthResult,
+  startOAuthConnection,
+  subscribeToOAuthResults,
+  type OAuthPlatform,
+  type OAuthProviderConfig,
+  type OAuthResult,
+} from "@/lib/oauth";
 
 type Ripple = { id: number; x: number; y: number };
 type Platform = "twitch" | "youtube" | "telegram" | "donatealerts" | "kick";
 type IntegrationCategory = "platforms" | "donations" | "notifications";
+type NoticeState = { tone: "success" | "error"; text: string } | null;
+
+const oauthPlatformKeys = ["twitch", "youtube", "donatealerts"] as const;
+
+function isOAuthPlatform(platform: Platform): platform is OAuthPlatform {
+  return (oauthPlatformKeys as readonly string[]).includes(platform);
+}
 
 type PlatformConfig = {
   key: Platform;
@@ -49,6 +67,12 @@ type VerifyPayload = {
   platform: Platform;
   channel: string;
   init_data?: string | null;
+};
+
+const defaultOAuthProviderConfig: OAuthProviderConfig = {
+  twitch: false,
+  youtube: false,
+  donatealerts: false,
 };
 
 function buildChannelUrl(platform: Platform, channel: string) {
@@ -239,6 +263,19 @@ function mapIntegrationError(
   return t("integrations.errorNotFound", "Channel not found. Please check username or link");
 }
 
+function mapOAuthNotice(result: OAuthResult, platformLabel: string) {
+  if (result.status === "success") {
+    return {
+      tone: "success" as const,
+      text: `${platformLabel} подключён. Возвращаем вас в приложение и обновляем подключение.`,
+    };
+  }
+  return {
+    tone: "error" as const,
+    text: result.message || `Не удалось завершить подключение ${platformLabel}. Попробуйте ещё раз.`,
+  };
+}
+
 function IntegrationCard({
   label,
   description,
@@ -395,6 +432,10 @@ export default function IntegrationsPage() {
   const [telegramTargets, setTelegramTargets] = useState<TelegramTarget[]>([]);
   const [loadingTelegramTargets, setLoadingTelegramTargets] = useState(false);
   const [loadingSaved, setLoadingSaved] = useState(false);
+  const [oauthProviders, setOauthProviders] = useState<OAuthProviderConfig>(defaultOAuthProviderConfig);
+  const [oauthLoading, setOauthLoading] = useState(true);
+  const [connectingPlatform, setConnectingPlatform] = useState<OAuthPlatform | null>(null);
+  const [notice, setNotice] = useState<NoticeState>(null);
   const platformLabels = useMemo(() => {
     return platforms.reduce<Record<Platform, string>>((acc, p) => {
       acc[p.key] = p.label;
@@ -409,9 +450,10 @@ export default function IntegrationsPage() {
   const item = makeFadeUp(reduceMotion);
 
   const tg = (window as TelegramWindow).Telegram?.WebApp;
-  const userId = tg?.initDataUnsafe?.user?.id;
+  const telegramUserId = tg?.initDataUnsafe?.user?.id;
   const initData = tg?.initData || "";
-  const canManageIntegrations = Boolean(userId && initData);
+  const userId = useMemo(() => getOrCreateUserId(telegramUserId), [telegramUserId]);
+  const hasVerifiedContext = Boolean(telegramUserId && initData);
 
   const openTelegramLink = (url: string) => {
     if (tg?.openTelegramLink) {
@@ -420,6 +462,16 @@ export default function IntegrationsPage() {
     }
     window.open(url, "_blank");
   };
+
+  const canManagePlatform = useCallback(
+    (platform: Platform) => {
+      if (isOAuthPlatform(platform)) {
+        return Boolean(userId);
+      }
+      return hasVerifiedContext;
+    },
+    [hasVerifiedContext, userId],
+  );
 
   const fetchBotUsername = useCallback(async () => {
     try {
@@ -464,27 +516,33 @@ export default function IntegrationsPage() {
   );
 
   const fetchTelegramTargetsList = useCallback(async () => {
-    if (!userId || !initData) return;
+    if (!hasVerifiedContext) return;
     setLoadingTelegramTargets(true);
     try {
-      const targets = await loadTelegramTargets(userId, initData);
+      const targets = await loadTelegramTargets(Number(userId), initData);
       setTelegramTargets(targets);
     } finally {
       setLoadingTelegramTargets(false);
     }
-  }, [initData, userId]);
+  }, [hasVerifiedContext, initData, userId]);
+
+  const makeSavedResult = useCallback(
+    (platform: Platform, channel: string) =>
+      ({
+        name: channel,
+        url: buildChannelUrl(platform, channel),
+        platform,
+      }) as VerifyResult,
+    [],
+  );
 
   const hydrateConnection = useCallback(async (platform: Platform, channel: string) => {
-    if (!userId || !initData) {
-      return {
-        name: channel,
-        url: "",
-        platform,
-      } as VerifyResult;
+    if (!hasVerifiedContext || !isOAuthPlatform(platform)) {
+      return makeSavedResult(platform, channel);
     }
     try {
       const response = await postVerifyChannel({
-        user_id: userId,
+        user_id: Number(userId),
         platform,
         channel,
         init_data: initData,
@@ -496,72 +554,170 @@ export default function IntegrationsPage() {
     } catch {
       // ignore
     }
-    return {
-      name: channel,
-      url: "",
-      platform,
-    } as VerifyResult;
-  }, [userId, initData, makeVerifyResult]);
+    return makeSavedResult(platform, channel);
+  }, [hasVerifiedContext, initData, makeSavedResult, makeVerifyResult, userId]);
+
+  const refreshSavedConnections = useCallback(async () => {
+    if (!userId) return;
+    setLoadingSaved(true);
+    try {
+      const params = new URLSearchParams({ user_id: String(userId) });
+      if (initData) {
+        params.set("init_data", initData);
+      }
+      const res = await fetch(`/api/settings?${params.toString()}`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return;
+      const next: Record<Platform, VerifyResult | null> = {
+        twitch: null,
+        youtube: null,
+        telegram: null,
+        donatealerts: null,
+        kick: null,
+      };
+      const tasks: Promise<void>[] = [];
+      if (data?.twitch_name) {
+        tasks.push(
+          hydrateConnection("twitch", data.twitch_name).then((payload) => {
+            next.twitch = payload;
+          }),
+        );
+      }
+      if (data?.yt_channel_id) {
+        tasks.push(
+          hydrateConnection("youtube", data.yt_channel_id).then((payload) => {
+            next.youtube = payload;
+          }),
+        );
+      }
+      if (data?.donationalerts_name) {
+        tasks.push(
+          hydrateConnection("donatealerts", data.donationalerts_name).then((payload) => {
+            next.donatealerts = payload;
+          }),
+        );
+      }
+      if (data?.telegram_channel) {
+        tasks.push(
+          hydrateConnection("telegram", data.telegram_channel).then((payload) => {
+            next.telegram = payload;
+          }),
+        );
+      }
+      if (data?.kick_name) {
+        tasks.push(
+          hydrateConnection("kick", data.kick_name).then((payload) => {
+            next.kick = payload;
+          }),
+        );
+      }
+      await Promise.all(tasks);
+      if (hasVerifiedContext) {
+        await fetchTelegramTargetsList();
+      }
+      setConnected(next);
+    } finally {
+      setLoadingSaved(false);
+    }
+  }, [fetchTelegramTargetsList, hasVerifiedContext, hydrateConnection, initData, userId]);
 
   useEffect(() => {
-    const loadSaved = async () => {
-      if (!userId || !initData) return;
-      setLoadingSaved(true);
+    let active = true;
+
+    const loadProviders = async () => {
       try {
-        const res = await fetch(`/api/settings?user_id=${userId}&init_data=${encodeURIComponent(initData)}`);
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) return;
-        const next: Partial<Record<Platform, VerifyResult>> = {};
-        const tasks: Promise<void>[] = [];
-        if (data?.twitch_name) {
-          tasks.push(
-            hydrateConnection("twitch", data.twitch_name).then((payload) => {
-              next.twitch = payload;
-            }),
-          );
+        const config = await fetchOAuthProviderConfig();
+        if (active) {
+          setOauthProviders(config);
         }
-        if (data?.yt_channel_id) {
-          tasks.push(
-            hydrateConnection("youtube", data.yt_channel_id).then((payload) => {
-              next.youtube = payload;
-            }),
-          );
-        }
-        if (data?.donationalerts_name) {
-          tasks.push(
-            hydrateConnection("donatealerts", data.donationalerts_name).then((payload) => {
-              next.donatealerts = payload;
-            }),
-          );
-        }
-        if (data?.telegram_channel) {
-          tasks.push(
-            hydrateConnection("telegram", data.telegram_channel).then((payload) => {
-              next.telegram = payload;
-            }),
-          );
-        }
-        if (data?.kick_name) {
-          tasks.push(
-            hydrateConnection("kick", data.kick_name).then((payload) => {
-              next.kick = payload;
-            }),
-          );
-        }
-        await Promise.all(tasks);
-        await fetchTelegramTargetsList();
-        if (Object.keys(next).length) {
-          setConnected((prev) => ({ ...prev, ...next }));
+      } catch {
+        if (active) {
+          setOauthProviders(defaultOAuthProviderConfig);
         }
       } finally {
-        setLoadingSaved(false);
+        if (active) {
+          setOauthLoading(false);
+        }
       }
     };
 
-    loadSaved();
-  }, [userId, initData, hydrateConnection, fetchTelegramTargetsList]);
+    void loadProviders();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    void refreshSavedConnections();
+  }, [refreshSavedConnections]);
+
+  useEffect(() => {
+    const handleOAuthResult = async (result: OAuthResult) => {
+      const platformConfig = platforms.find((platform) => platform.key === result.platform);
+      setConnectingPlatform(null);
+      setNotice(mapOAuthNotice(result, platformConfig?.label || result.platform));
+      if (result.status === "success") {
+        await refreshSavedConnections();
+        setSuccessData({
+          name: platformConfig?.label || result.platform,
+          url: "",
+          platform: result.platform,
+        });
+        setShowSuccess(true);
+      }
+    };
+
+    const immediateResult = consumeOAuthResultFromLocation() || popStoredOAuthResult();
+    if (immediateResult) {
+      void handleOAuthResult(immediateResult);
+    }
+
+    const unsubscribe = subscribeToOAuthResults((result) => {
+      void handleOAuthResult(result);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [refreshSavedConnections]);
+
+  const startPlatformOAuth = useCallback(async (platform: OAuthPlatform, primary = false) => {
+    if (!userId) return;
+    if (!oauthProviders[platform]) {
+      const platformConfig = platforms.find((item) => item.key === platform);
+      setNotice({
+        tone: "error",
+        text: `${platformConfig?.label || platform} ещё не настроен на сервере для прямого подключения.`,
+      });
+      return;
+    }
+    try {
+      setNotice(null);
+      setConnectingPlatform(platform);
+      await startOAuthConnection({
+        platform,
+        userId,
+        initData,
+        primary,
+        returnPath: "/integrations",
+      });
+    } catch {
+      setConnectingPlatform(null);
+      const platformConfig = platforms.find((item) => item.key === platform);
+      setNotice({
+        tone: "error",
+        text: `Не удалось открыть окно подключения ${platformConfig?.label || platform}. Попробуйте ещё раз.`,
+      });
+    }
+  }, [initData, oauthProviders, userId]);
 
   const openPlatform = useCallback((platform: PlatformConfig, presetValue = "") => {
+    if (isOAuthPlatform(platform.key)) {
+      const shouldPromoteToPrimary =
+        platform.category === "platforms" && !connected.twitch && !connected.youtube && !connected.kick;
+      void startPlatformOAuth(platform.key, shouldPromoteToPrimary);
+      return;
+    }
     setActivePlatform(platform);
     setStatus("idle");
     setResult(null);
@@ -570,7 +726,7 @@ export default function IntegrationsPage() {
     if (platform.key === "telegram") {
       void fetchTelegramTargetsList();
     }
-  }, [fetchTelegramTargetsList]);
+  }, [connected.kick, connected.twitch, connected.youtube, fetchTelegramTargetsList, startPlatformOAuth]);
 
   const verify = async () => {
     if (!inputValue.trim()) {
@@ -578,7 +734,7 @@ export default function IntegrationsPage() {
       setErrorMessage(t("integrations.errorEmpty", "Enter a username or link"));
       return;
     }
-    if (!activePlatform || !userId) {
+    if (!activePlatform || !hasVerifiedContext) {
       setStatus("error");
       setErrorMessage(t("integrations.errorTelegram", "Open the app via Telegram to verify"));
       return;
@@ -587,7 +743,7 @@ export default function IntegrationsPage() {
     setErrorMessage(null);
     try {
       const response = await postVerifyChannel({
-        user_id: userId,
+        user_id: Number(userId),
         platform: activePlatform.key,
         channel: inputValue.trim(),
         init_data: initData,
@@ -627,14 +783,14 @@ export default function IntegrationsPage() {
 
   const confirmConnection = async () => {
     if (!result) return;
-    if (userId && initData) {
+    if (hasVerifiedContext) {
       let response: Response | null = null;
       if (result.platform === "twitch") {
         const twitchLogin = extractHandle(result.url || result.name);
         response = await fetch("/api/save_settings", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: userId, twitch_name: twitchLogin, init_data: initData }),
+          body: JSON.stringify({ user_id: Number(userId), twitch_name: twitchLogin, init_data: initData }),
         });
       }
       if (result.platform === "youtube") {
@@ -642,7 +798,7 @@ export default function IntegrationsPage() {
         response = await fetch("/api/save_settings", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: userId, yt_channel_id: youtubeIdOrHandle, init_data: initData }),
+          body: JSON.stringify({ user_id: Number(userId), yt_channel_id: youtubeIdOrHandle, init_data: initData }),
         });
       }
       if (result.platform === "donatealerts") {
@@ -650,7 +806,7 @@ export default function IntegrationsPage() {
         response = await fetch("/api/save_settings", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: userId, donationalerts_name: donatealertsName, init_data: initData }),
+          body: JSON.stringify({ user_id: Number(userId), donationalerts_name: donatealertsName, init_data: initData }),
         });
       }
       if (result.platform === "telegram") {
@@ -658,7 +814,7 @@ export default function IntegrationsPage() {
         response = await fetch("/api/save_settings", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: userId, telegram_channel: channel, init_data: initData }),
+          body: JSON.stringify({ user_id: Number(userId), telegram_channel: channel, init_data: initData }),
         });
       }
       if (result.platform === "kick") {
@@ -666,7 +822,7 @@ export default function IntegrationsPage() {
         response = await fetch("/api/save_settings", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: userId, kick_name: kickName, init_data: initData }),
+          body: JSON.stringify({ user_id: Number(userId), kick_name: kickName, init_data: initData }),
         });
       }
       const savePayload = response ? await response.json().catch(() => ({})) : {};
@@ -700,8 +856,8 @@ export default function IntegrationsPage() {
     [connected],
   );
 
-  const primaryNextStep = !canManageIntegrations
-    ? "Откройте приложение через Telegram, чтобы подтверждать подключения и выбирать каналы для публикации."
+  const primaryNextStep = !hasVerifiedContext
+    ? "Основной канал можно подключить прямо сейчас. Для Telegram и Kick приложение попросит открыть его внутри Telegram."
     : connected.twitch || connected.youtube || connected.kick
       ? "Подключите ещё одну площадку, чтобы видеть общую аналитику по платформам."
       : "Подключите платформу, чтобы открыть аналитику, историю эфиров и AI-рекомендации.";
@@ -727,15 +883,38 @@ export default function IntegrationsPage() {
                 </div>
               </div>
             </div>
-            {!canManageIntegrations ? (
+            {!hasVerifiedContext ? (
               <div className="mt-4 rounded-[22px] border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">
-                Откройте этот экран через Telegram Mini App, чтобы подтверждать каналы, сохранять подключения и видеть найденные чаты.
+                Twitch, YouTube и DonateAlerts можно подключать уже сейчас. Telegram и Kick сохраняются только внутри Telegram Mini App.
+              </div>
+            ) : null}
+            {notice ? (
+              <div
+                className={`mt-4 rounded-[22px] border px-4 py-3 text-sm ${
+                  notice.tone === "success"
+                    ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-100"
+                    : "border-red-300/20 bg-red-300/10 text-red-100"
+                }`}
+              >
+                {notice.text}
               </div>
             ) : null}
           </div>
 
           <div className="flex min-w-0 flex-col gap-3 lg:min-w-[220px]">
-            <Button onClick={() => openPlatform(primaryPlatform)} className="w-full gap-2 lg:w-auto" disabled={!canManageIntegrations}>
+            <Button
+              onClick={() => {
+                if (isOAuthPlatform(primaryPlatform.key)) {
+                  const shouldPromoteToPrimary =
+                    primaryPlatform.category === "platforms" && !connected.twitch && !connected.youtube && !connected.kick;
+                  void startPlatformOAuth(primaryPlatform.key, shouldPromoteToPrimary);
+                  return;
+                }
+                openPlatform(primaryPlatform);
+              }}
+              className="w-full gap-2 lg:w-auto"
+              disabled={isOAuthPlatform(primaryPlatform.key) ? connectingPlatform !== null : !canManagePlatform(primaryPlatform.key)}
+            >
               Подключить платформу
               <ArrowRight size={14} />
             </Button>
@@ -743,11 +922,11 @@ export default function IntegrationsPage() {
               variant="outline"
               onClick={() => openPlatform(platforms.find((platform) => platform.key === "telegram") || platforms[0])}
               className="w-full gap-2 lg:w-auto"
-              disabled={!canManageIntegrations}
+              disabled={!canManagePlatform("telegram")}
             >
               Подключить Telegram
             </Button>
-            {loadingSaved ? <p className="text-xs text-white/50">{t("integrations.loadingSaved", "Загружаем сохранённые подключения...")}</p> : null}
+            {loadingSaved || oauthLoading ? <p className="text-xs text-white/50">{t("integrations.loadingSaved", "Загружаем сохранённые подключения...")}</p> : null}
           </div>
         </div>
       </motion.section>
@@ -764,8 +943,18 @@ export default function IntegrationsPage() {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
               {group.items.map((platform) => {
                 const isConnected = Boolean(connected[platform.key]);
+                const platformCanOpen = canManagePlatform(platform.key);
+                const isOauthCard = isOAuthPlatform(platform.key);
                 const statusText = isConnected ? "Подключено" : botInfoError && platform.key === "telegram" ? "Проверить" : "Не подключено";
-                const actionLabel = isConnected ? "Управлять" : "Подключить";
+                const actionLabel = !platformCanOpen
+                  ? "Нужен Telegram"
+                  : connectingPlatform === platform.key
+                    ? "Открываем..."
+                    : isConnected
+                      ? "Управлять"
+                      : isOauthCard
+                        ? "Войти и дать доступ"
+                        : "Подключить";
                 return (
                   <IntegrationCard
                     key={platform.key}
@@ -774,10 +963,10 @@ export default function IntegrationsPage() {
                     color={platform.color}
                     icon={platform.icon}
                     connected={isConnected}
-                    statusText={!canManageIntegrations ? "Mini App" : statusText}
-                    actionLabel={!canManageIntegrations ? "Открыть в Telegram" : actionLabel}
+                    statusText={!platformCanOpen ? "Через Telegram" : statusText}
+                    actionLabel={actionLabel}
                     connectedLabel={t("integrations.connected", "Уже подключено")}
-                    disabled={!canManageIntegrations}
+                    disabled={!platformCanOpen || connectingPlatform !== null}
                     onOpen={() => openPlatform(platform)}
                   />
                 );
@@ -819,6 +1008,10 @@ export default function IntegrationsPage() {
                     onClick={() => {
                       const config = platforms.find((platform) => platform.key === value.platform);
                       if (!config) return;
+                      if (isOAuthPlatform(value.platform)) {
+                        void startPlatformOAuth(value.platform, false);
+                        return;
+                      }
                       openPlatform(config, value.chat_id || value.url || value.channel || value.name);
                     }}
                     className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/70 transition hover:border-white/30 hover:bg-white/10"
