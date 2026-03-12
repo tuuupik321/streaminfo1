@@ -489,6 +489,13 @@ def _cleanup_expired_oauth_states() -> None:
         oauth_state_store.pop(key, None)
 
 
+def _cleanup_expired_oauth_results() -> None:
+    now = time.time()
+    expired = [key for key, payload in oauth_result_store.items() if now - float(payload.get("created_at", 0)) > OAUTH_STATE_TTL_SECONDS]
+    for key in expired:
+        oauth_result_store.pop(key, None)
+
+
 def _create_oauth_state(payload: dict[str, Any]) -> str:
     _cleanup_expired_oauth_states()
     state = uuid.uuid4().hex
@@ -508,6 +515,26 @@ def _pop_oauth_state(state: Optional[str]) -> Optional[dict[str, Any]]:
     return payload
 
 
+def _store_oauth_result_ticket(payload: dict[str, Any]) -> str:
+    _cleanup_expired_oauth_results()
+    ticket = uuid.uuid4().hex
+    oauth_result_store[ticket] = {"created_at": time.time(), **payload}
+    return ticket
+
+
+def _pop_oauth_result_ticket(ticket: Optional[str]) -> Optional[dict[str, Any]]:
+    if not ticket:
+        return None
+    _cleanup_expired_oauth_results()
+    payload = oauth_result_store.pop(ticket, None)
+    if not payload:
+        return None
+    if time.time() - float(payload.get("created_at", 0)) > OAUTH_STATE_TTL_SECONDS:
+        return None
+    payload.pop("created_at", None)
+    return payload
+
+
 def _build_oauth_callback_url(platform: str) -> str:
     app_url = get_public_app_url()
     if not app_url:
@@ -518,6 +545,33 @@ def _build_oauth_callback_url(platform: str) -> str:
 def _build_native_result_url(payload: dict[str, Any]) -> str:
     params = urlencode({key: "" if value is None else str(value) for key, value in payload.items()})
     return f"{APP_DEEP_LINK_SCHEME}://oauth?{params}"
+
+
+async def _get_telegram_bot_username() -> Optional[str]:
+    global telegram_bot_username_cache, telegram_bot_username_cache_ts
+
+    if telegram_bot_username_cache and time.time() - telegram_bot_username_cache_ts < 3600:
+        return telegram_bot_username_cache
+
+    if not bot:
+        return None
+
+    try:
+        me = await bot.get_me()
+        telegram_bot_username_cache = me.username or None
+        telegram_bot_username_cache_ts = time.time()
+        return telegram_bot_username_cache
+    except Exception as error:
+        log_event("oauth_bot_username_failed", error=str(error))
+        return None
+
+
+async def _build_telegram_result_url(payload: dict[str, Any]) -> Optional[str]:
+    username = await _get_telegram_bot_username()
+    if not username:
+        return None
+    ticket = _store_oauth_result_ticket(payload)
+    return f"https://t.me/{username}?startapp=oauth_{ticket}"
 
 
 def _build_oauth_result_payload(
@@ -539,7 +593,7 @@ def _build_oauth_result_payload(
     return payload
 
 
-def _oauth_result_response(
+async def _oauth_result_response(
     request: web.Request,
     *,
     platform: str,
@@ -557,7 +611,12 @@ def _oauth_result_response(
         message=message,
     )
     if mode == "native":
-        raise web.HTTPFound(_build_native_result_url(payload))
+        return web.HTTPFound(_build_native_result_url(payload))
+
+    if mode == "telegram":
+        telegram_url = await _build_telegram_result_url(payload)
+        if telegram_url:
+            return web.HTTPFound(telegram_url)
 
     redirect_path = payload.get("return_path") or "/integrations"
     redirect_payload = {key: value for key, value in payload.items() if key != "return_path"}
@@ -675,6 +734,9 @@ _youtube_stats_cache: dict[str, tuple[float, dict[str, Any]]] = {}
 STATS_CACHE_TTL_SECONDS = _env_int("STATS_CACHE_TTL_SECONDS", 30, min_value=5, max_value=600)
 PROFILE_CACHE_TTL_SECONDS = _env_int("PROFILE_CACHE_TTL_SECONDS", 180, min_value=30, max_value=1800)
 oauth_state_store: dict[str, dict[str, Any]] = {}
+oauth_result_store: dict[str, dict[str, Any]] = {}
+telegram_bot_username_cache: Optional[str] = None
+telegram_bot_username_cache_ts: float = 0.0
 
 async def _get_twitch_app_token() -> Optional[str]:
     global _twitch_token, _twitch_token_expiry
@@ -1663,6 +1725,14 @@ async def get_oauth_providers(request: web.Request):
     return web.json_response(_oauth_provider_config())
 
 
+async def get_oauth_result(request: web.Request):
+    ticket = (request.query.get("ticket") or "").strip()
+    payload = _pop_oauth_result_ticket(ticket)
+    if not payload:
+        return web.json_response({"error": "not_found"}, status=404, headers={"Access-Control-Allow-Origin": "*"})
+    return web.json_response(payload, headers={"Access-Control-Allow-Origin": "*"})
+
+
 async def oauth_start(request: web.Request):
     raw_platform = (request.match_info.get("platform") or "").strip().lower()
     platform = "donatealerts" if raw_platform in {"donatealerts", "donationalerts"} else raw_platform
@@ -1674,13 +1744,13 @@ async def oauth_start(request: web.Request):
 
     return_path = _sanitize_return_path(request.query.get("return_path"))
     mode = (request.query.get("mode") or "popup").strip().lower()
-    if mode not in {"popup", "redirect", "native"}:
+    if mode not in {"popup", "redirect", "native", "telegram"}:
         mode = "popup"
     primary = (request.query.get("primary") or "").strip().lower() in {"1", "true", "yes", "on"}
 
     provider_config = _oauth_provider_config()
     if not provider_config.get(platform):
-        return _oauth_result_response(
+        return await _oauth_result_response(
             request,
             platform=platform,
             status="error",
@@ -1693,7 +1763,7 @@ async def oauth_start(request: web.Request):
     try:
         callback_url = _build_oauth_callback_url(platform)
     except RuntimeError:
-        return _oauth_result_response(
+        return await _oauth_result_response(
             request,
             platform=platform,
             status="error",
@@ -1758,7 +1828,7 @@ async def oauth_start(request: web.Request):
             )
         )
     else:
-        return _oauth_result_response(
+        return await _oauth_result_response(
             request,
             platform=platform,
             status="error",
@@ -1778,7 +1848,7 @@ async def oauth_callback(request: web.Request):
     state_value = request.query.get("state")
     state_payload = _pop_oauth_state(state_value)
     if not state_payload:
-        return _oauth_result_response(
+        return await _oauth_result_response(
             request,
             platform=platform,
             status="error",
@@ -1798,7 +1868,7 @@ async def oauth_callback(request: web.Request):
     if provider_error:
         description = request.query.get("error_description") or provider_error
         log_event("oauth_callback_error", platform=platform, error=provider_error, description=description)
-        return _oauth_result_response(
+        return await _oauth_result_response(
             request,
             platform=platform,
             status="error",
@@ -1810,7 +1880,7 @@ async def oauth_callback(request: web.Request):
 
     code = request.query.get("code")
     if not code or user_id is None:
-        return _oauth_result_response(
+        return await _oauth_result_response(
             request,
             platform=platform,
             status="error",
@@ -1823,7 +1893,7 @@ async def oauth_callback(request: web.Request):
     try:
         callback_url = _build_oauth_callback_url(platform)
     except RuntimeError:
-        return _oauth_result_response(
+        return await _oauth_result_response(
             request,
             platform=platform,
             status="error",
@@ -1848,7 +1918,7 @@ async def oauth_callback(request: web.Request):
         profile_data = await _fetch_donatealerts_oauth_identity(str(access_token)) if access_token else None
 
     if not profile_data:
-        return _oauth_result_response(
+        return await _oauth_result_response(
             request,
             platform=platform,
             status="error",
@@ -1866,7 +1936,7 @@ async def oauth_callback(request: web.Request):
         primary=primary,
     )
     if not saved:
-        return _oauth_result_response(
+        return await _oauth_result_response(
             request,
             platform=platform,
             status="error",
@@ -1889,7 +1959,7 @@ async def oauth_callback(request: web.Request):
         ),
     )
     log_event("oauth_callback_success", platform=platform, user_id=user_id, primary=primary)
-    return _oauth_result_response(
+    return await _oauth_result_response(
         request,
         platform=platform,
         status="success",
@@ -2677,6 +2747,7 @@ def build_app():
     app.router.add_post("/api/ping", api_ping)
     app.router.add_get("/api/bot_info", get_bot_info)
     app.router.add_get("/api/oauth/providers", get_oauth_providers)
+    app.router.add_get("/api/oauth/result", get_oauth_result)
     app.router.add_get("/api/oauth/{platform}/start", oauth_start)
     app.router.add_get("/api/oauth/{platform}/callback", oauth_callback)
     app.router.add_get("/api/telegram_targets", get_telegram_targets)

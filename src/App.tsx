@@ -16,6 +16,7 @@ import { type ClipItem, type DashboardStats, type NotificationItem, type StreamI
 import { AppLayout } from "./app/AppLayout";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { I18nProvider } from "./lib/i18n";
+import { consumeOAuthRedirectFromTelegramStartParam } from "./lib/oauth";
 
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const Analytics = lazy(() => import("./pages/Analytics"));
@@ -65,6 +66,25 @@ const App = () => {
   const queryClient = useMemo(() => new QueryClient(), []);
 
   const theme = useMemo(() => (profile ? getThemeByPlatform(profile.platform) : null), [profile]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const applyTelegramOAuthRedirect = async () => {
+      const redirectUrl = await consumeOAuthRedirectFromTelegramStartParam();
+      if (cancelled || !redirectUrl) return;
+
+      const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      if (currentUrl === redirectUrl) return;
+
+      window.location.replace(redirectUrl);
+    };
+
+    void applyTelegramOAuthRedirect();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!theme) return;

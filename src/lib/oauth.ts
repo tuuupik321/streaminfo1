@@ -12,6 +12,10 @@ export type OAuthResult = {
   primary: boolean;
 };
 
+type OAuthRedirectPayload = OAuthResult & {
+  returnPath: string;
+};
+
 const OAUTH_RESULT_STORAGE_KEY = "streamfly_oauth_result_v1";
 const OAUTH_RESULT_EVENT = "streamfly-oauth-result";
 const OAUTH_QUERY_KEYS = ["oauth_status", "oauth_platform", "oauth_message", "oauth_primary"] as const;
@@ -21,6 +25,10 @@ type TelegramWindow = Window & {
   Telegram?: {
     WebApp?: {
       initData?: string;
+      openLink?: (url: string) => void;
+      initDataUnsafe?: {
+        start_param?: string;
+      };
     };
   };
 };
@@ -45,7 +53,7 @@ function buildStartUrl({
   initData?: string | null;
   primary: boolean;
   returnPath: string;
-  mode: "popup" | "redirect" | "native";
+  mode: "popup" | "redirect" | "native" | "telegram";
 }) {
   const url = new URL(`/api/oauth/${platform}/start`, getOAuthApiOrigin());
   url.searchParams.set("user_id", String(userId));
@@ -96,6 +104,28 @@ function parseOAuthResult(searchParams: URLSearchParams): OAuthResult | null {
   };
 }
 
+function normalizeOAuthRedirectPayload(payload: unknown): OAuthRedirectPayload | null {
+  if (!payload || typeof payload !== "object") return null;
+  const candidate = payload as {
+    oauth_status?: string;
+    oauth_platform?: string;
+    oauth_message?: string;
+    oauth_primary?: string;
+    return_path?: string;
+  };
+  const platform = normalizePlatform(candidate.oauth_platform ?? null);
+  if (!platform || (candidate.oauth_status !== "success" && candidate.oauth_status !== "error")) {
+    return null;
+  }
+  return {
+    status: candidate.oauth_status,
+    platform,
+    message: candidate.oauth_message || "",
+    primary: candidate.oauth_primary === "1",
+    returnPath: candidate.return_path || "/integrations",
+  };
+}
+
 function clearOAuthQueryParams() {
   const url = new URL(window.location.href);
   let changed = false;
@@ -143,6 +173,46 @@ export function consumeOAuthResultFromLocation(): OAuthResult | null {
   return result;
 }
 
+function getTelegramStartParam(): string | null {
+  const queryValue = new URL(window.location.href).searchParams.get("tgWebAppStartParam");
+  if (queryValue) return queryValue;
+  const tg = (window as TelegramWindow).Telegram?.WebApp;
+  return tg?.initDataUnsafe?.start_param || null;
+}
+
+async function fetchOAuthRedirectPayload(ticket: string): Promise<OAuthRedirectPayload | null> {
+  try {
+    const response = await fetch(`${getOAuthApiOrigin()}/api/oauth/result?ticket=${encodeURIComponent(ticket)}`);
+    if (!response.ok) return null;
+    const payload = await response.json().catch(() => null);
+    return normalizeOAuthRedirectPayload(payload);
+  } catch {
+    return null;
+  }
+}
+
+export async function consumeOAuthRedirectFromTelegramStartParam(): Promise<string | null> {
+  const startParam = getTelegramStartParam();
+  if (!startParam || !startParam.startsWith("oauth_")) {
+    return null;
+  }
+
+  const ticket = startParam.slice("oauth_".length);
+  if (!ticket) return null;
+
+  const payload = await fetchOAuthRedirectPayload(ticket);
+  if (!payload) return null;
+
+  const url = new URL(payload.returnPath || "/integrations", window.location.origin);
+  url.searchParams.set("oauth_status", payload.status);
+  url.searchParams.set("oauth_platform", payload.platform);
+  if (payload.message) {
+    url.searchParams.set("oauth_message", payload.message);
+  }
+  url.searchParams.set("oauth_primary", payload.primary ? "1" : "0");
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
 export function subscribeToOAuthResults(handler: (result: OAuthResult) => void) {
   const onMessage = (event: MessageEvent) => {
     if (event.origin !== window.location.origin) return;
@@ -180,7 +250,7 @@ export function subscribeToOAuthResults(handler: (result: OAuthResult) => void) 
 }
 
 export async function fetchOAuthProviderConfig(): Promise<OAuthProviderConfig> {
-  const response = await fetch("/api/oauth/providers");
+  const response = await fetch(`${getOAuthApiOrigin()}/api/oauth/providers`);
   const data = (await response.json().catch(() => ({}))) as Partial<OAuthProviderConfig>;
   return {
     twitch: Boolean(data.twitch),
@@ -216,16 +286,20 @@ export async function startOAuthConnection({
   }
 
   if (isTelegramMiniApp()) {
-    window.location.assign(
-      buildStartUrl({
-        platform,
-        userId,
-        initData,
-        primary,
-        returnPath,
-        mode: "redirect",
-      }),
-    );
+    const url = buildStartUrl({
+      platform,
+      userId,
+      initData,
+      primary,
+      returnPath,
+      mode: "telegram",
+    });
+    const telegramWebApp = (window as TelegramWindow).Telegram?.WebApp;
+    if (typeof telegramWebApp?.openLink === "function") {
+      telegramWebApp.openLink(url);
+      return;
+    }
+    window.location.assign(url);
     return;
   }
 
