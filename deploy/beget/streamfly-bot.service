@@ -1,0 +1,15 @@
+[Unit]
+Description=StreamFly bot service
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/streamfly/app
+EnvironmentFile=/opt/streamfly/app/.env.production
+ExecStart=/opt/streamfly/app/.venv/bin/python /opt/streamfly/app/bot.py
+Restart=always
+RestartSec=5
+User=root
+
+[Install]
+WantedBy=multi-user.target
