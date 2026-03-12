@@ -26,6 +26,27 @@ install_packages() {
   apt install -y git nginx python3 python3-venv python3-pip nodejs npm curl
 }
 
+ensure_swap() {
+  if swapon --show --noheadings | grep -q .; then
+    log "Swap already configured"
+    return
+  fi
+
+  log "Creating 2G swap file"
+  if command -v fallocate >/dev/null 2>&1; then
+    fallocate -l 2G /swapfile || true
+  fi
+  if [ ! -f /swapfile ] || [ ! -s /swapfile ]; then
+    dd if=/dev/zero of=/swapfile bs=1M count=2048 status=progress
+  fi
+  chmod 600 /swapfile
+  mkswap /swapfile
+  swapon /swapfile
+  if ! grep -q '^/swapfile ' /etc/fstab; then
+    echo '/swapfile none swap sw 0 0' >> /etc/fstab
+  fi
+}
+
 sync_repo() {
   log "Syncing repository"
   mkdir -p /opt/streamfly
@@ -43,7 +64,7 @@ build_app() {
   log "Building frontend"
   cd "$APP_DIR"
   npm ci
-  npm run build
+  NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=768}" npm run build
 
   log "Installing Python dependencies"
   python3 -m venv .venv
@@ -147,6 +168,7 @@ show_status() {
 main() {
   require_root
   install_packages
+  ensure_swap
   sync_repo
   build_app
   ensure_env_file
