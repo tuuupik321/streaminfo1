@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:gravity="center"
+        android:width="180dp"
+        android:height="180dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="44dp" />
+            <gradient
+                android:angle="315"
+                android:endColor="@color/colorBrandPrimarySoft"
+                android:startColor="@color/colorBrandPrimary" />
+        </shape>
+    </item>
+
+    <item
+        android:gravity="center"
+        android:width="120dp"
+        android:height="120dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="34dp" />
+            <solid android:color="@color/colorBrandCard" />
+        </shape>
+    </item>
+
+    <item
+        android:gravity="center"
+        android:width="58dp"
+        android:height="14dp"
+        android:bottom="32dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="999dp" />
+            <solid android:color="@color/colorBrandText" />
+        </shape>
+    </item>
+
+    <item
+        android:gravity="center"
+        android:width="42dp"
+        android:height="14dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="999dp" />
+            <solid android:color="@color/colorBrandText" />
+        </shape>
+    </item>
+
+    <item
+        android:gravity="center"
+        android:width="58dp"
+        android:height="14dp"
+        android:top="32dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="999dp" />
+            <solid android:color="@color/colorBrandText" />
+        </shape>
+    </item>
+</layer-list>

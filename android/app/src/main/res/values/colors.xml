@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#0D1B2A</color>
+    <color name="colorPrimaryDark">#07111D</color>
+    <color name="colorAccent">#60D394</color>
+    <color name="colorSurface">#0B1626</color>
+    <color name="colorStatusBar">#07111D</color>
+    <color name="colorNavigationBar">#07111D</color>
+    <color name="colorSplashBackground">#07111D</color>
+    <color name="colorBrandGlow">#16344D</color>
+    <color name="colorBrandCard">#0F2032</color>
+    <color name="colorBrandPrimary">#60D394</color>
+    <color name="colorBrandPrimarySoft">#4EC7E2</color>
+    <color name="colorBrandText">#F5F7FA</color>
+</resources>
