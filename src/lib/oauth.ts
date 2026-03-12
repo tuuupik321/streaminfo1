@@ -15,6 +15,15 @@ export type OAuthResult = {
 const OAUTH_RESULT_STORAGE_KEY = "streamfly_oauth_result_v1";
 const OAUTH_RESULT_EVENT = "streamfly-oauth-result";
 const OAUTH_QUERY_KEYS = ["oauth_status", "oauth_platform", "oauth_message", "oauth_primary"] as const;
+const CANONICAL_APP_ORIGIN = "https://streamfly-bot.onrender.com";
+
+type TelegramWindow = Window & {
+  Telegram?: {
+    WebApp?: {
+      initData?: string;
+    };
+  };
+};
 
 function normalizePlatform(value: string | null): OAuthPlatform | null {
   if (value === "twitch" || value === "youtube" || value === "donatealerts") {
@@ -38,7 +47,7 @@ function buildStartUrl({
   returnPath: string;
   mode: "popup" | "redirect" | "native";
 }) {
-  const url = new URL(`/api/oauth/${platform}/start`, window.location.origin);
+  const url = new URL(`/api/oauth/${platform}/start`, getOAuthApiOrigin());
   url.searchParams.set("user_id", String(userId));
   url.searchParams.set("primary", primary ? "1" : "0");
   url.searchParams.set("return_path", returnPath);
@@ -47,6 +56,30 @@ function buildStartUrl({
     url.searchParams.set("init_data", initData);
   }
   return url.toString();
+}
+
+function getOAuthApiOrigin() {
+  if (import.meta.env.DEV) {
+    return window.location.origin;
+  }
+
+  const currentOrigin = window.location.origin;
+  const currentProtocol = window.location.protocol.toLowerCase();
+
+  if (!currentProtocol.startsWith("http")) {
+    return CANONICAL_APP_ORIGIN;
+  }
+
+  if (currentOrigin.includes("hf.space")) {
+    return CANONICAL_APP_ORIGIN;
+  }
+
+  return currentOrigin;
+}
+
+function isTelegramMiniApp() {
+  const tg = (window as TelegramWindow).Telegram?.WebApp;
+  return Boolean(tg?.initData);
 }
 
 function parseOAuthResult(searchParams: URLSearchParams): OAuthResult | null {
@@ -179,6 +212,20 @@ export async function startOAuthConnection({
       mode: "native",
     });
     await Browser.open({ url });
+    return;
+  }
+
+  if (isTelegramMiniApp()) {
+    window.location.assign(
+      buildStartUrl({
+        platform,
+        userId,
+        initData,
+        primary,
+        returnPath,
+        mode: "redirect",
+      }),
+    );
     return;
   }
 
