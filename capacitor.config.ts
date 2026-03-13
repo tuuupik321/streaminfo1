@@ -6,9 +6,9 @@ const config: CapacitorConfig = {
   webDir: "dist",
   bundledWebRuntime: false,
   server: {
-    url: "https://streamfly-bot.onrender.com",
+    url: "https://straminfoapp.ru",
     cleartext: false,
-    allowNavigation: ["streamfly-bot.onrender.com"],
+    allowNavigation: ["straminfoapp.ru"],
   },
 };
 

@@ -19,7 +19,7 @@ type OAuthRedirectPayload = OAuthResult & {
 const OAUTH_RESULT_STORAGE_KEY = "streamfly_oauth_result_v1";
 const OAUTH_RESULT_EVENT = "streamfly-oauth-result";
 const OAUTH_QUERY_KEYS = ["oauth_status", "oauth_platform", "oauth_message", "oauth_primary"] as const;
-const CANONICAL_APP_ORIGIN = "https://streamfly-bot.onrender.com";
+const CANONICAL_APP_ORIGIN = "https://straminfoapp.ru";
 
 type TelegramWindow = Window & {
   Telegram?: {
@@ -335,3 +335,4 @@ export async function startOAuthConnection({
     );
   }
 }
+

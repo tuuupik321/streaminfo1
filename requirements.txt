@@ -2,6 +2,7 @@ aiogram
 aiohttp
 sqlalchemy
 asyncpg
+aiomysql
 greenlet
 uvicorn[standard]
 pydantic

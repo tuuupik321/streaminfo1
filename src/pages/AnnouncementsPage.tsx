@@ -1,6 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { Megaphone, Trash2, Plus, Copy, Sparkles, Link as LinkIcon, Save } from "lucide-react";
+import { Megaphone, Trash2, Plus, Copy, Sparkles, Link as LinkIcon, Save, Send } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,15 @@ type AnnouncementButton = {
 type AnnouncementDraft = {
   message: string;
   buttons: AnnouncementButton[];
+};
+
+type TelegramWindow = Window & {
+  Telegram?: {
+    WebApp?: {
+      initData?: string;
+      initDataUnsafe?: { user?: { id?: number } };
+    };
+  };
 };
 
 const draftStorageKey = "streamfly:announcement-draft";
@@ -83,11 +92,15 @@ export default function AnnouncementsPage() {
   const [message, setMessage] = useState("");
   const [buttons, setButtons] = useState<AnnouncementButton[]>([]);
   const [saving, setSaving] = useState(false);
+  const [sending, setSending] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const { width, height } = useWindowSize();
   const reduceMotion = useReducedMotion();
   const container = makeStagger(reduceMotion);
   const item = makeFadeUp(reduceMotion);
+  const tg = (window as TelegramWindow).Telegram?.WebApp;
+  const userId = tg?.initDataUnsafe?.user?.id;
+  const initData = tg?.initData || "";
 
   const templates = useMemo(
     () => [
@@ -183,6 +196,67 @@ export default function AnnouncementsPage() {
       toast.success("Текст анонса скопирован.");
     } catch {
       toast.error("Не удалось скопировать текст.");
+    }
+  };
+
+  const handleSendToTelegram = async () => {
+    if (!message.trim()) {
+      toast.error("Сначала добавьте текст анонса.");
+      return;
+    }
+
+    if (!userId || !initData) {
+      toast.error("Откройте mini app внутри Telegram, чтобы отправить анонс.");
+      return;
+    }
+
+    setSending(true);
+
+    try {
+      const response = await fetch("/api/announcements/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: userId,
+          message,
+          buttons: buttons
+            .filter((button) => button.text.trim())
+            .map((button) => ({ text: button.text.trim(), url: button.url.trim() })),
+          init_data: initData,
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const errorCode = typeof data?.error === "string" ? data.error : "";
+        if (errorCode === "no_telegram_target") {
+          toast.error("Сначала подключите Telegram в разделе интеграций и выберите канал или группу.");
+          return;
+        }
+        if (errorCode === "telegram_bot_not_configured") {
+          toast.error("На сервере ещё не настроен Telegram-бот.");
+          return;
+        }
+        if (errorCode === "telegram_unreachable") {
+          toast.error("Сейчас сервер не может достучаться до Telegram API.");
+          return;
+        }
+        if (errorCode === "telegram_send_failed") {
+          toast.error("Не удалось отправить анонс. Проверьте, что бот всё ещё есть в канале и имеет права.");
+          return;
+        }
+        if (errorCode === "user_mismatch" || errorCode === "invalid_init_data") {
+          toast.error("Откройте приложение через Telegram и повторите попытку.");
+          return;
+        }
+        toast.error("Не удалось отправить анонс.");
+        return;
+      }
+
+      persistDraft();
+      toast.success("Анонс отправлен в Telegram.");
+    } finally {
+      setSending(false);
     }
   };
 
@@ -340,7 +414,7 @@ export default function AnnouncementsPage() {
           <CardShell className="space-y-3">
             <div className="rounded-2xl border border-border/70 bg-secondary/35 p-4 text-sm leading-relaxed text-muted-foreground">
               <strong className="block text-foreground">Следующий шаг</strong>
-              <span className="mt-2 block">Сохраните черновик и скопируйте текст, когда будете готовы опубликовать анонс в канал или чат.</span>
+              <span className="mt-2 block">Если Telegram уже подключён в интеграциях, можно отправить анонс прямо отсюда в выбранный канал или чат.</span>
             </div>
             <div className="flex flex-col gap-3">
               <Button onClick={handleSaveDraft} disabled={saving} size="lg" className="group relative w-full gap-2 overflow-hidden text-base">
@@ -356,10 +430,23 @@ export default function AnnouncementsPage() {
                   {saving ? "Сохраняем..." : "Сохранить черновик"}
                 </span>
               </Button>
+              <Button onClick={handleSendToTelegram} disabled={sending} size="lg" className="w-full gap-2 text-base">
+                {sending ? (
+                  <motion.span animate={{ rotate: [0, 360] }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}>
+                    <Sparkles size={18} />
+                  </motion.span>
+                ) : (
+                  <Send size={18} />
+                )}
+                {sending ? "Отправляем..." : "Отправить в Telegram"}
+              </Button>
               <Button variant="outline" onClick={handleCopy} className="w-full gap-2">
                 <Copy size={16} /> Скопировать текст
               </Button>
             </div>
+            <p className="text-xs text-muted-foreground">
+              Для отправки используется Telegram-цель, которую вы уже подключили в разделе интеграций.
+            </p>
           </CardShell>
         </motion.div>
       </div>

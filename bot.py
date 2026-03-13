@@ -2,9 +2,11 @@ import asyncio
 import html
 import hashlib
 import hmac
+import html
 import json
 import logging
 import os
+import re
 import time
 import mimetypes
 import uuid
@@ -21,7 +23,7 @@ from aiogram.types import WebAppInfo
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
 from pydantic import BaseModel, ValidationError
-from sqlalchemy import BigInteger, Boolean, Column, DateTime, Integer, MetaData, String, and_, desc, func, or_, select, text
+from sqlalchemy import BigInteger, Boolean, Column, DateTime, Integer, MetaData, String, and_, desc, func, inspect, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
@@ -77,29 +79,43 @@ def _normalize_webhook_path(path: Optional[str]) -> str:
     return result.rstrip("/") or "/telegram/webhook"
 
 
-def _normalize_db_url(raw_url: Optional[str]) -> tuple[Optional[str], dict[str, Any]]:
+def _normalize_db_url(raw_url: Optional[str]) -> tuple[Optional[str], dict[str, Any], Optional[str]]:
     connect_args: dict[str, Any] = {}
     if not raw_url:
-        return None, connect_args
+        return None, connect_args, None
     raw_url = raw_url.strip()
-    if raw_url.startswith("postgresql+asyncpg://"):
+    lowered = raw_url.lower()
+    if lowered.startswith("mysql+aiomysql://"):
         normalized = raw_url
-    elif raw_url.startswith("postgresql://"):
+        dialect = "mysql"
+    elif lowered.startswith("mysql://"):
+        normalized = f"mysql+aiomysql://{raw_url[len('mysql://'):]}"
+        dialect = "mysql"
+    elif lowered.startswith("postgresql+asyncpg://"):
+        normalized = raw_url
+        dialect = "postgresql"
+    elif lowered.startswith("postgresql://"):
         normalized = raw_url.replace("postgresql://", "postgresql+asyncpg://", 1)
-    elif raw_url.startswith("postgres://"):
+        dialect = "postgresql"
+    elif lowered.startswith("postgres://"):
         normalized = raw_url.replace("postgres://", "postgresql+asyncpg://", 1)
+        dialect = "postgresql"
     else:
         normalized = f"postgresql+asyncpg://{raw_url}"
+        dialect = "postgresql"
 
-    parsed = urlparse(normalized)
-    query_params = dict(parse_qsl(parsed.query, keep_blank_values=True))
-    sslmode = query_params.pop("sslmode", None)
-    if sslmode and sslmode.lower() not in {"disable", "allow", "prefer"}:
-        # asyncpg expects "ssl" connect arg, not "sslmode"
-        connect_args["ssl"] = True
-    query_params.pop("channel_binding", None)
-    cleaned = parsed._replace(query=urlencode(query_params))
-    return urlunparse(cleaned), connect_args
+    if dialect == "postgresql":
+        parsed = urlparse(normalized)
+        query_params = dict(parse_qsl(parsed.query, keep_blank_values=True))
+        sslmode = query_params.pop("sslmode", None)
+        if sslmode and sslmode.lower() not in {"disable", "allow", "prefer"}:
+            # asyncpg expects "ssl" connect arg, not "sslmode"
+            connect_args["ssl"] = True
+        query_params.pop("channel_binding", None)
+        cleaned = parsed._replace(query=urlencode(query_params))
+        return urlunparse(cleaned), connect_args, dialect
+
+    return normalized, connect_args, dialect
 
 
 def _is_telegram_network_error(error: Exception) -> bool:
@@ -148,9 +164,10 @@ ADMIN_TOKEN_TTL_SECONDS = _env_int("ADMIN_TOKEN_TTL_SECONDS", 43_200, min_value=
 OAUTH_STATE_TTL_SECONDS = _env_int("OAUTH_STATE_TTL_SECONDS", 900, min_value=120, max_value=3_600)
 
 
-DB_URL, DB_CONNECT_ARGS = _normalize_db_url(RAW_DB_URL)
+DB_URL, DB_CONNECT_ARGS, DB_DIALECT = _normalize_db_url(RAW_DB_URL)
+DB_SCHEMA = "public" if DB_DIALECT == "postgresql" else None
 
-Base = declarative_base(metadata=MetaData(schema="public"))
+Base = declarative_base(metadata=MetaData(schema=DB_SCHEMA))
 
 # Pydantic Models for API validation
 class SaveSettingsPayload(BaseModel):
@@ -160,6 +177,16 @@ class SaveSettingsPayload(BaseModel):
     donationalerts_name: Optional[str] = None
     kick_name: Optional[str] = None
     telegram_channel: Optional[str] = None
+
+class AnnouncementButtonPayload(BaseModel):
+    text: str
+    url: Optional[str] = None
+
+class SendAnnouncementPayload(BaseModel):
+    user_id: int
+    message: str
+    target: Optional[str] = None
+    buttons: list[AnnouncementButtonPayload] = []
 
 class VerifyChannelPayload(BaseModel):
     user_id: int
@@ -401,7 +428,7 @@ def validate_runtime_config() -> None:
         log_event("config_warning", key="TWITCH_CLIENT_ID", reason="missing_while_twitch_secret_is_set")
     if YT_HANDOFF_WEBHOOK_URL and not YT_HANDOFF_WEBHOOK_URL.startswith(("http://", "https://")):
         log_event("config_warning", key="YT_HANDOFF_WEBHOOK_URL", reason="must_be_http_url")
-    if DONATALERTS_ACCESS_TOKEN and not DONATALERTS_API_BASE.startswith(("http://", "https-:-//")):
+    if DONATALERTS_ACCESS_TOKEN and not DONATALERTS_API_BASE.startswith(("http://", "https://")):
         log_event("config_warning", key="DONATALERTS_API_BASE", reason="must_be_http_url")
 
     log_event(
@@ -1416,6 +1443,25 @@ def _resolve_user_id(
 async def setup_database():
     if not engine:
         return
+    async def _get_table_names(conn) -> set[str]:
+        def _load(sync_conn):
+            inspector = inspect(sync_conn)
+            return inspector.get_table_names(schema=DB_SCHEMA)
+        return set(await conn.run_sync(_load))
+
+    async def _column_exists(conn, table_name: str, column_name: str) -> bool:
+        def _load(sync_conn):
+            inspector = inspect(sync_conn)
+            try:
+                columns = inspector.get_columns(table_name, schema=DB_SCHEMA)
+            except Exception:
+                return False
+            return any(col.get("name") == column_name for col in columns)
+        return bool(await conn.run_sync(_load))
+
+    def _table_ref(table_name: str) -> str:
+        return f"{DB_SCHEMA}.{table_name}" if DB_SCHEMA else table_name
+
     async with engine.begin() as conn:
         try:
             await conn.run_sync(Base.metadata.create_all)
@@ -1423,28 +1469,21 @@ async def setup_database():
             log_event("db_create_all_failed", error=str(error))
             raise
         try:
-            await conn.execute(text("ALTER TABLE public.users ADD COLUMN IF NOT EXISTS donationalerts_name VARCHAR"))
+            if not await _column_exists(conn, "users", "donationalerts_name"):
+                await conn.execute(
+                    text(f"ALTER TABLE {_table_ref('users')} ADD COLUMN donationalerts_name VARCHAR(255)")
+                )
         except Exception as error:
             log_event("db_alter_users_failed", error=str(error))
         try:
-            await conn.execute(
-                text(
-                    """
-                    DO $$
-                    BEGIN
-                      IF EXISTS (
-                        SELECT 1
-                        FROM information_schema.tables
-                        WHERE table_schema = 'public'
-                          AND table_name = 'telegram_channels'
-                      ) THEN
-                        ALTER TABLE public.telegram_channels ADD COLUMN IF NOT EXISTS owner_user_id BIGINT;
-                        ALTER TABLE public.telegram_channels ADD COLUMN IF NOT EXISTS chat_username VARCHAR;
-                      END IF;
-                    END $$;
-                    """
+            if not await _column_exists(conn, "telegram_channels", "owner_user_id"):
+                await conn.execute(
+                    text(f"ALTER TABLE {_table_ref('telegram_channels')} ADD COLUMN owner_user_id BIGINT")
                 )
-            )
+            if not await _column_exists(conn, "telegram_channels", "chat_username"):
+                await conn.execute(
+                    text(f"ALTER TABLE {_table_ref('telegram_channels')} ADD COLUMN chat_username VARCHAR(255)")
+                )
         except Exception as error:
             log_event("db_alter_telegram_channels_failed", error=str(error))
 
@@ -1468,15 +1507,15 @@ async def setup_database():
     ]
     missing_tables: list[str] = []
     async with engine.connect() as conn:
+        existing_tables = await _get_table_names(conn)
         for table_name in required_tables:
-            result = await conn.execute(text("SELECT to_regclass(:table_name)"), {"table_name": f"public.{table_name}"})
-            if result.scalar_one_or_none() is None:
+            if table_name not in existing_tables:
                 missing_tables.append(table_name)
     if missing_tables:
         log_event("db_schema_missing", missing_tables=missing_tables)
         async with engine.begin() as conn:
             for table_name in missing_tables:
-                table_key = f"public.{table_name}"
+                table_key = _table_ref(table_name)
                 table = Base.metadata.tables.get(table_key)
                 if table is None:
                     continue
@@ -1484,9 +1523,9 @@ async def setup_database():
         # Re-check after attempting to create missing tables
         still_missing: list[str] = []
         async with engine.connect() as conn:
+            existing_tables = await _get_table_names(conn)
             for table_name in required_tables:
-                result = await conn.execute(text("SELECT to_regclass(:table_name)"), {"table_name": f"public.{table_name}"})
-                if result.scalar_one_or_none() is None:
+                if table_name not in existing_tables:
                     still_missing.append(table_name)
         if still_missing:
             log_event("db_schema_still_missing", missing_tables=still_missing)
@@ -1568,6 +1607,52 @@ async def find_telegram_target(session: AsyncSession, user_id: int, raw_value: s
         ),
     ).order_by(desc(TelegramChannel.updated_at), desc(TelegramChannel.created_at))
     return (await session.execute(query)).scalars().first()
+
+
+def _render_announcement_html(message: str) -> str:
+    escaped = html.escape((message or "").strip())
+    escaped = re.sub(r"\*\*(.+?)\*\*", lambda match: f"<b>{match.group(1)}</b>", escaped, flags=re.DOTALL)
+    escaped = re.sub(r"(?<!\*)\*(.+?)\*(?!\*)", lambda match: f"<i>{match.group(1)}</i>", escaped, flags=re.DOTALL)
+    return escaped.replace("\r\n", "\n")
+
+
+def _build_announcement_markup(
+    buttons: list[AnnouncementButtonPayload],
+) -> Optional[types.InlineKeyboardMarkup]:
+    rows: list[list[types.InlineKeyboardButton]] = []
+    for button in buttons[:3]:
+        label = button.text.strip()
+        url = (button.url or "").strip()
+        if not label or not url.startswith(("http://", "https://")):
+            continue
+        rows.append([types.InlineKeyboardButton(text=label[:64], url=url)])
+    if not rows:
+        return None
+    return types.InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+async def _resolve_announcement_target(session: AsyncSession, user_id: int, target_hint: Optional[str]) -> Optional[TelegramChannel]:
+    if target_hint:
+        resolved = await find_telegram_target(session, user_id, target_hint)
+        if resolved:
+            return resolved
+
+    streamer = await session.get(Streamer, user_id)
+    if streamer and streamer.telegram_channel:
+        resolved = await find_telegram_target(session, user_id, streamer.telegram_channel)
+        if resolved:
+            return resolved
+
+    return (
+        await session.execute(
+            select(TelegramChannel)
+            .where(
+                TelegramChannel.owner_user_id == int(user_id),
+                TelegramChannel.is_verified == True,  # noqa: E712
+            )
+            .order_by(desc(TelegramChannel.updated_at), desc(TelegramChannel.created_at))
+        )
+    ).scalars().first()
 
 @dp.my_chat_member()
 async def handle_bot_membership(event: types.ChatMemberUpdated):
@@ -2712,6 +2797,75 @@ async def save_settings(request: web.Request):
         }
     )
 
+
+async def send_announcement(request: web.Request):
+    auth_error = await _require_verified_user(request)
+    if auth_error:
+        return auth_error
+
+    try:
+        payload = SendAnnouncementPayload.model_validate(await request.json())
+    except ValidationError as e:
+        return web.json_response({"error": "validation_error", "details": e.errors()}, status=400)
+
+    if not async_session:
+        return web.json_response({"error": "db_not_configured"}, status=500)
+    if not bot:
+        return web.json_response({"error": "telegram_bot_not_configured"}, status=500)
+
+    user_id = _parse_int64(payload.user_id)
+    if user_id is None:
+        return web.json_response({"error": "invalid_user_id"}, status=400)
+    if REQUIRE_INIT_DATA and request.get("verified_user_id") and request["verified_user_id"] != str(user_id):
+        return web.json_response({"error": "user_mismatch"}, status=403)
+    if not _allow_rate("send_announcement", str(user_id), limit=10, window_seconds=60):
+        return web.json_response({"error": "rate_limited"}, status=429)
+
+    message = payload.message.strip()
+    if not message:
+        return web.json_response({"error": "empty_message"}, status=400)
+    if len(message) > 4096:
+        return web.json_response({"error": "message_too_long"}, status=400)
+
+    try:
+        async with async_session() as session:
+            target = await _resolve_announcement_target(session, user_id, payload.target)
+            if not target:
+                return web.json_response({"error": "no_telegram_target"}, status=404)
+
+        markup = _build_announcement_markup(payload.buttons)
+        await bot.send_message(
+            chat_id=target.chat_id,
+            text=_render_announcement_html(message),
+            parse_mode="HTML",
+            disable_web_page_preview=False,
+            reply_markup=markup,
+        )
+        await write_audit_log(
+            str(user_id),
+            "send_announcement",
+            json.dumps(
+                {
+                    "chat_id": target.chat_id,
+                    "channel": target.chat_username or target.channel_name,
+                    "buttons": len([button for button in payload.buttons[:3] if button.text.strip()]),
+                },
+                ensure_ascii=False,
+            ),
+        )
+        return web.json_response(
+            {
+                "status": "ok",
+                "chat_id": target.chat_id,
+                "channel": target.chat_username or target.channel_name or target.chat_id,
+            }
+        )
+    except TelegramAPIError as error:
+        log_event("send_announcement_failed", error=str(error), user_id=user_id)
+        if _is_telegram_network_error(error):
+            return web.json_response({"error": "telegram_unreachable"}, status=503)
+        return web.json_response({"error": "telegram_send_failed"}, status=502)
+
 # ... (rest of the API endpoints remain the same)
 
 @web.middleware
@@ -2772,6 +2926,7 @@ def build_app():
     app.router.add_get("/api/clips", get_clips)
     app.router.add_get("/api/notifications", get_notifications)
     app.router.add_post("/api/save_settings", save_settings)
+    app.router.add_post("/api/announcements/send", send_announcement)
     app.router.add_post("/api/donations/webhook", donations_webhook)
     app.router.add_get("/api/donations/live", get_donations_live)
     app.router.add_get("/api/donations", get_donations)
