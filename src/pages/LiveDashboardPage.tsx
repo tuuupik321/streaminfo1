@@ -173,6 +173,7 @@ export default function LiveDashboardPage() {
             </CardShell>
           </div>
         </div>
-      </motion.div>
+      </div>
+    </motion.div>
   );
 }
