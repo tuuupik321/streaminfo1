@@ -34,7 +34,7 @@ import { useSettingsStore } from "@/store/useSettingsStore";
 import { UiLanguage } from "@/lib/language";
 import { useTheme } from "./ThemeProvider";
 
-type UiTheme = "light" | "dark" | "system";
+type UiTheme = "light" | "dark";
 
 const mainItems = [
   { key: "dashboard", url: "/", icon: Activity, fallback: "Dashboard" },
@@ -82,10 +82,9 @@ function SettingsMenu({ canSeeAdmin, collapsed }: { canSeeAdmin: boolean; collap
         {t("sidebar.theme", "Theme")}
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent>
-        <DropdownMenuRadioGroup value={theme} onValueChange={(v) => setTheme(v as UiTheme)}>
+        <DropdownMenuRadioGroup value={theme === "light" ? "light" : "dark"} onValueChange={(v) => setTheme(v as UiTheme)}>
           <DropdownMenuRadioItem value="light">{t("sidebar.light", "Light")}</DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="dark">{t("sidebar.dark", "Dark")}</DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="system">{t("sidebar.systemTheme", "System")}</DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
       </DropdownMenuSubContent>
     </DropdownMenuSub>

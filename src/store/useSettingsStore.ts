@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { UiLanguage, detectTelegramUiLanguage } from "@/lib/language";
 
-type Theme = "light" | "dark" | "system" | "neon";
+type Theme = "light" | "dark";
 type CardStyle = "minimal" | "colorful";
 
 interface SettingsState {
@@ -10,23 +10,27 @@ interface SettingsState {
   theme: Theme;
   glowIntensity: number;
   cardStyle: CardStyle;
+  surfaceBehavior: number;
   setLanguage: (language: UiLanguage) => void;
   setTheme: (theme: Theme) => void;
   setGlowIntensity: (value: number) => void;
   setCardStyle: (style: CardStyle) => void;
+  setSurfaceBehavior: (value: number) => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
       language: detectTelegramUiLanguage(),
-      theme: "system",
+      theme: "dark",
       glowIntensity: 0.6,
       cardStyle: "minimal",
+      surfaceBehavior: 0.6,
       setLanguage: (language) => set({ language }),
       setTheme: (theme) => set({ theme }),
       setGlowIntensity: (value) => set({ glowIntensity: value }),
       setCardStyle: (style) => set({ cardStyle: style }),
+      setSurfaceBehavior: (value) => set({ surfaceBehavior: value }),
     }),
     {
       name: "app-settings",
@@ -36,6 +40,7 @@ export const useSettingsStore = create<SettingsState>()(
         theme: state.theme,
         glowIntensity: state.glowIntensity,
         cardStyle: state.cardStyle,
+        surfaceBehavior: state.surfaceBehavior,
       }),
     },
   ),

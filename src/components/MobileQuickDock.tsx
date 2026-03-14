@@ -11,7 +11,7 @@ export function MobileQuickDock() {
   const labels = useMemo(
     () => ({
       live: t("quickDock.live", language === "en" ? "Live" : "Эфир"),
-      events: t("quickDock.events", language === "en" ? "Events" : "События"),
+      events: t("quickDock.events", language === "en" ? "Events" : "Активность"),
       action: t("quickDock.action", language === "en" ? "Action" : "Действие"),
     }),
     [t, language],

@@ -1,6 +1,7 @@
 import type { Platform } from "../utils/detectPlatform";
 import { twitchTheme } from "../platforms/twitch";
 import { youtubeTheme } from "../platforms/youtube";
+import { vkLiveTheme } from "../platforms/vklive";
 
 export type PlatformTheme = {
   platform: Platform;
@@ -13,5 +14,7 @@ export type PlatformTheme = {
 };
 
 export function getThemeByPlatform(platform: Platform): PlatformTheme {
-  return platform === "youtube" ? youtubeTheme : twitchTheme;
+  if (platform === "youtube") return youtubeTheme;
+  if (platform === "vklive") return vkLiveTheme;
+  return twitchTheme;
 }

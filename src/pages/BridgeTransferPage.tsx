@@ -140,7 +140,7 @@ export default function BridgeTransferPage() {
               Повторить демо <ArrowRight size={14} />
             </Button>
             <Button type="button" onClick={() => navigate("/announcements")} className="gap-2">
-              Подготовить анонс <Megaphone size={14} />
+              Открыть анонс <Megaphone size={14} />
             </Button>
           </div>
         </CardShell>

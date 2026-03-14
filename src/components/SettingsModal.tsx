@@ -42,7 +42,8 @@ export function SettingsModal({ open, anchorRect, onClose }: SettingsModalProps)
   const { language, t } = useI18n();
   const activeLanguage = language === "ru" ? "ru" : "en";
   const { theme, setTheme } = useTheme();
-  const { glowIntensity, setGlowIntensity, setLanguage } = useSettingsStore();
+  const { glowIntensity, setGlowIntensity, setLanguage, surfaceBehavior, setSurfaceBehavior } = useSettingsStore();
+  const activeTheme = theme === "light" ? "light" : "dark";
   const [ripples, setRipples] = useState<Ripple[]>([]);
   const isAnchored = Boolean(anchorRect && typeof window !== "undefined" && window.innerWidth < 768);
   const panelStyle = (() => {
@@ -181,10 +182,9 @@ export function SettingsModal({ open, anchorRect, onClose }: SettingsModalProps)
                   <div className="grid gap-3 md:grid-cols-2">
                     <div className="space-y-2">
                       <p className="text-xs uppercase tracking-wide text-white/40">{t("settings.theme", "Theme")}</p>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant={theme === "dark" ? "default" : "outline"} onClick={(e) => { handleRipple(e); setTheme("dark"); }} className="relative overflow-hidden">{t("settings.themeDark", "Dark")}</Button>
-                        <Button size="sm" variant={theme === "light" ? "default" : "outline"} onClick={(e) => { handleRipple(e); setTheme("light"); }} className="relative overflow-hidden">{t("settings.themeLight", "Light")}</Button>
-                        <Button size="sm" variant={theme === "neon" ? "default" : "outline"} onClick={(e) => { handleRipple(e); setTheme("neon"); }} className="relative overflow-hidden">{t("settings.themeNeon", "Neon")}</Button>
+                      <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/20 p-2">
+                        <Button size="sm" variant={activeTheme === "light" ? "default" : "outline"} onClick={(e) => { handleRipple(e); setTheme("light"); }} className="flex-1">{t("settings.themeLight", "Light")}</Button>
+                        <Button size="sm" variant={activeTheme === "dark" ? "default" : "outline"} onClick={(e) => { handleRipple(e); setTheme("dark"); }} className="flex-1">{t("settings.themeDark", "Dark")}</Button>
                       </div>
                     </div>
                     <div className="space-y-2 md:col-span-2">
@@ -203,6 +203,25 @@ export function SettingsModal({ open, anchorRect, onClose }: SettingsModalProps)
                             <span>{t("settings.glowLow", "Low")}</span>
                             <span>{t("settings.glowMedium", "Medium")}</span>
                             <span>{t("settings.glowHigh", "High")}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <div className="flex items-center gap-2 text-white">
+                        <Palette size={12} /> {t("settings.surfaceBehavior", "Surface behavior")}
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <p className="text-xs uppercase tracking-wide text-white/40">{t("settings.surfaceHint", "Glass depth")}</p>
+                        <div className="mt-4">
+                          <Slider
+                            value={[Math.round(surfaceBehavior * 100)]}
+                            step={10}
+                            onValueChange={(value) => setSurfaceBehavior(value[0] / 100)}
+                          />
+                          <div className="mt-3 flex justify-between text-[11px] text-white/40">
+                            <span>{t("settings.surfaceLow", "Flat")}</span>
+                            <span>{t("settings.surfaceHigh", "Deep")}</span>
                           </div>
                         </div>
                       </div>

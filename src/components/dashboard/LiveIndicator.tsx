@@ -28,7 +28,7 @@ export function LiveIndicator({ isLive }: LiveIndicatorProps) {
           isLive ? "text-destructive" : "text-muted-foreground"
         }`}
       >
-        {isLive ? "LIVE" : "ОФФЛАЙН"}
+        {isLive ? "LIVE" : "НЕ В ЭФИРЕ"}
       </span>
     </motion.div>
   );

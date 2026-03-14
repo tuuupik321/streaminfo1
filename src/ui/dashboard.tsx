@@ -6,7 +6,6 @@ import {
   Bell,
   Clock3,
   Film,
-  Flame,
   Radio,
   Sparkles,
   Users,
@@ -132,8 +131,8 @@ export function Dashboard({
   const heroStatus = isOnline
     ? `В эфире · сейчас ${formatCompactNumber(viewers || averageOnline)} зрителей`
     : lastStream?.published_at
-      ? `Оффлайн · последний эфир ${timeAgo(lastStream.published_at)}`
-      : "Оффлайн · лучший слот сегодня — 20:00";
+      ? `Не в эфире · последний эфир ${timeAgo(lastStream.published_at)}`
+      : "Не в эфире · лучший слот сегодня — 20:00";
 
   const nextStep = profile.platform === "twitch"
     ? "Подключите YouTube, чтобы видеть общую аналитику по платформам."
@@ -195,7 +194,7 @@ export function Dashboard({
           <div className="dashboard-hero-copy">
             <Pill>{profile.platform.toUpperCase()}</Pill>
             <h1>Центр управления эфиром</h1>
-            <p>Один рабочий экран для подготовки эфира, истории трансляций, клипов и следующего полезного шага.</p>
+            <p>Один рабочий экран для контроля эфира, истории трансляций, клипов и следующего полезного шага.</p>
             <div className="hero-tags">
               <span className={`status-pill ${isOnline ? "online" : "offline"}`}>
                 <Radio size={14} />
@@ -213,7 +212,7 @@ export function Dashboard({
             </div>
           </div>
           <div className="header-actions dashboard-hero-actions">
-            <PrimaryButton onClick={() => navigate("/announcements")}>Подготовить анонс</PrimaryButton>
+            <PrimaryButton onClick={() => navigate("/announcements")}>Открыть анонсы</PrimaryButton>
             <GhostButton onClick={() => navigate("/analytics")}>Открыть AI-подсказки</GhostButton>
           </div>
         </header>
@@ -323,29 +322,11 @@ export function Dashboard({
             </div>
           </SectionCard>
 
-          <SectionCard title="Оффлайн-помощь" icon={<Flame size={16} />}>
-            <div className="dashboard-helper-stack">
-              <div className="dashboard-helper-card">
-                <strong>Что сделать до старта</strong>
-                <ul className="dashboard-checklist">
-                  <li>Подготовить анонс</li>
-                  <li>Скопировать ссылку</li>
-                  <li>Отправить в Telegram</li>
-                  <li>Проверить донаты и уведомления</li>
-                </ul>
-              </div>
-              <div className="dashboard-helper-card muted">
-                <strong>Полезно оффлайн</strong>
-                <p>Лучшее окно сегодня: 19:30-21:00. Если хотите собрать аудиторию заранее, отправьте анонс за 30 минут до старта.</p>
-              </div>
-            </div>
-          </SectionCard>
-
-          <SectionCard title="Лента событий" icon={<Bell size={16} />}>
+          <SectionCard title="Активность" icon={<Bell size={16} />}>
             <div className="dashboard-event-list">
               {notifications.length === 0 ? (
                 <div className="empty dashboard-empty-block">
-                  <strong>Пока мало событий</strong>
+                  <strong>Пока мало активности</strong>
                   <span>Создайте первое уведомление о старте эфира, чтобы зрители получили напоминание вовремя.</span>
                   <GhostButton onClick={() => navigate("/announcements")}>Создать уведомление</GhostButton>
                 </div>
@@ -353,7 +334,7 @@ export function Dashboard({
                 notifications.slice(0, 4).map((note) => (
                   <article key={note.created_at} className="dashboard-event-row">
                     <strong>{note.title}</strong>
-                    <p>{note.body || "Системное событие сохранено в ленте активности."}</p>
+                    <p>{note.body || "Системный сигнал сохранён в ленте активности."}</p>
                   </article>
                 ))
               )}

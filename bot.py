@@ -1,5 +1,4 @@
 import asyncio
-import html
 import hashlib
 import hmac
 import html
@@ -178,6 +177,7 @@ class SaveSettingsPayload(BaseModel):
     yt_channel_id: Optional[str] = None
     donationalerts_name: Optional[str] = None
     kick_name: Optional[str] = None
+    vklive_name: Optional[str] = None
     telegram_channel: Optional[str] = None
 
 class AnnouncementButtonPayload(BaseModel):
@@ -213,6 +213,8 @@ class Streamer(Base):
     telegram_connected = Column(Boolean, default=False)
     kick_connected = Column(Boolean, default=False)
     kick_name = Column(String(50), nullable=True)
+    vklive_connected = Column(Boolean, default=False)
+    vklive_name = Column(String(80), nullable=True)
     language = Column(String(5), default="ru")
 
 class TelegramChannel(Base):
@@ -1546,6 +1548,17 @@ async def setup_database():
                 )
         except Exception as error:
             log_event("db_alter_telegram_channels_failed", error=str(error))
+        try:
+            if not await _column_exists(conn, "streamers", "vklive_connected"):
+                await conn.execute(
+                    text(f"ALTER TABLE {_table_ref('streamers')} ADD COLUMN vklive_connected BOOLEAN")
+                )
+            if not await _column_exists(conn, "streamers", "vklive_name"):
+                await conn.execute(
+                    text(f"ALTER TABLE {_table_ref('streamers')} ADD COLUMN vklive_name VARCHAR(80)")
+                )
+        except Exception as error:
+            log_event("db_alter_streamers_failed", error=str(error))
 
     required_tables = [
         "users",
@@ -2133,6 +2146,8 @@ def _detect_platform_from_url(url: str) -> str:
         return "twitch"
     if "youtube.com" in lowered or "youtu.be" in lowered:
         return "youtube"
+    if "vkplay.live" in lowered or "vkplay.ru" in lowered or "vk.com" in lowered:
+        return "vklive"
     raise ValueError("Platform not detected")
 
 async def verify_channel(request: web.Request):
@@ -2267,6 +2282,18 @@ async def verify_channel(request: web.Request):
             "channel": username,
         })
 
+    if platform == "vklive":
+        username = _extract_username(channel_raw)
+        if not username:
+            return web.json_response({"error": "vklive_not_found"}, status=404)
+        return web.json_response({
+            "status": "ok",
+            "platform": "vklive",
+            "name": username,
+            "url": f"https://vkplay.live/{username}",
+            "channel": username,
+        })
+
     if platform == "donatealerts":
         username = _extract_username(channel_raw)
         if not username:
@@ -2323,7 +2350,8 @@ async def connect_channel(request: web.Request):
         })
         twitch_name = resolved
         yt_channel_id = None
-    else:
+        vklive_name = None
+    elif platform == "youtube":
         resolved = await resolve_youtube_channel_id(channel_name)
         if not resolved:
             return web.json_response({"error": "youtube_not_found"}, status=404)
@@ -2337,7 +2365,20 @@ async def connect_channel(request: web.Request):
         })
         twitch_name = None
         yt_channel_id = resolved
+        vklive_name = None
         profile_data["channel_url"] = f"https://youtube.com/channel/{resolved}"
+    elif platform == "vklive":
+        vklive_name = _extract_username(channel_url)
+        if not vklive_name:
+            return web.json_response({"error": "vklive_not_found"}, status=404)
+        profile_data.update({
+            "channel_name": vklive_name,
+        })
+        twitch_name = None
+        yt_channel_id = None
+        profile_data["channel_url"] = channel_url or f"https://vkplay.live/{vklive_name}"
+    else:
+        return web.json_response({"error": "unsupported_platform"}, status=400)
 
     if not async_session:
         return web.json_response({"error": "db_not_configured"}, status=500)
@@ -2355,6 +2396,9 @@ async def connect_channel(request: web.Request):
         if yt_channel_id is not None:
             user.yt_channel_id = yt_channel_id
             streamer.youtube_connected = bool(yt_channel_id)
+        if vklive_name is not None:
+            streamer.vklive_name = vklive_name
+            streamer.vklive_connected = bool(vklive_name)
 
         connection = await session.get(ChannelConnection, user_id)
         if not connection:
@@ -2470,8 +2514,10 @@ async def get_streams(request: web.Request):
         platform = connection.platform
         if platform == "twitch":
             items = await fetch_twitch_videos(user.twitch_name if user else None)
-        else:
+        elif platform == "youtube":
             items = await fetch_youtube_streams(user.yt_channel_id if user else None)
+        else:
+            items = []
         return web.json_response({"platform": platform, "items": items})
 
 async def get_clips(request: web.Request):
@@ -2771,6 +2817,7 @@ async def save_settings(request: web.Request):
     yt_channel_id = payload.yt_channel_id
     donationalerts_name = payload.donationalerts_name
     kick_name = payload.kick_name
+    vklive_name = payload.vklive_name
     telegram_channel = payload.telegram_channel
 
     if twitch_name:
@@ -2801,6 +2848,8 @@ async def save_settings(request: web.Request):
         if not DONATALERTS_ACCESS_TOKEN:
             return web.json_response({"error": "donatealerts_not_configured"}, status=500)
         donationalerts_name = _extract_username(donationalerts_name)
+    if vklive_name:
+        vklive_name = _extract_username(vklive_name)
 
     try:
         async with async_session() as session:
@@ -2827,6 +2876,9 @@ async def save_settings(request: web.Request):
             if kick_name is not None:
                 streamer.kick_connected = bool(kick_name)
                 streamer.kick_name = kick_name
+            if vklive_name is not None:
+                streamer.vklive_connected = bool(vklive_name)
+                streamer.vklive_name = vklive_name
             await session.commit()
     except Exception as error:
         log_event("save_settings_failed", error=str(error))
@@ -2841,6 +2893,7 @@ async def save_settings(request: web.Request):
                 "youtube": yt_channel_id,
                 "donationalerts": donationalerts_name,
                 "kick": kick_name,
+                "vklive": vklive_name,
                 "telegram": telegram_channel,
             }
         ),
@@ -2853,6 +2906,7 @@ async def save_settings(request: web.Request):
             "yt_channel_id": yt_channel_id,
             "donationalerts_name": donationalerts_name,
             "kick_name": kick_name,
+            "vklive_name": vklive_name,
             "telegram_channel": telegram_channel,
         }
     )
@@ -3138,23 +3192,27 @@ async def get_settings(request: web.Request):
         user = await session.get(User, user_id)
         if not user:
             return web.json_response({
-                "is_linked": bool(streamer.telegram_connected or streamer.kick_connected),
+                "is_linked": bool(streamer.telegram_connected or streamer.kick_connected or streamer.vklive_connected),
                 "twitch_name": None,
                 "yt_channel_id": None,
                 "donationalerts_name": None,
                 "telegram_channel": streamer.telegram_channel,
                 "kick_connected": streamer.kick_connected,
                 "kick_name": streamer.kick_name,
+                "vklive_connected": streamer.vklive_connected,
+                "vklive_name": streamer.vklive_name,
                 "language": streamer.language,
             })
         return web.json_response({
-            "is_linked": bool(user.twitch_name or user.yt_channel_id or user.donationalerts_name or streamer.kick_connected or streamer.telegram_connected),
+            "is_linked": bool(user.twitch_name or user.yt_channel_id or user.donationalerts_name or streamer.kick_connected or streamer.telegram_connected or streamer.vklive_connected),
             "twitch_name": user.twitch_name,
             "yt_channel_id": user.yt_channel_id,
             "donationalerts_name": user.donationalerts_name,
             "telegram_channel": streamer.telegram_channel,
             "kick_connected": streamer.kick_connected,
             "kick_name": streamer.kick_name,
+            "vklive_connected": streamer.vklive_connected,
+            "vklive_name": streamer.vklive_name,
             "language": streamer.language,
         })
 
@@ -3243,6 +3301,7 @@ if __name__ == "__main__":
         print(f"!!! Startup error: {error}")
 
 # Force update
+
 
 
 

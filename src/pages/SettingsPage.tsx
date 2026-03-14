@@ -25,6 +25,7 @@ type SettingsPayload = {
   donationalerts_name?: string | null;
   telegram_channel?: string | null;
   kick_name?: string | null;
+  vklive_name?: string | null;
 };
 
 function OverviewRow({
@@ -61,7 +62,8 @@ function OverviewRow({
 
 function ThemeSettings() {
   const { theme, setTheme } = useTheme();
-  const { glowIntensity, setGlowIntensity } = useSettingsStore();
+  const { glowIntensity, setGlowIntensity, surfaceBehavior, setSurfaceBehavior } = useSettingsStore();
+  const activeTheme = theme === "light" ? "light" : "dark";
 
   return (
     <div className="space-y-4 rounded-[26px] border border-border/60 bg-card/70 p-4 shadow-[0_14px_30px_hsla(var(--shadow)/0.18)] backdrop-blur-xl sm:p-5">
@@ -69,17 +71,22 @@ function ThemeSettings() {
         <p className="text-sm font-semibold text-foreground">Предпросмотр интерфейса</p>
         <p className="mt-1 text-xs text-muted-foreground">Изменения применяются сразу.</p>
       </div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Button variant={theme === "system" ? "default" : "outline"} onClick={() => setTheme("system")} className="gap-2">Системная</Button>
-        <Button variant={theme === "dark" ? "default" : "outline"} onClick={() => setTheme("dark")} className="gap-2">Темная</Button>
-        <Button variant={theme === "light" ? "default" : "outline"} onClick={() => setTheme("light")} className="gap-2">Светлая</Button>
-        <Button variant={theme === "neon" ? "default" : "outline"} onClick={() => setTheme("neon")} className="gap-2">Неон</Button>
+      <div className="flex items-center gap-2 rounded-2xl border border-border/60 bg-secondary/40 p-2">
+        <Button variant={activeTheme === "light" ? "default" : "outline"} onClick={() => setTheme("light")} className="flex-1 gap-2">Светлая</Button>
+        <Button variant={activeTheme === "dark" ? "default" : "outline"} onClick={() => setTheme("dark")} className="flex-1 gap-2">Тёмная</Button>
       </div>
       <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
         <p className="text-sm font-semibold text-white">Сила эффектов</p>
         <p className="mt-1 text-xs text-white/55">Сделайте интерфейс спокойнее или ярче, не теряя читаемость.</p>
         <div className="mt-4">
           <Slider value={[Math.round(glowIntensity * 100)]} step={10} onValueChange={(value) => setGlowIntensity(value[0] / 100)} />
+        </div>
+      </div>
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+        <p className="text-sm font-semibold text-white">Поведение поверхностей</p>
+        <p className="mt-1 text-xs text-white/55">Настройте глубину стекла и ощущение слоёв интерфейса.</p>
+        <div className="mt-4">
+          <Slider value={[Math.round(surfaceBehavior * 100)]} step={10} onValueChange={(value) => setSurfaceBehavior(value[0] / 100)} />
         </div>
       </div>
     </div>
@@ -150,14 +157,15 @@ export default function SettingsPage() {
     settingsPayload?.donationalerts_name,
     settingsPayload?.telegram_channel,
     settingsPayload?.kick_name,
+    settingsPayload?.vklive_name,
   ].filter(Boolean).length;
 
-  const themeLabel = theme === "system" ? "Системная" : theme === "dark" ? "Темная" : theme === "light" ? "Светлая" : "Неон";
+  const themeLabel = theme === "light" ? "Светлая" : "Тёмная";
   const languageLabel = language === "ru" ? "Русский" : "English";
   const nextStep = connectedCount === 0
     ? {
-        title: "Следующий шаг",
-        text: "Подключите первую платформу, чтобы открыть аналитику, историю эфиров и полезный оффлайн-режим.",
+      title: "Следующий шаг",
+        text: "Подключите первую платформу, чтобы открыть аналитику, историю эфиров и режим паузы.",
         cta: "Подключить платформу",
       }
     : connectedCount < 3

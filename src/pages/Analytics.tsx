@@ -317,7 +317,7 @@ export default function Analytics() {
               <div className="mt-4 space-y-3 text-sm text-white/68">
                 <p>Лучшее время для эфира: <span className="font-semibold text-white">{peakTime}</span></p>
                 <p>Пик за выбранный период: <span className="font-semibold text-white">{peak.toLocaleString("ru-RU")}</span></p>
-                <p>Следующий шаг: закрепите время старта и подготовьте анонс заранее.</p>
+                <p>Следующий шаг: закрепите время старта и соберите анонс заранее.</p>
               </div>
             </div>
           </motion.div>

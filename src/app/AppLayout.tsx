@@ -1,122 +1,126 @@
-п»їimport { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { AppSidebar } from "@/components/AppSidebar";
+import { GlobalStatusBar } from "@/components/GlobalStatusBar";
 import { BottomNav } from "@/components/BottomNav";
 import { CommandPalette } from "@/components/CommandPalette";
-import { GlobalStatusBar } from "@/components/GlobalStatusBar";
+import { PartnerBanner } from "@/components/PartnerBanner";
 import { PageTransition } from "@/components/PageTransition";
+import { QuickGearMenu } from "@/components/QuickGearMenu";
 import { SettingsModal } from "@/components/SettingsModal";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { useI18n } from "@/lib/i18n";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsAnchor, setSettingsAnchor] = useState<DOMRect | null>(null);
   const location = useLocation();
+  const { t } = useI18n();
 
   const headerContent = useMemo(() => {
     if (location.pathname.startsWith("/info")) {
       return {
-        eyebrow: "РџРѕРґРіРѕС‚РѕРІРєР°",
-        title: "РџРѕРґРіРѕС‚РѕРІРєР° Рє СЌС„РёСЂСѓ",
-        description: "Р§РµРєР»РёСЃС‚, С†РµР»Рё, Р°РЅРѕРЅСЃ Рё РІСЃС‘, С‡С‚Рѕ РїРѕРјРѕРіР°РµС‚ СЃРїРѕРєРѕР№РЅРѕ Рё РІРѕРІСЂРµРјСЏ РІС‹Р№С‚Рё РІ СЌС„РёСЂ.",
-        chip: "РЎР»РµРґСѓСЋС‰РёР№ С€Р°Рі: СЃРѕР±СЂР°С‚СЊ Р°РЅРѕРЅСЃ Рё РїСЂРѕРІРµСЂРёС‚СЊ СЃСЃС‹Р»РєСѓ",
+        eyebrow: t("header.info.eyebrow", "Сводка"),
+        title: t("header.info.title", "Сводка эфира"),
+        description: t("header.info.description", "Ключевые метрики по эфиру, кликам и поддержке в одном месте."),
+        chip: t("header.info.chip", "Обновляется в реальном времени"),
       };
     }
     if (location.pathname.startsWith("/analytics")) {
       return {
-        eyebrow: "РђРЅР°Р»РёС‚РёРєР°",
-        title: "Р РѕСЃС‚ Рё Р»СѓС‡С€РёРµ РѕРєРЅР°",
-        description: "РЎСЂРµРґРЅРёР№ РѕРЅР»Р°Р№РЅ, РїРёРєРё, Р»СѓС‡С€РёРµ С‡Р°СЃС‹ Рё РїРѕРґСЃРєР°Р·РєРё, РєРѕС‚РѕСЂС‹Рµ РїРѕРјРѕРіР°СЋС‚ Р·Р°РїСѓСЃС‚РёС‚СЊ СЌС„РёСЂ РІ РЅСѓР¶РЅС‹Р№ РјРѕРјРµРЅС‚.",
-        chip: "РџРµСЂРёРѕРґС‹: 7 / 30 / 90 РґРЅРµР№ / РІСЃС‘ РІСЂРµРјСЏ",
+        eyebrow: t("header.analytics.eyebrow", "Аналитика"),
+        title: t("header.analytics.title", "Рост и лучшие окна"),
+        description: t("header.analytics.description", "Средний онлайн, пики и лучшие часы для запуска эфира."),
+        chip: t("header.analytics.chip", "Периоды: 7 / 30 / 90 дней / всё время"),
       };
     }
     if (location.pathname.startsWith("/donations")) {
       return {
-        eyebrow: "РџРѕРґРґРµСЂР¶РєР°",
-        title: "Р”РѕРЅР°С‚С‹ Рё Р°РєС‚РёРІРЅС‹Рµ Р·СЂРёС‚РµР»Рё",
-        description: "РСЃС‚РѕСЂРёСЏ РїРѕРґРґРµСЂР¶РєРё, СЃСЂРµРґРЅРёР№ РґРѕРЅР°С‚, С‚РѕРї РґРѕРЅР°С‚РµСЂС‹ Рё РїРѕРґРєР»СЋС‡РµРЅРёРµ СЃРµСЂРІРёСЃРѕРІ РІ РѕРґРЅРѕРј СЌРєСЂР°РЅРµ.",
-        chip: "РЎР»РµРґСѓСЋС‰РёР№ С€Р°Рі: РїРѕРґРєР»СЋС‡РёС‚СЊ СЃРµСЂРІРёСЃ РґРѕРЅР°С‚РѕРІ",
+        eyebrow: t("header.donations.eyebrow", "Поддержка"),
+        title: t("header.donations.title", "Донаты и активные зрители"),
+        description: t("header.donations.description", "История донатов, средние суммы и топ поддержки на одном экране."),
+        chip: t("header.donations.chip", "Следующий шаг: подключить сервис донатов"),
       };
     }
     if (location.pathname.startsWith("/announcements")) {
       return {
-        eyebrow: "РђРЅРѕРЅСЃС‹",
-        title: "РџРѕРґРіРѕС‚РѕРІРєР° Р°РЅРѕРЅСЃР°",
-        description: "РЎРѕР±РµСЂРёС‚Рµ РєРѕСЂРѕС‚РєРёР№ С‚РµРєСЃС‚, РѕРґРёРЅ РіР»Р°РІРЅС‹Р№ CTA Рё РіРѕС‚РѕРІСѓСЋ СЃСЃС‹Р»РєСѓ РґР»СЏ Telegram РёР»Рё РєР°РЅР°Р»Р°.",
-        chip: "РҐРѕСЂРѕС€РёР№ Р°РЅРѕРЅСЃ РІРµРґС‘С‚ Рє РѕРґРЅРѕРјСѓ РїРѕРЅСЏС‚РЅРѕРјСѓ РґРµР№СЃС‚РІРёСЋ",
+        eyebrow: t("header.announcements.eyebrow", "Анонсы"),
+        title: t("header.announcements.title", "Центр анонсов"),
+        description: t("header.announcements.description", "Короткий текст, CTA и ссылка для канала или mini app."),
+        chip: t("header.announcements.chip", "Один анонс = одно понятное действие"),
       };
     }
     if (location.pathname.startsWith("/integrations")) {
       return {
-        eyebrow: "РРЅС‚РµРіСЂР°С†РёРё",
-        title: "РџР»Р°С‚С„РѕСЂРјС‹ Рё СЃРµСЂРІРёСЃС‹",
-        description: "РџРѕРґРєР»СЋС‡РёС‚Рµ РїР»Р°С‚С„РѕСЂРјС‹, РґРѕРЅР°С‚С‹ Рё СѓРІРµРґРѕРјР»РµРЅРёСЏ, С‡С‚РѕР±С‹ РѕС‚РєСЂС‹С‚СЊ Р°РЅР°Р»РёС‚РёРєСѓ, РёСЃС‚РѕСЂРёСЋ СЌС„РёСЂРѕРІ Рё РїРѕРґРґРµСЂР¶РєСѓ.",
-        chip: "РџРѕРґРєР»СЋС‡РµРЅРёСЏ РѕС‚РєСЂС‹РІР°СЋС‚ РЅРѕРІС‹Рµ Р±Р»РѕРєРё mini app",
+        eyebrow: t("header.integrations.eyebrow", "Интеграции"),
+        title: t("header.integrations.title", "Платформы и сервисы"),
+        description: t("header.integrations.description", "Подключите платформы, донаты и уведомления для полной картины эфира."),
+        chip: t("header.integrations.chip", "Подключения открывают новые блоки mini app"),
       };
     }
     if (location.pathname.startsWith("/settings")) {
       return {
-        eyebrow: "РќР°СЃС‚СЂРѕР№РєРё",
-        title: "Р‘С‹СЃС‚СЂС‹Рµ РЅР°СЃС‚СЂРѕР№РєРё mini app",
-        description: "РўРµРјР°, СЏР·С‹Рє Рё РёРЅС‚РµРіСЂР°С†РёРё СЃРѕР±СЂР°РЅС‹ Р±РµР· Р»РёС€РЅРµР№ РіР»СѓР±РёРЅС‹, С‡С‚РѕР±С‹ РЅРµ С‚РµСЂСЏС‚СЊ С„РѕРєСѓСЃ РїРµСЂРµРґ СЌС„РёСЂРѕРј.",
-        chip: "РњРµРЅСЏР№С‚Рµ С‚РѕР»СЊРєРѕ С‚Рѕ, С‡С‚Рѕ СЂРµР°Р»СЊРЅРѕ РІР»РёСЏРµС‚ РЅР° РѕРїС‹С‚",
+        eyebrow: t("header.settings.eyebrow", "Настройки"),
+        title: t("header.settings.title", "Быстрые настройки"),
+        description: t("header.settings.description", "Тема, язык и интеграции без лишней глубины."),
+        chip: t("header.settings.chip", "Меняйте только то, что влияет на опыт"),
       };
     }
     if (location.pathname.startsWith("/support")) {
       return {
-        eyebrow: "РџРѕРґРґРµСЂР¶РєР°",
-        title: "РЎРІСЏР·СЊ СЃ РєРѕРјР°РЅРґРѕР№",
-        description: "РћРїРёС€РёС‚Рµ РїСЂРѕР±Р»РµРјСѓ РёР»Рё РёРґРµСЋ, Р° РѕС‚РІРµС‚ РїСЂРёРґС‘С‚ РїСЂСЏРјРѕ РІ СЌС‚РѕС‚ Telegram-Р°РєРєР°СѓРЅС‚.",
-        chip: "Р›СѓС‡С€Рµ СѓРєР°Р·Р°С‚СЊ С€Р°РіРё, СЌРєСЂР°РЅ Рё РѕР¶РёРґР°РµРјС‹Р№ СЂРµР·СѓР»СЊС‚Р°С‚",
+        eyebrow: t("header.support.eyebrow", "Поддержка"),
+        title: t("header.support.title", "Связь с командой"),
+        description: t("header.support.description", "Опишите проблему или идею, ответ придёт прямо сюда."),
+        chip: t("header.support.chip", "Укажите шаги, экран и ожидаемый результат"),
       };
     }
     if (location.pathname.startsWith("/admin")) {
       return {
-        eyebrow: "Admin",
-        title: "Р¦РµРЅС‚СЂ СѓРїСЂР°РІР»РµРЅРёСЏ",
-        description: "РџРѕРґРґРµСЂР¶РєР°, СЂР°СЃСЃС‹Р»РєРё, РјРѕРЅРёС‚РѕСЂРёРЅРі Рё СЃРёСЃС‚РµРјРЅС‹Рµ РґРµР№СЃС‚РІРёСЏ РґР»СЏ РєРѕРјР°РЅРґС‹ Рё РІР»Р°РґРµР»СЊС†Р° РїСЂРѕРµРєС‚Р°.",
-        chip: "РўРѕР»СЊРєРѕ РґР»СЏ Р°РґРјРёРЅ-РґРѕСЃС‚СѓРїР°",
+        eyebrow: t("header.admin.eyebrow", "Admin"),
+        title: t("header.admin.title", "Центр управления"),
+        description: t("header.admin.description", "Поддержка, мониторинг и действия для команды проекта."),
+        chip: t("header.admin.chip", "Только для админ-доступа"),
       };
     }
     if (location.pathname.startsWith("/live")) {
       return {
-        eyebrow: "Live",
-        title: "РџСѓР»СЊСЃ СЌС„РёСЂР°",
-        description: "РЎРѕР±С‹С‚РёСЏ, Р°РєС‚РёРІРЅРѕСЃС‚СЊ С‡Р°С‚Р° Рё Р±С‹СЃС‚СЂС‹Рµ РґРµР№СЃС‚РІРёСЏ РґР»СЏ Р¶РёРІРѕРіРѕ СЌС„РёСЂР° РІ РѕРґРЅРѕРј РєРѕРјРїР°РєС‚РЅРѕРј СЌРєСЂР°РЅРµ.",
-        chip: "РЎР»РµРґСѓСЋС‰РёР№ С€Р°Рі: РѕС‚СЂРµР°РіРёСЂРѕРІР°С‚СЊ РЅР° С‡Р°С‚ РёР»Рё СЃРѕР±СЂР°С‚СЊ Р°РЅРѕРЅСЃ",
+        eyebrow: t("header.live.eyebrow", "Live"),
+        title: t("header.live.title", "Пульс эфира"),
+        description: t("header.live.description", "Активность чата и ключевые сигналы эфира в одном экране."),
+        chip: t("header.live.chip", "Следующий шаг: отреагировать на чат"),
       };
     }
     if (location.pathname.startsWith("/bridge")) {
       return {
-        eyebrow: "Bridge",
-        title: "РњР°СЂС€СЂСѓС‚ Р°СѓРґРёС‚РѕСЂРёРё",
-        description: "РџРѕРєР°Р·С‹РІР°РµС‚, РєР°Рє СЃРІСЏР·Р°С‚СЊ РїР»Р°С‚С„РѕСЂРјС‹, Telegram Рё Р°РЅРѕРЅСЃС‹, С‡С‚РѕР±С‹ Р·СЂРёС‚РµР»СЋ Р±С‹Р»Рѕ РїСЂРѕС‰Рµ РґРѕР№С‚Рё РґРѕ СЌС„РёСЂР°.",
-        chip: "РЎР»РµРґСѓСЋС‰РёР№ С€Р°Рі: РѕС‚РєСЂС‹С‚СЊ РёРЅС‚РµРіСЂР°С†РёРё",
+        eyebrow: t("header.bridge.eyebrow", "Bridge"),
+        title: t("header.bridge.title", "Маршрут аудитории"),
+        description: t("header.bridge.description", "Показывает, как связать платформы, Telegram и анонсы."),
+        chip: t("header.bridge.chip", "Следующий шаг: открыть интеграции"),
       };
     }
     if (location.pathname.startsWith("/design-agent")) {
       return {
-        eyebrow: "Workflow",
-        title: "Р›РѕРєР°Р»СЊРЅС‹Р№ РґРёР·Р°Р№РЅ-С†РёРєР»",
-        description: "Р­РєСЂР°РЅ Рѕ С‚РѕРј, РєР°Рє РјС‹ СЂР°Р±РѕС‚Р°РµРј СЃ localhost, diff Рё Р¶РёРІРѕР№ РїСЂРѕРІРµСЂРєРѕР№ РёРЅС‚РµСЂС„РµР№СЃР° РІ Р±СЂР°СѓР·РµСЂРµ.",
-        chip: "Р›РѕРєР°Р»СЊРЅС‹Р№ preview Р±С‹СЃС‚СЂРµРµ Р»СЋР±РѕРіРѕ СЃС‚Р°С‚РёС‡РЅРѕРіРѕ РјР°РєРµС‚Р°",
+        eyebrow: t("header.designAgent.eyebrow", "Workflow"),
+        title: t("header.designAgent.title", "Локальный дизайн-цикл"),
+        description: t("header.designAgent.description", "Как мы работаем с localhost, diff и живой проверкой интерфейса."),
+        chip: t("header.designAgent.chip", "Локальный preview быстрее статичного макета"),
       };
     }
     if (location.pathname.startsWith("/legacy")) {
       return {
-        eyebrow: "Legacy",
-        title: "РђСЂС…РёРІРЅС‹Р№ СЌРєСЂР°РЅ",
-        description: "РЎС‚Р°СЂС‹Р№ dashboard СЃРѕС…СЂР°РЅС‘РЅ РєР°Рє reference, С‡С‚РѕР±С‹ СЃСЂР°РІРЅРёРІР°С‚СЊ СЂРµС€РµРЅРёСЏ Рё РЅРµ С‚РµСЂСЏС‚СЊ РїРѕР»РµР·РЅС‹Рµ РёРґРµРё.",
-        chip: "РўРµРєСѓС‰Р°СЏ РіР»Р°РІРЅР°СЏ Р¶РёРІС‘С‚ РЅР° РЅРѕРІРѕРј СЃС†РµРЅР°СЂРЅРѕРј СЌРєСЂР°РЅРµ",
+        eyebrow: t("header.legacy.eyebrow", "Legacy"),
+        title: t("header.legacy.title", "Архивный экран"),
+        description: t("header.legacy.description", "Старый dashboard сохранён как reference для сравнения решений."),
+        chip: t("header.legacy.chip", "Текущая главная живёт на новом сценарном экране"),
       };
     }
     return {
-      eyebrow: "Telegram Mini App",
-      title: "StreamsInfo",
-      description: "Р“Р»Р°РІРЅР°СЏ СЃРІРѕРґРєР° РїРѕ СЌС„РёСЂСѓ, РёСЃС‚РѕСЂРёРё, Р°РЅР°Р»РёС‚РёРєРµ Рё СЃР»РµРґСѓСЋС‰РµРјСѓ РїРѕР»РµР·РЅРѕРјСѓ РґРµР№СЃС‚РІРёСЋ РґР»СЏ СЃС‚СЂРёРјРµСЂР°.",
-      chip: "РЎР»РµРґСѓСЋС‰РёР№ С€Р°Рі: РїРѕРґРіРѕС‚РѕРІРёС‚СЊ Р°РЅРѕРЅСЃ",
+      eyebrow: t("header.default.eyebrow", "Telegram Mini App"),
+      title: t("header.default.title", "StreamsInfo"),
+      description: t("header.default.description", "Сводка по эфиру, истории и аналитике в одном месте."),
+      chip: t("header.default.chip", "Доступно на сайте и в Telegram"),
     };
-  }, [location.pathname]);
+  }, [location.pathname, t]);
 
   return (
     <SidebarProvider defaultOpen>
@@ -143,7 +147,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
           <div className="mx-auto w-full max-w-[1520px] px-2.5 pb-[calc(6.75rem+env(safe-area-inset-bottom))] pt-2.5 md:px-5 md:pb-28 md:pt-4">
             <GlobalStatusBar />
+            <PartnerBanner className="mb-4" />
             <PageTransition>{children}</PageTransition>
+          </div>
           </div>
         </SidebarInset>
 
@@ -158,8 +164,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           anchorRect={settingsAnchor}
           onClose={() => setSettingsOpen(false)}
         />
+        <QuickGearMenu />
         <CommandPalette />
       </div>
     </SidebarProvider>
   );
 }
+
+
+

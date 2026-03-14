@@ -1,20 +1,21 @@
-п»їimport { motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { BarChart3, House, Settings, Video, Wallet } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useRef } from "react";
-
-const mainTabs = [
-  { icon: House, label: "Р“Р»Р°РІРЅР°СЏ", path: "/" },
-  { icon: Video, label: "Р­С„РёСЂС‹", path: "/info" },
-  { icon: BarChart3, label: "РђРЅР°Р»РёС‚РёРєР°", path: "/analytics" },
-  { icon: Wallet, label: "Р”РѕРЅР°С‚С‹", path: "/donations" },
-];
+import { useI18n } from "@/lib/i18n";
 
 export function BottomNav({ onOpenSettings }: { onOpenSettings?: (anchor: DOMRect | null) => void }) {
   const location = useLocation();
   const currentPath = location.pathname;
   const settingsRef = useRef<HTMLButtonElement | null>(null);
+  const { t } = useI18n();
+  const mainTabs = [
+    { icon: House, label: t("bottomNav.dashboard", "Главная"), path: "/" },
+    { icon: Video, label: t("bottomNav.info", "Эфиры"), path: "/info" },
+    { icon: BarChart3, label: t("bottomNav.analytics", "Аналитика"), path: "/analytics" },
+    { icon: Wallet, label: t("bottomNav.donations", "Донаты"), path: "/donations" },
+  ];
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 md:hidden">
@@ -60,14 +61,16 @@ export function BottomNav({ onOpenSettings }: { onOpenSettings?: (anchor: DOMRec
             ref={settingsRef}
             onClick={() => onOpenSettings?.(settingsRef.current?.getBoundingClientRect() ?? null)}
             className="group relative flex h-[3.35rem] flex-col items-center justify-center gap-1 overflow-hidden rounded-[1.28rem] text-muted-foreground/90 transition-all duration-200 active:scale-95"
-            aria-label="РќР°СЃС‚СЂРѕР№РєРё"
+            aria-label={t("bottomNav.settings", "Настройки")}
           >
             <span className="absolute inset-0 rounded-[1.28rem] transition-colors duration-200 group-hover:bg-white/[0.05]" />
             <Settings size={18} strokeWidth={2.1} className="relative z-10 transition-transform duration-200 group-active:rotate-12" />
-            <span className="relative z-10 text-[10px] font-medium leading-none tracking-tight">РќР°СЃС‚СЂРѕР№РєРё</span>
+            <span className="relative z-10 text-[10px] font-medium leading-none tracking-tight">{t("bottomNav.settings", "Настройки")}</span>
           </button>
         </div>
       </div>
     </nav>
   );
 }
+
+

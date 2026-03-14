@@ -1,9 +1,10 @@
-﻿export type Platform = "twitch" | "youtube";
+export type Platform = "twitch" | "youtube" | "vklive";
 
 export function detectPlatform(url: string): Platform {
   const normalized = url.toLowerCase();
   if (normalized.includes("twitch.tv")) return "twitch";
   if (normalized.includes("youtube.com") || normalized.includes("youtu.be")) return "youtube";
+  if (normalized.includes("vkplay.live") || normalized.includes("vkplay.ru") || normalized.includes("vk.com")) return "vklive";
   throw new Error("Не удалось определить платформу");
 }
 

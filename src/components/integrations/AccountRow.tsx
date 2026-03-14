@@ -90,7 +90,7 @@ export default function AccountRow({
               className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-background ${
                 streamStatus?.isLive ? "animate-pulse bg-destructive" : "bg-emerald-500"
               }`}
-              title={streamStatus?.isLive ? "LIVE" : "Оффлайн"}
+              title={streamStatus?.isLive ? "LIVE" : "Не в эфире"}
             />
           </div>
 
