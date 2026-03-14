@@ -66,6 +66,7 @@
     "partners.go":  "Перейти",
     "settings.title":  "Настройки",
     "settings.subtitle":  "Центр управления StreamInfo",
+    "settings.quickButton":  "Быстрые настройки",
     "settings.language":  "Язык",
     "settings.languageDesc":  "Мгновенно переключайте язык интерфейса на всём сайте.",
     "settings.languageHint":  "RU | EN",

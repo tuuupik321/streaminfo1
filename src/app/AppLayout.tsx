@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { Settings } from "lucide-react";
+import { useRef } from "react";
 import { AppSidebar } from "@/components/AppSidebar";
 import { GlobalStatusBar } from "@/components/GlobalStatusBar";
 import { BottomNav } from "@/components/BottomNav";
@@ -14,6 +16,7 @@ import { useI18n } from "@/lib/i18n";
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsAnchor, setSettingsAnchor] = useState<DOMRect | null>(null);
+  const settingsButtonRef = useRef<HTMLButtonElement | null>(null);
   const location = useLocation();
   const { t } = useI18n();
 
@@ -138,9 +141,27 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   <div className="hidden text-xs text-muted-foreground md:block">{headerContent.description}</div>
                 </div>
               </div>
-              <div className="hidden items-center gap-2 rounded-full bg-white/[0.05] px-3 py-1.5 text-[11px] text-muted-foreground md:flex">
-                <span className="inline-flex h-2 w-2 rounded-full bg-primary shadow-[0_0_14px_rgba(74,222,128,0.55)]" />
-                {headerContent.chip}
+              <div className="flex items-center gap-2">
+                {location.pathname.startsWith("/settings") && (
+                  <button
+                    ref={settingsButtonRef}
+                    type="button"
+                    onClick={() => {
+                      setSettingsAnchor(settingsButtonRef.current?.getBoundingClientRect() ?? null);
+                      setSettingsOpen(true);
+                    }}
+                    className="group inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-400/15 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-50 shadow-[0_12px_30px_rgba(16,185,129,0.3)] transition hover:bg-emerald-400/25 md:px-3"
+                  >
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-400/30">
+                      <Settings size={14} className="transition-transform duration-200 group-hover:rotate-12" />
+                    </span>
+                    <span className="hidden sm:inline">{t("settings.quickButton", "Быстрые настройки")}</span>
+                  </button>
+                )}
+                <div className="hidden items-center gap-2 rounded-full bg-white/[0.05] px-3 py-1.5 text-[11px] text-muted-foreground md:flex">
+                  <span className="inline-flex h-2 w-2 rounded-full bg-primary shadow-[0_0_14px_rgba(74,222,128,0.55)]" />
+                  {headerContent.chip}
+                </div>
               </div>
             </div>
           </header>

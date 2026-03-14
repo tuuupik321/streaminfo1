@@ -7,6 +7,7 @@
     "streamInfo.errorDescription":  "Перевірте підключення та спробуйте ще раз.",
     "settings.title":  "Налаштування",
     "settings.subtitle":  "Центр керування StreamInfo",
+    "settings.quickButton":  "Швидкі налаштування",
     "settings.language":  "Мова",
     "settings.languageDesc":  "Миттєво перемикайте мову інтерфейсу на всьому сайті.",
     "settings.languageHint":  "RU | EN",

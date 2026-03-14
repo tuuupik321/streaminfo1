@@ -66,6 +66,7 @@
     "partners.go":  "Go",
     "settings.title":  "Settings",
     "settings.subtitle":  "StreamInfo control center",
+    "settings.quickButton":  "Quick settings",
     "settings.language":  "Language",
     "settings.languageDesc":  "Switch the interface language instantly across the app.",
     "settings.languageHint":  "RU | EN",
