@@ -162,6 +162,8 @@ OWNER_TELEGRAM_ID = os.getenv("OWNER_TELEGRAM_ID")
 OWNER_ADMIN_PASSWORD = os.getenv("OWNER_ADMIN_PASSWORD")
 ADMIN_TOKEN_TTL_SECONDS = _env_int("ADMIN_TOKEN_TTL_SECONDS", 43_200, min_value=300, max_value=604_800)
 OAUTH_STATE_TTL_SECONDS = _env_int("OAUTH_STATE_TTL_SECONDS", 900, min_value=120, max_value=3_600)
+APP_API_TOKEN = os.getenv("APP_API_TOKEN")
+ALLOW_WEB_AUTH = _env_bool("ALLOW_WEB_AUTH", not bool(APP_API_TOKEN))
 
 
 DB_URL, DB_CONNECT_ARGS, DB_DIALECT = _normalize_db_url(RAW_DB_URL)
@@ -752,6 +754,20 @@ def _resolve_oauth_user(request: web.Request) -> tuple[Optional[int], dict[str, 
         return public_user_id, {}, None
 
     return None, {}, web.json_response({"error": "invalid_user_id"}, status=400)
+
+def _parse_app_token(init_data: Optional[str]) -> Optional[dict[str, Any]]:
+    if not init_data or not APP_API_TOKEN:
+        return None
+    try:
+        pairs = dict(parse_qsl(init_data, keep_blank_values=True))
+    except Exception:
+        return None
+    token = pairs.get("app_token") or pairs.get("api_token")
+    if not token:
+        return None
+    if not hmac.compare_digest(str(token), APP_API_TOKEN):
+        return None
+    return {"user_id": _parse_int64(pairs.get("user_id"))}
 
 _twitch_token: Optional[str] = None
 _twitch_token_expiry: float = 0.0
@@ -1370,6 +1386,35 @@ async def get_telegram_targets(request: web.Request):
         return web.json_response([serialize_telegram_target(row) for row in rows])
 
 # ... (security and other functions remain the same)
+
+def _is_trusted_origin(request: web.Request) -> bool:
+    allowed = get_public_app_url()
+    if not allowed:
+        return False
+    allowed = allowed.rstrip("/")
+    origin = (request.headers.get("Origin") or "").strip()
+    referer = (request.headers.get("Referer") or "").strip()
+    if origin.startswith(allowed):
+        return True
+    if referer.startswith(allowed):
+        return True
+    return False
+
+def _extract_user_id_from_request(request: web.Request, init_data: Optional[str]) -> Optional[int]:
+    if init_data:
+        try:
+            pairs = dict(parse_qsl(init_data, keep_blank_values=True))
+            user_id = _parse_int64(pairs.get("user_id"))
+            if user_id is not None:
+                return user_id
+        except Exception:
+            pass
+    payload = request.get("_json") or {}
+    user_id = _parse_int64(payload.get("user_id"))
+    if user_id is not None:
+        return user_id
+    return _parse_int64(request.query.get("user_id"))
+
 async def _require_verified_user(request: web.Request):
     init_data = request.query.get("init_data")
     log_event("auth_attempt", method=request.method, path=request.path, has_init_data=bool(init_data))
@@ -1389,6 +1434,21 @@ async def _require_verified_user(request: web.Request):
 
     verified = parse_and_verify_init_data(init_data)
     if not verified or not verified.get("user_id"):
+        app_auth = _parse_app_token(init_data)
+        if app_auth is not None:
+            user_id = app_auth.get("user_id")
+            if user_id is not None:
+                request["verified_user_id"] = str(user_id)
+            request["verified_user"] = {"user_id": user_id, "auth": "app_token"}
+            log_event("auth_success", mode="app_token", user_id=user_id)
+            return None
+        if ALLOW_WEB_AUTH and _is_trusted_origin(request):
+            user_id = _extract_user_id_from_request(request, init_data)
+            if user_id is not None:
+                request["verified_user_id"] = str(user_id)
+            request["verified_user"] = {"user_id": user_id, "auth": "trusted_origin"}
+            log_event("auth_skipped", reason="trusted_origin", user_id=user_id)
+            return None
         log_event("auth_failed", reason="invalid_init_data", init_data_preview=str(init_data)[:100])
         return web.json_response({"error": "invalid_init_data"}, status=401)
 
@@ -3183,6 +3243,12 @@ if __name__ == "__main__":
         print(f"!!! Startup error: {error}")
 
 # Force update
+
+
+
+
+
+
 
 
 

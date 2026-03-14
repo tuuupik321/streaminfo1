@@ -10,6 +10,7 @@ export type UserProfile = {
 const STORAGE_KEY = "streamer_profile_v1";
 const USER_ID_KEY = "streamer_user_id";
 const INT64_MAX = 9223372036854775807n;
+const INT53_MAX = 9007199254740991n;
 
 export function getUserProfile(): UserProfile | null {
   try {
@@ -49,7 +50,7 @@ function createSafeRandomUserId(): string {
   for (const byte of bytes) {
     value = (value << 8n) | BigInt(byte);
   }
-  value &= INT64_MAX;
+  value &= INT53_MAX;
   if (value === 0n) {
     value = 1n;
   }
