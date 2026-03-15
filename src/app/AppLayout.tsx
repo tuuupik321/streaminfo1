@@ -10,6 +10,7 @@ import { PartnerBanner } from "@/components/PartnerBanner";
 import { PageTransition } from "@/components/PageTransition";
 import { QuickGearMenu } from "@/components/QuickGearMenu";
 import { SettingsModal } from "@/components/SettingsModal";
+import { TelegramOnboarding } from "@/components/TelegramOnboarding";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useI18n } from "@/lib/i18n";
 
@@ -150,7 +151,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       setSettingsAnchor(settingsButtonRef.current?.getBoundingClientRect() ?? null);
                       setSettingsOpen(true);
                     }}
-                    className="group inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-400/15 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-50 shadow-[0_12px_30px_rgba(16,185,129,0.3)] transition hover:bg-emerald-400/25 md:px-3"
+                    className="group hidden items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-400/15 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-50 shadow-[0_12px_30px_rgba(16,185,129,0.3)] transition hover:bg-emerald-400/25 md:inline-flex md:px-3"
                   >
                     <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-400/30">
                       <Settings size={14} className="transition-transform duration-200 group-hover:rotate-12" />
@@ -180,6 +181,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             setSettingsOpen(true);
           }}
         />
+        <TelegramOnboarding />
         <SettingsModal
           open={settingsOpen}
           anchorRect={settingsAnchor}

@@ -10,6 +10,7 @@ export function BottomNav({ onOpenSettings }: { onOpenSettings?: (anchor: DOMRec
   const currentPath = location.pathname;
   const settingsRef = useRef<HTMLButtonElement | null>(null);
   const { t } = useI18n();
+  const spring = { type: "spring", stiffness: 240, damping: 22 };
   const mainTabs = [
     { icon: House, label: t("bottomNav.dashboard", "Главная"), path: "/" },
     { icon: Video, label: t("bottomNav.info", "Эфиры"), path: "/info" },
@@ -32,18 +33,25 @@ export function BottomNav({ onOpenSettings }: { onOpenSettings?: (anchor: DOMRec
                 {isActive ? (
                   <motion.span
                     layoutId="tg-bottom-active"
-                    className="absolute inset-0 rounded-[1.28rem] border border-primary/30 bg-primary/[0.16] shadow-[inset_0_1px_0_rgba(255,255,255,0.09),0_0_26px_rgba(145,70,255,0.26)]"
-                    transition={{ type: "spring", stiffness: 360, damping: 30 }}
+                    className="absolute inset-0 rounded-[1.2rem] border border-primary/25 bg-primary/[0.14] shadow-[inset_0_1px_0_rgba(255,255,255,0.07),0_0_22px_rgba(145,70,255,0.24)]"
+                    transition={spring}
                   />
                 ) : null}
-                <tab.icon
-                  size={19}
-                  strokeWidth={isActive ? 2.5 : 2}
-                  className={cn(
-                    "relative z-10 transition-all duration-200",
-                    isActive ? "-translate-y-0.5 text-primary drop-shadow-[0_0_10px_rgba(145,70,255,0.45)]" : "text-muted-foreground/85 group-active:scale-95",
-                  )}
-                />
+                <motion.span
+                  className="relative z-10"
+                  animate={{ scale: isActive ? 1.08 : 1, y: isActive ? -2 : 0 }}
+                  transition={spring}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <tab.icon
+                    size={19}
+                    strokeWidth={isActive ? 2.5 : 2}
+                    className={cn(
+                      "transition-colors duration-200",
+                      isActive ? "text-primary drop-shadow-[0_0_10px_rgba(145,70,255,0.45)]" : "text-muted-foreground/85",
+                    )}
+                  />
+                </motion.span>
                 <span
                   className={cn(
                     "relative z-10 text-[10px] font-medium leading-none tracking-tight transition-colors",
@@ -60,17 +68,22 @@ export function BottomNav({ onOpenSettings }: { onOpenSettings?: (anchor: DOMRec
             type="button"
             ref={settingsRef}
             onClick={() => onOpenSettings?.(settingsRef.current?.getBoundingClientRect() ?? null)}
-            className="group relative flex h-[3.35rem] flex-col items-center justify-center gap-1 overflow-hidden rounded-[1.28rem] text-muted-foreground/90 transition-all duration-200 active:scale-95"
+            className="group relative flex h-[3.2rem] flex-col items-center justify-center gap-1 overflow-hidden rounded-[1.2rem] border border-emerald-400/40 bg-emerald-400/15 text-emerald-50 shadow-[0_14px_32px_rgba(16,185,129,0.35)] transition-all duration-200 active:scale-95"
             aria-label={t("bottomNav.settings", "Настройки")}
           >
-            <span className="absolute inset-0 rounded-[1.28rem] transition-colors duration-200 group-hover:bg-white/[0.05]" />
-            <Settings size={18} strokeWidth={2.1} className="relative z-10 transition-transform duration-200 group-active:rotate-12" />
-            <span className="relative z-10 text-[10px] font-medium leading-none tracking-tight">{t("bottomNav.settings", "Настройки")}</span>
+            <span className="absolute inset-0 rounded-[1.2rem] bg-emerald-400/10 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+            <span className="relative z-10 flex h-7 w-7 items-center justify-center rounded-full bg-emerald-400/30">
+              <Settings size={18} strokeWidth={2.1} className="transition-transform duration-200 group-active:rotate-12" />
+            </span>
+            <span className="relative z-10 text-[10px] font-medium leading-none tracking-tight">
+              {t("bottomNav.settings", "Настройки")}
+            </span>
           </button>
         </div>
       </div>
     </nav>
   );
 }
+
 
 
