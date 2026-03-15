@@ -18,19 +18,35 @@ type TelegramWindow = Window & {
 };
 
 const tgWindow = window as TelegramWindow;
-if (!tgWindow.Telegram?.WebApp?.initData) {
-  const userId = getOrCreateUserId();
-  const appToken = import.meta.env.VITE_APP_TOKEN || "";
+const fallbackUserId = getOrCreateUserId();
+const appToken = import.meta.env.VITE_APP_TOKEN || "";
+
+if (!tgWindow.Telegram?.WebApp) {
   const initData = new URLSearchParams({
     app_token: appToken,
-    user_id: userId,
+    user_id: fallbackUserId,
   }).toString();
   tgWindow.Telegram = {
+    ...(tgWindow.Telegram ?? {}),
     WebApp: {
       initData,
-      initDataUnsafe: { user: { id: Number(userId) } },
+      initDataUnsafe: { user: { id: Number(fallbackUserId) } },
     },
   };
+} else {
+  const webApp = tgWindow.Telegram.WebApp;
+  if (!webApp.initData) {
+    webApp.initData = new URLSearchParams({
+      app_token: appToken,
+      user_id: fallbackUserId,
+    }).toString();
+  }
+  if (!webApp.initDataUnsafe?.user?.id) {
+    webApp.initDataUnsafe = {
+      ...(webApp.initDataUnsafe ?? {}),
+      user: { id: Number(fallbackUserId) },
+    };
+  }
 }
 
 if (!import.meta.env.DEV) {

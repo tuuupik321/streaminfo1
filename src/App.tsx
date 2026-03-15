@@ -1,4 +1,4 @@
-п»їimport { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "./App.css";
@@ -17,6 +17,7 @@ import { AppLayout } from "./app/AppLayout";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { I18nProvider } from "./lib/i18n";
 import { consumeOAuthRedirectFromTelegramStartParam } from "./lib/oauth";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const Analytics = lazy(() => import("./pages/Analytics"));
@@ -28,9 +29,11 @@ const Index = lazy(() => import("./pages/Index"));
 const IntegrationsPage = lazy(() => import("./pages/IntegrationsPage"));
 const LiveDashboardPage = lazy(() => import("./pages/LiveDashboardPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const PrivacyPolicyPage = lazy(() => import("./pages/PrivacyPolicyPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const StreamInfoPage = lazy(() => import("./pages/StreamInfoPage"));
 const SupportPage = lazy(() => import("./pages/SupportPage"));
+const TermsPage = lazy(() => import("./pages/TermsPage"));
 const NewDashboardPage = lazy(() =>
   import("./pages/NewDashboardPage").then((module) => ({ default: module.NewDashboardPage })),
 );
@@ -40,7 +43,7 @@ function RouteLoadingState() {
     <div className="saas-card flex min-h-[220px] items-center justify-center rounded-[28px] border border-border/60 bg-card/75 p-6">
       <div className="space-y-2 text-center">
         <div className="text-[11px] font-mono uppercase tracking-[0.28em] text-muted-foreground">Loading</div>
-        <div className="text-sm font-medium text-foreground/80">РџРѕРґРіСЂСѓР¶Р°РµРј СЌРєСЂР°РЅ...</div>
+        <div className="text-sm font-medium text-foreground/80">Подгружаем экран...</div>
       </div>
     </div>
   );
@@ -181,7 +184,7 @@ const App = () => {
 
       saveUserProfile(fallbackProfile);
       setProfile(fallbackProfile);
-      setError("РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕРґС‚РІРµСЂРґРёС‚СЊ РєР°РЅР°Р», РїРѕРєР°Р·Р°РЅ РґРµРјРѕ-СЂРµР¶РёРј");
+      setError("Не удалось подтвердить канал, показан демо-режим");
     } catch (err) {
       setError((err as Error).message);
     }
@@ -208,6 +211,8 @@ const App = () => {
           </div>
         }
       />
+      <Route path="/privacy" element={<PrivacyPolicyPage />} />
+      <Route path="/terms" element={<TermsPage />} />
       <Route path="/design-agent" element={<DesignAgentPage />} />
       <Route path="/legacy" element={<Index />} />
       <Route path="*" element={<Navigate to="/" replace />} />
@@ -243,6 +248,8 @@ const App = () => {
       <Route path="/admin" element={<AdminPage />} />
       <Route path="/live" element={<LiveDashboardPage />} />
       <Route path="/bridge" element={<BridgeTransferPage />} />
+      <Route path="/privacy" element={<PrivacyPolicyPage />} />
+      <Route path="/terms" element={<TermsPage />} />
       <Route path="/design-agent" element={<DesignAgentPage />} />
       <Route path="/legacy" element={<Index />} />
       <Route path="*" element={<NotFound />} />
@@ -254,13 +261,15 @@ const App = () => {
       <ThemeProvider>
         <I18nProvider>
           <BrowserRouter>
-            {!profile ? (
-              <Suspense fallback={<RouteLoadingState />}>{publicRoutes}</Suspense>
-            ) : (
-              <AppLayout>
-                <Suspense fallback={<RouteLoadingState />}>{authenticatedRoutes}</Suspense>
-              </AppLayout>
-            )}
+            <ErrorBoundary>
+              {!profile ? (
+                <Suspense fallback={<RouteLoadingState />}>{publicRoutes}</Suspense>
+              ) : (
+                <AppLayout>
+                  <Suspense fallback={<RouteLoadingState />}>{authenticatedRoutes}</Suspense>
+                </AppLayout>
+              )}
+            </ErrorBoundary>
           </BrowserRouter>
         </I18nProvider>
       </ThemeProvider>
@@ -269,3 +278,4 @@ const App = () => {
 };
 
 export default App;
+
