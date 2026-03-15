@@ -2,7 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "./App.css";
-import { detectPlatform, extractChannelName } from "./utils/detectPlatform";
+import { detectPlatform, normalizeChannelUrl } from "./utils/detectPlatform";
 import {
   clearUserProfile,
   getOrCreateUserId,
@@ -99,12 +99,19 @@ const App = () => {
   const refreshProfileFromServer = useCallback(async () => {
     try {
       const res = await fetch(`/api/channel?user_id=${userId}`);
-      if (!res.ok) return;
+      if (!res.ok) {
+        clearUserProfile();
+        setProfile(null);
+        return;
+      }
       const data = (await res.json()) as UserProfile;
       if (data?.connected) {
         saveUserProfile(data);
         setProfile(data);
         setError(null);
+      } else {
+        clearUserProfile();
+        setProfile(null);
       }
     } catch {
       // ignore
@@ -159,32 +166,42 @@ const App = () => {
 
   const handleConnect = async (url: string) => {
     try {
-      const platform = detectPlatform(url);
-      const channelName = extractChannelName(url);
-      const fallbackProfile: UserProfile = {
-        platform,
-        channel_url: url,
-        channel_name: channelName,
-        connected: true,
-      };
+      const normalizedUrl = normalizeChannelUrl(url);
+      detectPlatform(normalizedUrl);
+      const initData =
+        (window as Window & { Telegram?: { WebApp?: TelegramWebApp } }).Telegram?.WebApp?.initData || "";
 
       const res = await fetch("/api/channel/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userId, channel_url: url }),
+        body: JSON.stringify({ user_id: userId, channel_url: normalizedUrl, init_data: initData }),
       });
 
+      const data = (await res.json().catch(() => ({}))) as Partial<UserProfile> & { error?: string };
       if (res.ok) {
-        const data = (await res.json()) as UserProfile;
-        saveUserProfile(data);
-        setProfile(data);
+        saveUserProfile(data as UserProfile);
+        setProfile(data as UserProfile);
         setError(null);
         return;
       }
 
-      saveUserProfile(fallbackProfile);
-      setProfile(fallbackProfile);
-      setError("Не удалось подтвердить канал, показан демо-режим");
+      const errorCode = typeof data?.error === "string" ? data.error : "";
+      const fallbackMessage = "Не удалось подключить канал. Проверьте ссылку и попробуйте снова.";
+      const message =
+        errorCode === "twitch_not_found"
+          ? "Канал Twitch не найден."
+          : errorCode === "youtube_not_found"
+            ? "Канал YouTube не найден."
+            : errorCode === "vklive_not_found"
+              ? "Канал VK Live не найден."
+              : errorCode === "invalid_init_data"
+                ? "Откройте mini app через Telegram и повторите подключение."
+                : errorCode === "user_mismatch"
+                  ? "Проверьте, что вы входите тем же Telegram-аккаунтом."
+          : fallbackMessage;
+      setError(message);
+      clearUserProfile();
+      setProfile(null);
     } catch (err) {
       setError((err as Error).message);
     }
@@ -278,4 +295,7 @@ const App = () => {
 };
 
 export default App;
+
+
+
 

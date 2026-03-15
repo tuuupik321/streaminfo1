@@ -78,7 +78,7 @@ export default function BridgeTransferPage() {
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
             <Button className="gap-2" onClick={start}>
-              <Megaphone size={16} /> Запустить демо маршрута
+              <Megaphone size={16} /> Запустить маршрут
             </Button>
             <Button variant="outline" className="gap-2" onClick={() => navigate("/integrations")}>
               <Link2 size={16} /> Открыть интеграции
@@ -96,7 +96,7 @@ export default function BridgeTransferPage() {
 
       <motion.div variants={item}>
         <CardShell className="relative overflow-hidden p-6">
-          <h2 className="mb-2 text-xl font-bold text-foreground">Демо перехода Twitch → Telegram → эфир</h2>
+          <h2 className="mb-2 text-xl font-bold text-foreground">Переход Twitch → Telegram → эфир</h2>
           <p className="mb-6 text-sm text-muted-foreground">Наглядно показывает, как один анонс и одна ссылка проводят зрителя дальше.</p>
 
           <div className="relative h-48 overflow-hidden rounded-2xl border border-white/10 bg-black">
@@ -137,7 +137,7 @@ export default function BridgeTransferPage() {
 
           <div className="mt-5 flex flex-wrap gap-3">
             <Button type="button" variant="outline" onClick={start} className="gap-2">
-              Повторить демо <ArrowRight size={14} />
+              Повторить маршрут <ArrowRight size={14} />
             </Button>
             <Button type="button" onClick={() => navigate("/announcements")} className="gap-2">
               Открыть анонс <Megaphone size={14} />

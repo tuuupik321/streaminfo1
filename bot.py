@@ -2310,13 +2310,17 @@ async def verify_channel(request: web.Request):
     return web.json_response({"error": "unsupported_platform"}, status=400)
 
 async def connect_channel(request: web.Request):
+    auth_error = await _require_verified_user(request)
+    if auth_error:
+        return auth_error
+
     try:
         payload = await request.json()
         channel_url = str(payload.get("channel_url") or "").strip()
     except Exception:
         return web.json_response({"error": "bad_request"}, status=400)
 
-    user_id, user_error = _resolve_user_id(request, source="body", payload=payload)
+    user_id, user_error = _resolve_user_id(request, source="body", payload=payload, allow_verified_fallback=True)
     if user_error:
         return user_error
 
