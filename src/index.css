@@ -19,7 +19,7 @@
   --secondary: 216 27% 18%;
   --secondary-foreground: 210 40% 96%;
   --muted: 216 24% 15%;
-  --muted-foreground: 214 18% 71%;
+  --muted-foreground: 214 18% 64%;
   --accent: 36 97% 66%;
   --accent-foreground: 210 40% 8%;
   --destructive: 0 76% 58%;
@@ -53,11 +53,11 @@
   --glow-alpha-strong: 0.22;
   --card-style: minimal;
   --surface-strength: 0.6;
-  --surface-border-alpha: 0.2;
-  --surface-bg-alpha: 0.78;
-  --surface-bg-alpha-strong: 0.64;
+  --surface-border-alpha: 0.16;
+  --surface-bg-alpha: 0.74;
+  --surface-bg-alpha-strong: 0.58;
   --surface-blur: 18px;
-  --surface-shadow-alpha: 0.42;
+  --surface-shadow-alpha: 0.36;
 }
 
 .dark {
@@ -77,7 +77,7 @@
   --secondary: 48 26% 91%;
   --secondary-foreground: 216 38% 18%;
   --muted: 45 18% 89%;
-  --muted-foreground: 216 17% 43%;
+  --muted-foreground: 216 17% 38%;
   --accent: 28 92% 58%;
   --accent-foreground: 216 38% 13%;
   --destructive: 0 72% 51%;
@@ -167,10 +167,9 @@
     position: fixed;
     inset: 0;
     background:
-      radial-gradient(circle at 12% 10%, hsl(var(--accent) / 0.12), transparent 30%),
-      radial-gradient(circle at 84% 14%, hsl(var(--primary) / 0.16), transparent 32%),
-      radial-gradient(circle at 52% 104%, hsl(var(--info) / 0.1), transparent 38%),
-      radial-gradient(circle at 54% 28%, hsl(var(--primary) / 0.06), transparent 26%);
+      radial-gradient(circle at 14% 12%, hsl(var(--primary) / 0.12), transparent 28%),
+      radial-gradient(circle at 86% 16%, hsl(var(--primary) / 0.08), transparent 30%),
+      radial-gradient(circle at 48% 100%, hsl(var(--primary) / 0.06), transparent 36%);
     pointer-events: none;
     z-index: -2;
   }
@@ -204,6 +203,7 @@
     margin: 0;
     color: hsl(var(--foreground));
     font-family: "Sora", "IBM Plex Sans", sans-serif;
+    font-weight: 700;
     letter-spacing: -0.035em;
     line-height: 1.06;
     text-wrap: balance;
@@ -1673,4 +1673,5 @@
     width: 100%;
   }
 }
+
 

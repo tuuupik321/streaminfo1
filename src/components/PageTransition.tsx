@@ -4,22 +4,23 @@ import { useLocation } from "react-router-dom";
 const variants = {
   initial: {
     opacity: 0,
-    y: 8,
+    y: 12,
   },
   animate: {
     opacity: 1,
     y: 0,
     transition: {
-      duration: 0.4,
-      ease: "easeOut",
+      type: "spring",
+      stiffness: 180,
+      damping: 24,
     },
   },
   exit: {
     opacity: 0,
-    y: -8,
+    y: -6,
     transition: {
       duration: 0.2,
-      ease: "easeIn",
+      ease: "easeInOut",
     },
   },
 };

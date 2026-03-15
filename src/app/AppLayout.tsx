@@ -136,10 +136,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <div className="flex items-center gap-3">
                 <SidebarTrigger />
                 <div>
-                  <div className="text-[10px] font-medium uppercase tracking-[0.24em] text-muted-foreground">{headerContent.eyebrow}</div>
-                  <div className="text-sm font-semibold text-foreground">{headerContent.title}</div>
-                  <div className="mt-1 text-[11px] text-muted-foreground md:hidden">{headerContent.chip}</div>
-                  <div className="hidden text-xs text-muted-foreground md:block">{headerContent.description}</div>
+                  <div className="text-[10px] font-medium uppercase tracking-[0.24em] text-muted-foreground/75">
+                    {headerContent.eyebrow}
+                  </div>
+                  <div className="text-base font-semibold text-foreground md:text-lg">{headerContent.title}</div>
+                  <div className="mt-1 text-[11px] text-muted-foreground/70 md:hidden">{headerContent.chip}</div>
+                  <div className="hidden text-xs text-muted-foreground/75 md:block">{headerContent.description}</div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -151,9 +153,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       setSettingsAnchor(settingsButtonRef.current?.getBoundingClientRect() ?? null);
                       setSettingsOpen(true);
                     }}
-                    className="group hidden items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-400/15 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-50 shadow-[0_12px_30px_rgba(16,185,129,0.3)] transition hover:bg-emerald-400/25 md:inline-flex md:px-3"
+                    className="group hidden items-center gap-2 rounded-full border border-primary/35 bg-primary/15 px-2.5 py-1.5 text-[11px] font-semibold text-primary-foreground shadow-[0_12px_30px_hsl(var(--primary)_/_0.28)] transition hover:bg-primary/25 md:inline-flex md:px-3"
                   >
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-400/30">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/30">
                       <Settings size={14} className="transition-transform duration-200 group-hover:rotate-12" />
                     </span>
                     <span className="hidden sm:inline">{t("settings.quickButton", "Быстрые настройки")}</span>
