@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import re
+import secrets
 import time
 import mimetypes
 import uuid
@@ -161,6 +162,7 @@ OWNER_TELEGRAM_ID = os.getenv("OWNER_TELEGRAM_ID")
 OWNER_ADMIN_PASSWORD = os.getenv("OWNER_ADMIN_PASSWORD")
 ADMIN_TOKEN_TTL_SECONDS = _env_int("ADMIN_TOKEN_TTL_SECONDS", 43_200, min_value=300, max_value=604_800)
 OAUTH_STATE_TTL_SECONDS = _env_int("OAUTH_STATE_TTL_SECONDS", 900, min_value=120, max_value=3_600)
+AUTH_LINK_TTL_SECONDS = _env_int("AUTH_LINK_TTL_SECONDS", 600, min_value=60, max_value=3_600)
 APP_API_TOKEN = os.getenv("APP_API_TOKEN")
 ALLOW_WEB_AUTH = _env_bool("ALLOW_WEB_AUTH", not bool(APP_API_TOKEN))
 
@@ -238,6 +240,12 @@ class ChannelConnection(Base):
     connected = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+
+class AuthLink(Base):
+    __tablename__ = "auth_links"
+    code = Column(String(12), primary_key=True)
+    user_id = Column(BigInteger, index=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
 
 class StreamGoal(Base):
     __tablename__ = "stream_goals"
@@ -1500,6 +1508,77 @@ def _resolve_user_id(
     if REQUIRE_INIT_DATA and verified_user_id is not None and user_id != verified_user_id:
         return None, web.json_response({"error": "user_mismatch"}, status=403)
     return user_id, None
+
+
+def _generate_auth_link_code() -> str:
+    return f"{secrets.randbelow(900000) + 100000}"
+
+
+async def _cleanup_auth_links(session: AsyncSession) -> None:
+    cutoff = datetime.now(timezone.utc) - timedelta(seconds=AUTH_LINK_TTL_SECONDS)
+    await session.execute(AuthLink.__table__.delete().where(AuthLink.created_at < cutoff))
+
+
+async def start_auth_link(request: web.Request):
+    auth_error = await _require_verified_user(request)
+    if auth_error:
+        return auth_error
+
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+
+    user_id, user_error = _resolve_user_id(request, source="body", payload=payload, allow_verified_fallback=True)
+    if user_error:
+        return user_error
+    if user_id is None:
+        return web.json_response({"error": "invalid_user_id"}, status=400)
+    if not async_session:
+        return web.json_response({"error": "db_not_configured"}, status=500)
+
+    async with async_session() as session:
+        await _cleanup_auth_links(session)
+        await session.execute(AuthLink.__table__.delete().where(AuthLink.user_id == user_id))
+
+        for _ in range(5):
+            code = _generate_auth_link_code()
+            existing = await session.get(AuthLink, code)
+            if existing:
+                continue
+            session.add(AuthLink(code=code, user_id=user_id))
+            await session.commit()
+            return web.json_response({"code": code, "expires_in": AUTH_LINK_TTL_SECONDS})
+
+    return web.json_response({"error": "code_generation_failed"}, status=500)
+
+
+async def complete_auth_link(request: web.Request):
+    try:
+        payload = await request.json()
+        code = str(payload.get("code") or "").strip().replace(" ", "")
+    except Exception:
+        return web.json_response({"error": "bad_request"}, status=400)
+
+    if not code:
+        return web.json_response({"error": "bad_request"}, status=400)
+    if not async_session:
+        return web.json_response({"error": "db_not_configured"}, status=500)
+
+    async with async_session() as session:
+        await _cleanup_auth_links(session)
+        link = await session.get(AuthLink, code)
+        if not link:
+            return web.json_response({"error": "code_not_found"}, status=404)
+        age = datetime.now(timezone.utc) - (link.created_at or datetime.now(timezone.utc))
+        if age.total_seconds() > AUTH_LINK_TTL_SECONDS:
+            await session.delete(link)
+            await session.commit()
+            return web.json_response({"error": "code_expired"}, status=410)
+        user_id = link.user_id
+        await session.delete(link)
+        await session.commit()
+        return web.json_response({"user_id": user_id})
 
 
 async def setup_database():
@@ -3022,6 +3101,8 @@ def build_app():
     app.router.add_get("/api/oauth/result", get_oauth_result)
     app.router.add_get("/api/oauth/{platform}/start", oauth_start)
     app.router.add_get("/api/oauth/{platform}/callback", oauth_callback)
+    app.router.add_post("/api/link/start", start_auth_link)
+    app.router.add_post("/api/link/complete", complete_auth_link)
     app.router.add_get("/api/telegram_targets", get_telegram_targets)
     app.router.add_get("/api/stats", get_all_stats)
     app.router.add_get("/api/settings", get_settings)

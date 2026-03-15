@@ -74,3 +74,10 @@ export function getOrCreateUserId(preferredId?: string | number | bigint | null)
   window.localStorage.setItem(USER_ID_KEY, id);
   return id;
 }
+
+export function setUserId(nextId: string | number | bigint | null): string | null {
+  const normalized = normalizeUserId(nextId);
+  if (!normalized) return null;
+  window.localStorage.setItem(USER_ID_KEY, normalized);
+  return normalized;
+}
