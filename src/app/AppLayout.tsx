@@ -174,7 +174,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <PartnerBanner className="mb-4" />
             <PageTransition>{children}</PageTransition>
           </div>
-          </div>
         </SidebarInset>
 
         <BottomNav
@@ -195,6 +194,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     </SidebarProvider>
   );
 }
+
 
 
 
