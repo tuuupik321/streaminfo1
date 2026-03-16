@@ -26,6 +26,7 @@ import { SectionHeader } from "@/shared/ui/SectionHeader";
 type AdminRole = "owner" | "moderator" | "analyst" | null;
 type AdminOverviewResponse = { users?: number; active_streams?: number; backend_status?: "ok" | "degraded"; ping_ms?: number; error?: string };
 type AdminStatsState = { users: number; activeStreams: number; backendStatus: "ok" | "warn" | "error"; ping: string; cpu: string };
+type BuildInfo = { commit?: string; build_time?: string; started_at?: string; uptime_seconds?: number };
 type TelegramWindow = Window & { Telegram?: { WebApp?: { initData?: string } } };
 
 export default function AdminPage() {
@@ -38,6 +39,8 @@ export default function AdminPage() {
   const [stats, setStats] = useState<AdminStatsState>({ users: 0, activeStreams: 0, backendStatus: "ok", ping: "0ms", cpu: "n/a" });
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [buildInfo, setBuildInfo] = useState<BuildInfo | null>(null);
+  const buildLabel = buildInfo?.build_time ? new Date(buildInfo.build_time).toLocaleString() : null;
 
   useEffect(() => {
     if (!currentTelegramId) return;
@@ -70,6 +73,18 @@ export default function AdminPage() {
     const loadSettingsAndStats = async () => {
       const adminToken = sessionStorage.getItem("admin_token");
       const initData = (window as TelegramWindow).Telegram?.WebApp?.initData || "";
+      const publicStatusResponse = await fetch("/status");
+      if (publicStatusResponse.ok) {
+        const statusPayload = await publicStatusResponse.json();
+        if (statusPayload?.build) {
+          setBuildInfo({
+            commit: statusPayload.build?.commit,
+            build_time: statusPayload.build?.build_time,
+            started_at: statusPayload.started_at,
+            uptime_seconds: statusPayload.uptime_seconds,
+          });
+        }
+      }
       if (adminToken && initData) {
         let cpuValue = "n/a";
         const statusResponse = await fetch(`/api/system_status?init_data=${encodeURIComponent(initData)}`);
@@ -235,6 +250,11 @@ export default function AdminPage() {
         }}>
           <Lock size={12} /> Выйти из админки
         </Button>
+        {buildInfo ? (
+          <div className="mt-2 text-[11px] font-mono text-muted-foreground">
+            Build {buildInfo.commit ?? "n/a"}{buildLabel ? ` · ${buildLabel}` : ""}
+          </div>
+        ) : null}
       </div>
     </motion.div>
   );

@@ -167,6 +167,80 @@ AUTH_LINK_TTL_SECONDS = _env_int("AUTH_LINK_TTL_SECONDS", 600, min_value=60, max
 APP_API_TOKEN = os.getenv("APP_API_TOKEN")
 ALLOW_WEB_AUTH = _env_bool("ALLOW_WEB_AUTH", not bool(APP_API_TOKEN))
 
+APP_STARTED_AT = datetime.now(timezone.utc)
+APP_STARTED_TS = time.time()
+
+
+def _read_text_file(path: str) -> Optional[str]:
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            return handle.read().strip()
+    except OSError:
+        return None
+
+
+def _resolve_git_dir(base_dir: str) -> Optional[str]:
+    git_path = os.path.join(base_dir, ".git")
+    if os.path.isdir(git_path):
+        return git_path
+    if os.path.isfile(git_path):
+        payload = _read_text_file(git_path)
+        if payload and payload.startswith("gitdir:"):
+            rel_path = payload.split(":", 1)[1].strip()
+            return os.path.normpath(os.path.join(base_dir, rel_path))
+    return None
+
+
+def _resolve_git_commit(base_dir: str) -> Optional[str]:
+    git_dir = _resolve_git_dir(base_dir)
+    if not git_dir:
+        return None
+    head_path = os.path.join(git_dir, "HEAD")
+    head = _read_text_file(head_path)
+    if not head:
+        return None
+    if head.startswith("ref:"):
+        ref_path = head.split(" ", 1)[1].strip()
+        ref_full_path = os.path.join(git_dir, ref_path)
+        commit = _read_text_file(ref_full_path)
+        return commit or None
+    return head or None
+
+
+def _resolve_build_time(base_dir: str) -> Optional[str]:
+    for key in ("BUILD_TIME", "BUILD_DATE", "BUILD_TIMESTAMP"):
+        raw = os.getenv(key)
+        if raw:
+            return raw.strip()
+    epoch = os.getenv("SOURCE_DATE_EPOCH")
+    if epoch and epoch.isdigit():
+        return datetime.fromtimestamp(int(epoch), tz=timezone.utc).isoformat()
+    for candidate in ("dist/index.html", "public/index.html"):
+        path = os.path.join(base_dir, candidate)
+        if os.path.exists(path):
+            return datetime.fromtimestamp(os.path.getmtime(path), tz=timezone.utc).isoformat()
+    return None
+
+
+def _resolve_build_info() -> dict[str, Optional[str]]:
+    base_dir = os.path.dirname(__file__)
+    commit = (
+        os.getenv("BUILD_SHA")
+        or os.getenv("GIT_COMMIT")
+        or os.getenv("SOURCE_VERSION")
+        or os.getenv("RENDER_GIT_COMMIT")
+        or _resolve_git_commit(base_dir)
+    )
+    if commit:
+        commit = commit.strip()
+        if len(commit) > 12:
+            commit = commit[:12]
+    build_time = _resolve_build_time(base_dir)
+    return {"commit": commit, "build_time": build_time}
+
+
+BUILD_INFO = _resolve_build_info()
+
 
 DB_URL, DB_CONNECT_ARGS, DB_DIALECT = _normalize_db_url(RAW_DB_URL)
 DB_SCHEMA = "public" if DB_DIALECT == "postgresql" else None
@@ -1736,8 +1810,37 @@ async def keep_database_warm():
             log_event("db_keepalive_failed", error=str(error))
         await asyncio.sleep(240)
 
+def _apply_build_headers(response: web.StreamResponse) -> None:
+    if BUILD_INFO.get("commit"):
+        response.headers["X-Build-Commit"] = BUILD_INFO["commit"]
+    if BUILD_INFO.get("build_time"):
+        response.headers["X-Build-Time"] = BUILD_INFO["build_time"]
+    response.headers["X-Uptime-Seconds"] = str(int(time.time() - APP_STARTED_TS))
+
 async def health_check(request: web.Request):
-    return web.Response(text="I'm alive!", status=200)
+    message = "I'm alive!"
+    details = []
+    if BUILD_INFO.get("commit"):
+        details.append(f"commit={BUILD_INFO['commit']}")
+    if BUILD_INFO.get("build_time"):
+        details.append(f"build={BUILD_INFO['build_time']}")
+    if details:
+        message = f"{message} ({', '.join(details)})"
+    response = web.Response(text=message, status=200)
+    _apply_build_headers(response)
+    return response
+
+async def status_check(request: web.Request):
+    payload = {
+        "ok": True,
+        "status": "ok",
+        "uptime_seconds": int(time.time() - APP_STARTED_TS),
+        "started_at": APP_STARTED_AT.isoformat(),
+        "build": BUILD_INFO,
+    }
+    response = web.json_response(payload)
+    _apply_build_headers(response)
+    return response
 
 async def upsert_telegram_channel(
     session: AsyncSession,
@@ -3348,6 +3451,7 @@ def build_app():
     # Health check for cron-job
     app.router.add_get("/health", health_check)
     app.router.add_get("/healthz", health_check)
+    app.router.add_get("/status", status_check)
 
     # API routes
     app.router.add_post("/api/ping", api_ping)

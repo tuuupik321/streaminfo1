@@ -25,13 +25,19 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   const rawLanguage = useSettingsStore((state) => state.language);
   const language = normalizeUiLanguage(rawLanguage) || "ru";
   const [translations, setTranslations] = useState<Translations>({});
+  const fallbackLanguage: UiLanguage = language === "ru" ? "en" : "ru";
+  const [fallbackTranslations, setFallbackTranslations] = useState<Translations>({});
 
   useEffect(() => {
     loadTranslations(language).then(setTranslations);
   }, [language]);
 
+  useEffect(() => {
+    loadTranslations(fallbackLanguage).then(setFallbackTranslations);
+  }, [fallbackLanguage]);
+
   const t = (key: string, fallback?: string): string => {
-    return translations[key] || fallback || key;
+    return translations[key] || fallbackTranslations[key] || fallback || key;
   };
 
   return (
