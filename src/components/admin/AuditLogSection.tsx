@@ -1,14 +1,25 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Clock3, FileText, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { supabase } from "@/integrations/supabase/client";
 
 type AuditLog = {
-  id: string;
+  id: string | number;
   event_type: string;
   message: string;
   created_at: string;
+};
+
+type AuditResponse = {
+  logs?: AuditLog[];
+};
+
+type TelegramWindow = Window & {
+  Telegram?: {
+    WebApp?: {
+      initData?: string;
+    };
+  };
 };
 
 export function AuditLogSection() {
@@ -17,13 +28,23 @@ export function AuditLogSection() {
 
   useEffect(() => {
     const load = async () => {
-      const { data } = await supabase
-        .from("event_logs")
-        .select("id, event_type, message, created_at")
-        .order("created_at", { ascending: false })
-        .limit(100);
-      setLogs((data as AuditLog[] | null) || []);
-      setLoading(false);
+      const adminToken = sessionStorage.getItem("admin_token") || "";
+      const initData = (window as TelegramWindow).Telegram?.WebApp?.initData || "";
+      if (!adminToken) {
+        setLogs([]);
+        setLoading(false);
+        return;
+      }
+      try {
+        const res = await fetch(`/api/admin/audit?admin_token=${encodeURIComponent(adminToken)}&init_data=${encodeURIComponent(initData)}`);
+        if (!res.ok) throw new Error("bad_response");
+        const payload: AuditResponse = await res.json();
+        setLogs(payload.logs || []);
+      } catch {
+        setLogs([]);
+      } finally {
+        setLoading(false);
+      }
     };
     void load();
   }, []);

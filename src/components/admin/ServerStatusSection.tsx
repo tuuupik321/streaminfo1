@@ -1,11 +1,10 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Server, Cpu, HardDrive, Wifi, RefreshCw } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
 
 interface ServerMetrics {
   cpu: number;
@@ -16,17 +15,25 @@ interface ServerMetrics {
   region: string;
 }
 
+type TelegramWindow = Window & {
+  Telegram?: {
+    WebApp?: {
+      initData?: string;
+    };
+  };
+};
+
 const defaultMetrics: ServerMetrics = {
   cpu: 0,
   memory: 0,
   disk: 0,
   ping: 0,
-  uptime: "—",
-  region: "—",
+  uptime: "-",
+  region: "-",
 };
 
-function parseNumber(value: string | null | undefined, fallback = 0) {
-  if (!value) return fallback;
+function parseNumber(value: unknown, fallback = 0) {
+  if (value === null || value === undefined) return fallback;
   const num = Number(value);
   return Number.isFinite(num) ? num : fallback;
 }
@@ -36,31 +43,23 @@ export function ServerStatusSection() {
   const [refreshing, setRefreshing] = useState(false);
 
   const load = async () => {
-    const { data } = await supabase
-      .from("settings")
-      .select("key, value")
-      .in("key", [
-        "server_cpu",
-        "server_memory",
-        "server_disk",
-        "server_ping",
-        "server_uptime",
-        "server_region",
-      ]);
-
-    const map: Record<string, string> = {};
-    data?.forEach((row) => {
-      map[row.key] = row.value;
-    });
-
-    setMetrics({
-      cpu: parseNumber(map.server_cpu, 0),
-      memory: parseNumber(map.server_memory, 0),
-      disk: parseNumber(map.server_disk, 0),
-      ping: parseNumber(map.server_ping, 0),
-      uptime: map.server_uptime || "—",
-      region: map.server_region || "—",
-    });
+    try {
+      const initData = (window as TelegramWindow).Telegram?.WebApp?.initData || "";
+      const query = initData ? `?init_data=${encodeURIComponent(initData)}` : "";
+      const response = await fetch(`/api/system_status${query}`);
+      if (!response.ok) throw new Error("bad_response");
+      const payload = await response.json();
+      setMetrics({
+        cpu: parseNumber(payload.cpu, 0),
+        memory: parseNumber(payload.memory, 0),
+        disk: parseNumber(payload.disk, 0),
+        ping: parseNumber(payload.ping, 0),
+        uptime: payload.uptime || "-",
+        region: payload.region || "-",
+      });
+    } catch {
+      setMetrics(defaultMetrics);
+    }
   };
 
   useEffect(() => {

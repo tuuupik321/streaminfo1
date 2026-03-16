@@ -24,105 +24,105 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const headerContent = useMemo(() => {
     if (location.pathname.startsWith("/info")) {
       return {
-        eyebrow: t("header.info.eyebrow", "������"),
-        title: t("header.info.title", "������ �����"),
-        description: t("header.info.description", "�������� ������� �� �����, ������ � ��������� � ����� �����."),
-        chip: t("header.info.chip", "����������� � �������� �������"),
+        eyebrow: t("header.info.eyebrow", "РЎРІРѕРґРєР°"),
+        title: t("header.info.title", "РЎРІРѕРґРєР° СЌС„РёСЂР°"),
+        description: t("header.info.description", "РљР»СЋС‡РµРІС‹Рµ РјРµС‚СЂРёРєРё РїРѕ СЌС„РёСЂСѓ, РєР»РёРєР°Рј Рё РїРѕРґРґРµСЂР¶РєРµ РІ РѕРґРЅРѕРј РјРµСЃС‚Рµ."),
+        chip: t("header.info.chip", "РћР±РЅРѕРІР»СЏРµС‚СЃСЏ РІ СЂРµР°Р»СЊРЅРѕРј РІСЂРµРјРµРЅРё"),
       };
     }
     if (location.pathname.startsWith("/analytics")) {
       return {
-        eyebrow: t("header.analytics.eyebrow", "���������"),
-        title: t("header.analytics.title", "���� � ������ ����"),
-        description: t("header.analytics.description", "������� ������, ���� � ������ ���� ��� ������� �����."),
-        chip: t("header.analytics.chip", "�������: 7 / 30 / 90 ���� / �� �����"),
+        eyebrow: t("header.analytics.eyebrow", "РђРЅР°Р»РёС‚РёРєР°"),
+        title: t("header.analytics.title", "Р РѕСЃС‚ Рё Р»СѓС‡С€РёРµ РѕРєРЅР°"),
+        description: t("header.analytics.description", "РЎСЂРµРґРЅРёР№ РѕРЅР»Р°Р№РЅ, РїРёРєРё Рё Р»СѓС‡С€РёРµ С‡Р°СЃС‹ РґР»СЏ Р·Р°РїСѓСЃРєР° СЌС„РёСЂР°."),
+        chip: t("header.analytics.chip", "РџРµСЂРёРѕРґС‹: 7 / 30 / 90 РґРЅРµР№ / РІСЃС‘ РІСЂРµРјСЏ"),
       };
     }
     if (location.pathname.startsWith("/donations")) {
       return {
-        eyebrow: t("header.donations.eyebrow", "���������"),
-        title: t("header.donations.title", "������ � �������� �������"),
-        description: t("header.donations.description", "������� �������, ������� ����� � ��� ��������� �� ����� ������."),
-        chip: t("header.donations.chip", "��������� ���: ���������� ������ �������"),
+        eyebrow: t("header.donations.eyebrow", "РџРѕРґРґРµСЂР¶РєР°"),
+        title: t("header.donations.title", "Р”РѕРЅР°С‚С‹ Рё Р°РєС‚РёРІРЅС‹Рµ Р·СЂРёС‚РµР»Рё"),
+        description: t("header.donations.description", "РСЃС‚РѕСЂРёСЏ РґРѕРЅР°С‚РѕРІ, СЃСЂРµРґРЅРёРµ СЃСѓРјРјС‹ Рё С‚РѕРї РїРѕРґРґРµСЂР¶РєРё РЅР° РѕРґРЅРѕРј СЌРєСЂР°РЅРµ."),
+        chip: t("header.donations.chip", "РЎР»РµРґСѓСЋС‰РёР№ С€Р°Рі: РїРѕРґРєР»СЋС‡РёС‚СЊ СЃРµСЂРІРёСЃ РґРѕРЅР°С‚РѕРІ"),
       };
     }
     if (location.pathname.startsWith("/announcements")) {
       return {
-        eyebrow: t("header.announcements.eyebrow", "������"),
-        title: t("header.announcements.title", "����� �������"),
-        description: t("header.announcements.description", "�������� �����, CTA � ������ ��� ������ ��� mini app."),
-        chip: t("header.announcements.chip", "���� ����� = ���� �������� ��������"),
+        eyebrow: t("header.announcements.eyebrow", "РђРЅРѕРЅСЃС‹"),
+        title: t("header.announcements.title", "Р¦РµРЅС‚СЂ Р°РЅРѕРЅСЃРѕРІ"),
+        description: t("header.announcements.description", "РљРѕСЂРѕС‚РєРёР№ С‚РµРєСЃС‚, CTA Рё СЃСЃС‹Р»РєР° РґР»СЏ РєР°РЅР°Р»Р° РёР»Рё mini app."),
+        chip: t("header.announcements.chip", "РћРґРёРЅ Р°РЅРѕРЅСЃ = РѕРґРЅРѕ РїРѕРЅСЏС‚РЅРѕРµ РґРµР№СЃС‚РІРёРµ"),
       };
     }
     if (location.pathname.startsWith("/integrations")) {
       return {
-        eyebrow: t("header.integrations.eyebrow", "����������"),
-        title: t("header.integrations.title", "��������� � �������"),
-        description: t("header.integrations.description", "���������� ���������, ������ � ����������� ��� ������ ������� �����."),
-        chip: t("header.integrations.chip", "����������� ��������� ����� ����� mini app"),
+        eyebrow: t("header.integrations.eyebrow", "РРЅС‚РµРіСЂР°С†РёРё"),
+        title: t("header.integrations.title", "РџР»Р°С‚С„РѕСЂРјС‹ Рё СЃРµСЂРІРёСЃС‹"),
+        description: t("header.integrations.description", "РџРѕРґРєР»СЋС‡РёС‚Рµ РїР»Р°С‚С„РѕСЂРјС‹, РґРѕРЅР°С‚С‹ Рё СѓРІРµРґРѕРјР»РµРЅРёСЏ РґР»СЏ РїРѕР»РЅРѕР№ РєР°СЂС‚РёРЅС‹ СЌС„РёСЂР°."),
+        chip: t("header.integrations.chip", "РџРѕРґРєР»СЋС‡РµРЅРёСЏ РѕС‚РєСЂС‹РІР°СЋС‚ РЅРѕРІС‹Рµ Р±Р»РѕРєРё mini app"),
       };
     }
     if (location.pathname.startsWith("/settings")) {
       return {
-        eyebrow: t("header.settings.eyebrow", "���������"),
-        title: t("header.settings.title", "������� ���������"),
-        description: t("header.settings.description", "����, ���� � ���������� ��� ������ �������."),
-        chip: t("header.settings.chip", "������� ������ ��, ��� ������ �� ����"),
+        eyebrow: t("header.settings.eyebrow", "РќР°СЃС‚СЂРѕР№РєРё"),
+        title: t("header.settings.title", "Р‘С‹СЃС‚СЂС‹Рµ РЅР°СЃС‚СЂРѕР№РєРё"),
+        description: t("header.settings.description", "РўРµРјР°, СЏР·С‹Рє Рё РёРЅС‚РµРіСЂР°С†РёРё Р±РµР· Р»РёС€РЅРµР№ РіР»СѓР±РёРЅС‹."),
+        chip: t("header.settings.chip", "РњРµРЅСЏР№С‚Рµ С‚РѕР»СЊРєРѕ С‚Рѕ, С‡С‚Рѕ РІР»РёСЏРµС‚ РЅР° РѕРїС‹С‚"),
       };
     }
     if (location.pathname.startsWith("/support")) {
       return {
-        eyebrow: t("header.support.eyebrow", "���������"),
-        title: t("header.support.title", "����� � ��������"),
-        description: t("header.support.description", "������� �������� ��� ����, ����� ����� ����� ����."),
-        chip: t("header.support.chip", "������� ����, ����� � ��������� ���������"),
+        eyebrow: t("header.support.eyebrow", "РџРѕРґРґРµСЂР¶РєР°"),
+        title: t("header.support.title", "РЎРІСЏР·СЊ СЃ РєРѕРјР°РЅРґРѕР№"),
+        description: t("header.support.description", "РћРїРёС€РёС‚Рµ РїСЂРѕР±Р»РµРјСѓ РёР»Рё РёРґРµСЋ, РѕС‚РІРµС‚ РїСЂРёРґС‘С‚ РїСЂСЏРјРѕ СЃСЋРґР°."),
+        chip: t("header.support.chip", "РЈРєР°Р¶РёС‚Рµ С€Р°РіРё, СЌРєСЂР°РЅ Рё РѕР¶РёРґР°РµРјС‹Р№ СЂРµР·СѓР»СЊС‚Р°С‚"),
       };
     }
     if (location.pathname.startsWith("/admin")) {
       return {
         eyebrow: t("header.admin.eyebrow", "Admin"),
-        title: t("header.admin.title", "����� ����������"),
-        description: t("header.admin.description", "���������, ���������� � �������� ��� ������� �������."),
-        chip: t("header.admin.chip", "������ ��� �����-�������"),
+        title: t("header.admin.title", "Р¦РµРЅС‚СЂ СѓРїСЂР°РІР»РµРЅРёСЏ"),
+        description: t("header.admin.description", "РџРѕРґРґРµСЂР¶РєР°, РјРѕРЅРёС‚РѕСЂРёРЅРі Рё РґРµР№СЃС‚РІРёСЏ РґР»СЏ РєРѕРјР°РЅРґС‹ РїСЂРѕРµРєС‚Р°."),
+        chip: t("header.admin.chip", "РўРѕР»СЊРєРѕ РґР»СЏ Р°РґРјРёРЅ-РґРѕСЃС‚СѓРїР°"),
       };
     }
     if (location.pathname.startsWith("/live")) {
       return {
         eyebrow: t("header.live.eyebrow", "Live"),
-        title: t("header.live.title", "����� �����"),
-        description: t("header.live.description", "���������� ���� � �������� ������� ����� � ����� ������."),
-        chip: t("header.live.chip", "��������� ���: ������������� �� ���"),
+        title: t("header.live.title", "РџСѓР»СЊСЃ СЌС„РёСЂР°"),
+        description: t("header.live.description", "РђРєС‚РёРІРЅРѕСЃС‚СЊ С‡Р°С‚Р° Рё РєР»СЋС‡РµРІС‹Рµ СЃРёРіРЅР°Р»С‹ СЌС„РёСЂР° РІ РѕРґРЅРѕРј СЌРєСЂР°РЅРµ."),
+        chip: t("header.live.chip", "РЎР»РµРґСѓСЋС‰РёР№ С€Р°Рі: РѕС‚СЂРµР°РіРёСЂРѕРІР°С‚СЊ РЅР° С‡Р°С‚"),
       };
     }
     if (location.pathname.startsWith("/bridge")) {
       return {
         eyebrow: t("header.bridge.eyebrow", "Bridge"),
-        title: t("header.bridge.title", "������� ���������"),
-        description: t("header.bridge.description", "����������, ��� ������� ���������, Telegram � ������."),
-        chip: t("header.bridge.chip", "��������� ���: ������� ����������"),
+        title: t("header.bridge.title", "РњР°СЂС€СЂСѓС‚ Р°СѓРґРёС‚РѕСЂРёРё"),
+        description: t("header.bridge.description", "РџРѕРєР°Р·С‹РІР°РµС‚, РєР°Рє СЃРІСЏР·Р°С‚СЊ РїР»Р°С‚С„РѕСЂРјС‹, Telegram Рё Р°РЅРѕРЅСЃС‹."),
+        chip: t("header.bridge.chip", "РЎР»РµРґСѓСЋС‰РёР№ С€Р°Рі: РѕС‚РєСЂС‹С‚СЊ РёРЅС‚РµРіСЂР°С†РёРё"),
       };
     }
     if (location.pathname.startsWith("/design-agent")) {
       return {
         eyebrow: t("header.designAgent.eyebrow", "Workflow"),
-        title: t("header.designAgent.title", "��������� ������-����"),
-        description: t("header.designAgent.description", "��� �� �������� � localhost, diff � ����� ��������� ����������."),
-        chip: t("header.designAgent.chip", "��������� preview ������� ���������� ������"),
+        title: t("header.designAgent.title", "Р›РѕРєР°Р»СЊРЅС‹Р№ РґРёР·Р°Р№РЅ-С†РёРєР»"),
+        description: t("header.designAgent.description", "РљР°Рє РјС‹ СЂР°Р±РѕС‚Р°РµРј СЃ localhost, diff Рё Р¶РёРІРѕР№ РїСЂРѕРІРµСЂРєРѕР№ РёРЅС‚РµСЂС„РµР№СЃР°."),
+        chip: t("header.designAgent.chip", "Р›РѕРєР°Р»СЊРЅС‹Р№ preview Р±С‹СЃС‚СЂРµРµ СЃС‚Р°С‚РёС‡РЅРѕРіРѕ РјР°РєРµС‚Р°"),
       };
     }
     if (location.pathname.startsWith("/legacy")) {
       return {
         eyebrow: t("header.legacy.eyebrow", "Legacy"),
-        title: t("header.legacy.title", "�������� �����"),
-        description: t("header.legacy.description", "������ dashboard �������� ��� reference ��� ��������� �������."),
-        chip: t("header.legacy.chip", "������� ������� ���� �� ����� ��������� ������"),
+        title: t("header.legacy.title", "РђСЂС…РёРІРЅС‹Р№ СЌРєСЂР°РЅ"),
+        description: t("header.legacy.description", "РЎС‚Р°СЂС‹Р№ dashboard СЃРѕС…СЂР°РЅС‘РЅ РєР°Рє reference РґР»СЏ СЃСЂР°РІРЅРµРЅРёСЏ СЂРµС€РµРЅРёР№."),
+        chip: t("header.legacy.chip", "РўРµРєСѓС‰Р°СЏ РіР»Р°РІРЅР°СЏ Р¶РёРІС‘С‚ РЅР° РЅРѕРІРѕРј СЃС†РµРЅР°СЂРЅРѕРј СЌРєСЂР°РЅРµ"),
       };
     }
     return {
       eyebrow: t("header.default.eyebrow", "Telegram Mini App"),
       title: t("header.default.title", "StreamsInfo"),
-      description: t("header.default.description", "������ �� �����, ������� � ��������� � ����� �����."),
-      chip: t("header.default.chip", "�������� �� ����� � � Telegram"),
+      description: t("header.default.description", "РЎРІРѕРґРєР° РїРѕ СЌС„РёСЂСѓ, РёСЃС‚РѕСЂРёРё Рё Р°РЅР°Р»РёС‚РёРєРµ РІ РѕРґРЅРѕРј РјРµСЃС‚Рµ."),
+      chip: t("header.default.chip", "Р”РѕСЃС‚СѓРїРЅРѕ РЅР° СЃР°Р№С‚Рµ Рё РІ Telegram"),
     };
   }, [location.pathname, t]);
 
@@ -158,7 +158,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/30">
                       <Settings size={14} className="transition-transform duration-200 group-hover:rotate-12" />
                     </span>
-                    <span className="hidden sm:inline">{t("settings.quickButton", "Быстрые настройки")}</span>
+                    <span className="hidden sm:inline">{t("settings.quickButton", "Quick settings")}</span>
                   </button>
                 )}
                 <div className="hidden items-center gap-2 rounded-full bg-white/[0.05] px-3 py-1.5 text-[11px] text-muted-foreground md:flex">
@@ -188,7 +188,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           anchorRect={settingsAnchor}
           onClose={() => setSettingsOpen(false)}
         />
-        <QuickGearMenu />
+        <div className="hidden md:block">
+          <QuickGearMenu />
+        </div>
         <CommandPalette />
       </div>
     </SidebarProvider>

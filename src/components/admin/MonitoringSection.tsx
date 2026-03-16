@@ -1,11 +1,9 @@
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+﻿import { useState, useEffect } from "react";
 import { Activity, Wifi, WifiOff, RefreshCw, AlertCircle, CheckCircle2, Clock, Loader2, Zap } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { supabase } from "@/integrations/supabase/client";
 
 interface ServiceStatus {
   name: string;
@@ -15,11 +13,23 @@ interface ServiceStatus {
 }
 
 interface EventLog {
-  id: string;
+  id: string | number;
   event_type: string;
   message: string;
   created_at: string;
 }
+
+type TelegramWindow = Window & {
+  Telegram?: {
+    WebApp?: {
+      initData?: string;
+    };
+  };
+};
+
+type AuditResponse = {
+  logs?: EventLog[];
+};
 
 export function MonitoringSection() {
   const [services, setServices] = useState<ServiceStatus[]>([
@@ -33,27 +43,26 @@ export function MonitoringSection() {
   const [logsLoading, setLogsLoading] = useState(true);
 
   const loadLogs = async () => {
-    const { data } = await supabase
-      .from("event_logs")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(30);
-    if (data) setLogs(data as EventLog[]);
-    setLogsLoading(false);
+    const adminToken = sessionStorage.getItem("admin_token") || "";
+    const initData = (window as TelegramWindow).Telegram?.WebApp?.initData || "";
+    if (!adminToken) {
+      setLogs([]);
+      setLogsLoading(false);
+      return;
+    }
+    try {
+      const res = await fetch(`/api/admin/audit?admin_token=${encodeURIComponent(adminToken)}&init_data=${encodeURIComponent(initData)}`);
+      if (!res.ok) throw new Error("bad_response");
+      const payload: AuditResponse = await res.json();
+      setLogs(payload.logs || []);
+    } catch {
+      setLogs([]);
+    } finally {
+      setLogsLoading(false);
+    }
   };
 
-  useEffect(() => { loadLogs(); }, []);
-
-  // Realtime subscription for live logs
-  useEffect(() => {
-    const channel = supabase
-      .channel("event_logs_realtime")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "event_logs" }, (payload) => {
-        setLogs((prev) => [payload.new as EventLog, ...prev].slice(0, 30));
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, []);
+  useEffect(() => { void loadLogs(); }, []);
 
   const refreshServices = async () => {
     setChecking(true);
@@ -88,7 +97,6 @@ export function MonitoringSection() {
 
   return (
     <div className="space-y-4">
-      {/* Service Status */}
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-bold font-heading flex items-center gap-2">
           <Wifi size={14} className="text-primary" /> Статус сервисов
@@ -119,7 +127,6 @@ export function MonitoringSection() {
         ))}
       </div>
 
-      {/* Live Log */}
       <Card className="bg-secondary/30 border-border/50">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-mono flex items-center gap-2">

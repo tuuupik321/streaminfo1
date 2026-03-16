@@ -97,19 +97,19 @@ export default function StreamInfoPage() {
   }
 
   if (error) {
-    return <EmptyState icon={Radio} title={t("streamInfo.errorTitle", "Не удалось загрузить дашборд")} description={t("streamInfo.errorDescription", "Проверьте подключение и попробуйте снова.")} />;
+    return <EmptyState icon={Radio} title={t("streamInfo.errorTitle", "Failed to load dashboard")} description={t("streamInfo.errorDescription", "Check the connection and try again.")} />;
   }
 
   const periodOptions = [
-    { value: "today", label: t("streamInfo.today", "Сегодня") },
-    { value: "7d", label: t("streamInfo.d7", "7 дней") },
-    { value: "30d", label: t("streamInfo.d30", "30 дней") },
-    { value: "all", label: t("streamInfo.all", "Всё время") },
+    { value: "today", label: t("streamInfo.today", "Today") },
+    { value: "7d", label: t("streamInfo.d7", "Last 7 days") },
+    { value: "30d", label: t("streamInfo.d30", "30 days") },
+    { value: "all", label: t("streamInfo.all", "All time") },
   ];
 
   const statusLine = isLive
-    ? `${t("streamInfo.liveOn", "LIVE")} · ${t("streamInfo.viewersNow", "Зрителей сейчас")} ${Math.max(1, viewersNow)}`
-    : t("streamInfo.liveOff", "Не в эфире");
+    ? `${t("streamInfo.liveOn", "LIVE")} - ${t("streamInfo.viewersNow", "Viewers now")} ${Math.max(1, viewersNow)}`
+    : t("streamInfo.liveOff", "Offline");
 
   const handleCopyLink = async () => {
     try {
@@ -128,21 +128,21 @@ export default function StreamInfoPage() {
               <span className={isLive ? "h-2 w-2 rounded-full bg-red-500" : "h-2 w-2 rounded-full bg-white/30"} />
               {statusLine}
             </div>
-            <h2 className="mt-3 text-xl font-bold sm:text-2xl">{t("streamInfo.summaryTitle", "Сводка эфира")}</h2>
+            <h2 className="mt-3 text-xl font-bold sm:text-2xl">{t("streamInfo.summaryTitle", "Stream summary")}</h2>
             <p className="mt-2 text-sm text-white/65">
-              {t("streamInfo.summaryDesc", "Ключевые метрики по эфиру, кликам и поддержке без лишних блоков.")}
+              {t("streamInfo.summaryDesc", "Key stream metrics, clicks, and support without extra noise.")}
             </p>
           </div>
 
           <div className="grid min-w-0 gap-2 sm:grid-cols-2 md:grid-cols-1 lg:min-w-[220px]">
             <Button size="sm" onClick={() => navigate("/announcements")} className="min-h-11 justify-start gap-2 sm:justify-center md:justify-start">
-              <Send size={14} /> {t("streamInfo.openAnnouncements", "Открыть анонсы")}
+              <Send size={14} /> {t("streamInfo.openAnnouncements", "Open announcements")}
             </Button>
             <Button size="sm" variant="outline" onClick={handleCopyLink} className="min-h-11 justify-start gap-2 sm:justify-center md:justify-start">
-              <Copy size={14} /> {t("streamInfo.copyLink", "Скопировать ссылку")}
+              <Copy size={14} /> {t("streamInfo.copyLink", "Copy link")}
             </Button>
             <Button size="sm" variant="outline" onClick={() => navigate("/integrations")} className="min-h-11 justify-start gap-2 sm:justify-center md:justify-start">
-              <Link2 size={14} /> {t("streamInfo.openIntegrations", "Интеграции")}
+              <Link2 size={14} /> {t("streamInfo.openIntegrations", "Integrations")}
             </Button>
           </div>
         </div>
@@ -150,8 +150,8 @@ export default function StreamInfoPage() {
 
       <motion.div variants={item} className="mb-4 mt-5 flex flex-wrap items-center justify-between gap-3 sm:mb-6 sm:mt-6">
         <div>
-          <h1 className="text-gradient-primary text-xl">{t("streamInfo.centerTitle", "Центр эфира")}</h1>
-          <p className="mt-1 text-xs text-muted-foreground">{t("streamInfo.centerDesc", "Сводка, динамика и ключевые сигналы в одном экране.")}</p>
+          <h1 className="text-gradient-primary text-xl">{t("streamInfo.centerTitle", "Stream center")}</h1>
+          <p className="mt-1 text-xs text-muted-foreground">{t("streamInfo.centerDesc", "Summary, dynamics, and key signals in one view.")}</p>
         </div>
         <div className="flex w-full gap-2 overflow-x-auto pb-1 md:w-auto md:flex-wrap md:overflow-visible md:pb-0">
           {periodOptions.map((option) => (
@@ -166,7 +166,7 @@ export default function StreamInfoPage() {
             </Button>
           ))}
           <Button size="sm" variant="ghost" onClick={() => refetch()} disabled={isRefetching} className="shrink-0">
-            {isRefetching ? t("streamInfo.refreshing", "Обновляем...") : t("streamInfo.refresh", "Обновить")}
+            {isRefetching ? t("streamInfo.refreshing", "Refreshing...") : t("streamInfo.refresh", "Refresh")}
           </Button>
         </div>
       </motion.div>
@@ -178,21 +178,21 @@ export default function StreamInfoPage() {
           <motion.div variants={item} className="saas-card">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs uppercase tracking-[0.28em] text-white/45">{t("streamInfo.donationsBlock", "Донаты сегодня")}</p>
-                <h3 className="mt-2 text-base font-semibold">{donationsToday.toLocaleString("ru-RU")} ₽</h3>
+                <p className="text-xs uppercase tracking-[0.28em] text-white/45">{t("streamInfo.donationsBlock", "Donations today")}</p>
+                <h3 className="mt-2 text-base font-semibold">{donationsToday.toLocaleString("ru-RU")} RUB</h3>
               </div>
               <Gift size={18} className="text-white/55" />
             </div>
             <div className="mt-4 space-y-2">
               {recentDonations.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-white/10 bg-black/10 px-3 py-4 text-sm text-white/50">
-                  {t("donations.emptyFeed", "Донатов пока нет. Лента появится здесь автоматически.")}
+                  {t("donations.emptyFeed", "No donations yet. The feed will appear here automatically.")}
                 </div>
               ) : (
                 recentDonations.map((donation) => (
                   <div key={donation.id} className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white/72">
                     <p className="font-semibold text-white">{donation.donor}</p>
-                    <p className="text-xs text-white/55">{donation.amount.toLocaleString("ru-RU")} {donation.currency || "RUB"}</p>
+                    <p className="text-xs text-white/55">{donation.amount.toLocaleString("ru-RU")} RUB</p>
                   </div>
                 ))
               )}
@@ -203,16 +203,16 @@ export default function StreamInfoPage() {
         <div className="space-y-3 sm:space-y-4">
           <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
             <motion.div variants={item}>
-              <KpiTile icon={Radio} label={t("streamInfo.viewersNow", "Зрителей сейчас")} value={isLoading ? "—" : viewersNow} />
+              <KpiTile icon={Radio} label={t("streamInfo.viewersNow", "Viewers now")} value={isLoading ? "-" : viewersNow} />
             </motion.div>
             <motion.div variants={item}>
-              <KpiTile icon={Link2} label={t("streamInfo.clicks", "Клики на эфир")} value={isLoading ? "—" : clicksToday} />
+              <KpiTile icon={Link2} label={t("streamInfo.clicks", "Stream clicks")} value={isLoading ? "-" : clicksToday} />
             </motion.div>
             <motion.div variants={item}>
-              <KpiTile icon={Gift} label={t("streamInfo.donationsToday", "Донаты сегодня")} value={isLoading ? "—" : `${donationsToday.toLocaleString("ru-RU")} ₽`} />
+              <KpiTile icon={Gift} label={t("streamInfo.donationsToday", "Donations today")} value={isLoading ? "-" : `${donationsToday.toLocaleString("ru-RU")} RUB`} />
             </motion.div>
             <motion.div variants={item}>
-              <KpiTile icon={Users} label={t("streamInfo.followers", "Фолловеры")} value={isLoading ? "—" : followers} />
+              <KpiTile icon={Users} label={t("streamInfo.followers", "Followers")} value={isLoading ? "-" : followers} />
             </motion.div>
           </div>
         </div>

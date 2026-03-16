@@ -7,6 +7,7 @@ import logging
 import os
 import re
 import secrets
+import shutil
 import time
 import mimetypes
 import uuid
@@ -661,8 +662,8 @@ async def _oauth_result_response(
     redirect_payload = {key: value for key, value in payload.items() if key != "return_path"}
     redirect_url = f"{redirect_path}?{urlencode(redirect_payload)}"
     payload_json = json.dumps(payload, ensure_ascii=False)
-    title = "Подключение готово" if status == "success" else "Подключение не завершено"
-    subtitle = message or ("Можно вернуться в приложение и продолжить работу." if status == "success" else "Попробуйте ещё раз или проверьте настройки OAuth.")
+    title = "Р В Р’В Р РЋРЎСџР В Р’В Р РЋРІР‚СћР В Р’В Р СћРІР‚ВР В Р’В Р РЋРІР‚СњР В Р’В Р вЂ™Р’В»Р В Р Р‹Р В РІР‚в„–Р В Р Р‹Р Р†Р вЂљР Р‹Р В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚ВР В Р’В Р вЂ™Р’Вµ Р В Р’В Р РЋРІР‚вЂњР В Р’В Р РЋРІР‚СћР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р РЋРІР‚СћР В Р’В Р В РІР‚В Р В Р’В Р РЋРІР‚Сћ" if status == "success" else "Р В Р’В Р РЋРЎСџР В Р’В Р РЋРІР‚СћР В Р’В Р СћРІР‚ВР В Р’В Р РЋРІР‚СњР В Р’В Р вЂ™Р’В»Р В Р Р‹Р В РІР‚в„–Р В Р Р‹Р Р†Р вЂљР Р‹Р В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚ВР В Р’В Р вЂ™Р’Вµ Р В Р’В Р В РІР‚В¦Р В Р’В Р вЂ™Р’Вµ Р В Р’В Р вЂ™Р’В·Р В Р’В Р вЂ™Р’В°Р В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РІР‚С™Р В Р Р‹Р Р†РІР‚С™Р’В¬Р В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚Сћ"
+    subtitle = message or ("Р В Р’В Р РЋРЎв„ўР В Р’В Р РЋРІР‚СћР В Р’В Р вЂ™Р’В¶Р В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚Сћ Р В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РІР‚С™Р В Р’В Р В РІР‚В¦Р В Р Р‹Р РЋРІР‚СљР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р В Р вЂ°Р В Р Р‹Р В РЎвЂњР В Р Р‹Р В Р РЏ Р В Р’В Р В РІР‚В  Р В Р’В Р РЋРІР‚вЂќР В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚ВР В Р’В Р вЂ™Р’В»Р В Р’В Р РЋРІР‚СћР В Р’В Р вЂ™Р’В¶Р В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚ВР В Р’В Р вЂ™Р’Вµ Р В Р’В Р РЋРІР‚В Р В Р’В Р РЋРІР‚вЂќР В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚СћР В Р’В Р СћРІР‚ВР В Р’В Р РЋРІР‚СћР В Р’В Р вЂ™Р’В»Р В Р’В Р вЂ™Р’В¶Р В Р’В Р РЋРІР‚ВР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р В Р вЂ° Р В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’В°Р В Р’В Р вЂ™Р’В±Р В Р’В Р РЋРІР‚СћР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р РЋРІР‚Сљ." if status == "success" else "Р В Р’В Р РЋРЎСџР В Р’В Р РЋРІР‚СћР В Р’В Р РЋРІР‚вЂќР В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚СћР В Р’В Р вЂ™Р’В±Р В Р Р‹Р РЋРІР‚СљР В Р’В Р Р†РІР‚С›РІР‚вЂњР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’Вµ Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р Р†Р вЂљР’В°Р В Р Р‹Р Р†Р вЂљР’В Р В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’В°Р В Р’В Р вЂ™Р’В· Р В Р’В Р РЋРІР‚ВР В Р’В Р вЂ™Р’В»Р В Р’В Р РЋРІР‚В Р В Р’В Р РЋРІР‚вЂќР В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚СћР В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РІР‚С™Р В Р Р‹Р В Р вЂ°Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’Вµ Р В Р’В Р В РІР‚В¦Р В Р’В Р вЂ™Р’В°Р В Р Р‹Р В РЎвЂњР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚СћР В Р’В Р Р†РІР‚С›РІР‚вЂњР В Р’В Р РЋРІР‚СњР В Р’В Р РЋРІР‚В OAuth.")
     html_body = f"""<!doctype html>
 <html lang="ru">
   <head>
@@ -725,7 +726,7 @@ async def _oauth_result_response(
       <div class="eyebrow">StreamFly OAuth</div>
       <h1>{html.escape(title)}</h1>
       <p>{html.escape(subtitle)}</p>
-      <a href="{html.escape(redirect_url)}">Вернуться в приложение</a>
+      <a href="{html.escape(redirect_url)}">Р В Р’В Р Р†Р вЂљРІвЂћСћР В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РІР‚С™Р В Р’В Р В РІР‚В¦Р В Р Р‹Р РЋРІР‚СљР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р В Р вЂ°Р В Р Р‹Р В РЎвЂњР В Р Р‹Р В Р РЏ Р В Р’В Р В РІР‚В  Р В Р’В Р РЋРІР‚вЂќР В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚ВР В Р’В Р вЂ™Р’В»Р В Р’В Р РЋРІР‚СћР В Р’В Р вЂ™Р’В¶Р В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚ВР В Р’В Р вЂ™Р’Вµ</a>
     </div>
     <script>
       (function() {{
@@ -779,6 +780,39 @@ def _parse_app_token(init_data: Optional[str]) -> Optional[dict[str, Any]]:
         return None
     return {"user_id": _parse_int64(pairs.get("user_id"))}
 
+admin_token_store: dict[str, dict[str, Any]] = {}
+
+def _cleanup_expired_admin_tokens() -> None:
+    now = time.time()
+    expired = [
+        token for token, payload in admin_token_store.items()
+        if now - float(payload.get("created_at", 0)) > ADMIN_TOKEN_TTL_SECONDS
+    ]
+    for token in expired:
+        admin_token_store.pop(token, None)
+
+
+def _create_admin_token(telegram_id: str) -> str:
+    _cleanup_expired_admin_tokens()
+    token = secrets.token_urlsafe(24)
+    admin_token_store[token] = {"telegram_id": str(telegram_id), "created_at": time.time()}
+    return token
+
+
+def _verify_admin_token(token: Optional[str], telegram_id: Optional[str]) -> bool:
+    if not token or not telegram_id:
+        return False
+    _cleanup_expired_admin_tokens()
+    payload = admin_token_store.get(token)
+    if not payload:
+        return False
+    if str(payload.get("telegram_id")) != str(telegram_id):
+        return False
+    created_at = float(payload.get("created_at", 0))
+    if time.time() - created_at > ADMIN_TOKEN_TTL_SECONDS:
+        admin_token_store.pop(token, None)
+        return False
+    return True
 _twitch_token: Optional[str] = None
 _twitch_token_expiry: float = 0.0
 _twitch_stats_cache: dict[str, tuple[float, dict[str, Any]]] = {}
@@ -1994,7 +2028,7 @@ async def oauth_start(request: web.Request):
             return_path=return_path,
             primary=primary,
             mode=mode,
-            message="Подключение пока не настроено на сервере. Нужны OAuth client id и client secret.",
+            message="Р В Р’В Р РЋРЎСџР В Р’В Р РЋРІР‚СћР В Р’В Р СћРІР‚ВР В Р’В Р РЋРІР‚СњР В Р’В Р вЂ™Р’В»Р В Р Р‹Р В РІР‚в„–Р В Р Р‹Р Р†Р вЂљР Р‹Р В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚ВР В Р’В Р вЂ™Р’Вµ Р В Р’В Р РЋРІР‚вЂќР В Р’В Р РЋРІР‚СћР В Р’В Р РЋРІР‚СњР В Р’В Р вЂ™Р’В° Р В Р’В Р В РІР‚В¦Р В Р’В Р вЂ™Р’Вµ Р В Р’В Р В РІР‚В¦Р В Р’В Р вЂ™Р’В°Р В Р Р‹Р В РЎвЂњР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚СћР В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚Сћ Р В Р’В Р В РІР‚В¦Р В Р’В Р вЂ™Р’В° Р В Р Р‹Р В РЎвЂњР В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РІР‚С™Р В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’Вµ. Р В Р’В Р РЋРЎС™Р В Р Р‹Р РЋРІР‚СљР В Р’В Р вЂ™Р’В¶Р В Р’В Р В РІР‚В¦Р В Р Р‹Р Р†Р вЂљРІвЂћвЂ“ OAuth client id Р В Р’В Р РЋРІР‚В client secret.",
         )
 
     try:
@@ -2007,7 +2041,7 @@ async def oauth_start(request: web.Request):
             return_path=return_path,
             primary=primary,
             mode=mode,
-            message="На сервере не задан публичный APP_URL, поэтому OAuth пока не может завершиться.",
+            message="Р В Р’В Р РЋРЎС™Р В Р’В Р вЂ™Р’В° Р В Р Р‹Р В РЎвЂњР В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РІР‚С™Р В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’Вµ Р В Р’В Р В РІР‚В¦Р В Р’В Р вЂ™Р’Вµ Р В Р’В Р вЂ™Р’В·Р В Р’В Р вЂ™Р’В°Р В Р’В Р СћРІР‚ВР В Р’В Р вЂ™Р’В°Р В Р’В Р В РІР‚В¦ Р В Р’В Р РЋРІР‚вЂќР В Р Р‹Р РЋРІР‚СљР В Р’В Р вЂ™Р’В±Р В Р’В Р вЂ™Р’В»Р В Р’В Р РЋРІР‚ВР В Р Р‹Р Р†Р вЂљР Р‹Р В Р’В Р В РІР‚В¦Р В Р Р‹Р Р†Р вЂљРІвЂћвЂ“Р В Р’В Р Р†РІР‚С›РІР‚вЂњ APP_URL, Р В Р’В Р РЋРІР‚вЂќР В Р’В Р РЋРІР‚СћР В Р Р‹Р В Р Р‰Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р РЋРІР‚СћР В Р’В Р РЋР’ВР В Р Р‹Р РЋРІР‚Сљ OAuth Р В Р’В Р РЋРІР‚вЂќР В Р’В Р РЋРІР‚СћР В Р’В Р РЋРІР‚СњР В Р’В Р вЂ™Р’В° Р В Р’В Р В РІР‚В¦Р В Р’В Р вЂ™Р’Вµ Р В Р’В Р РЋР’ВР В Р’В Р РЋРІР‚СћР В Р’В Р вЂ™Р’В¶Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р Р†Р вЂљРЎв„ў Р В Р’В Р вЂ™Р’В·Р В Р’В Р вЂ™Р’В°Р В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РІР‚С™Р В Р Р‹Р Р†РІР‚С™Р’В¬Р В Р’В Р РЋРІР‚ВР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р В Р вЂ°Р В Р Р‹Р В РЎвЂњР В Р Р‹Р В Р РЏ.",
         )
 
     state = _create_oauth_state(
@@ -2072,7 +2106,7 @@ async def oauth_start(request: web.Request):
             return_path=return_path,
             primary=primary,
             mode=mode,
-            message="Для этой платформы OAuth пока не поддерживается.",
+            message="Р В Р’В Р Р†Р вЂљРЎСљР В Р’В Р вЂ™Р’В»Р В Р Р‹Р В Р РЏ Р В Р Р‹Р В Р Р‰Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р РЋРІР‚СћР В Р’В Р Р†РІР‚С›РІР‚вЂњ Р В Р’В Р РЋРІР‚вЂќР В Р’В Р вЂ™Р’В»Р В Р’В Р вЂ™Р’В°Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р Р†Р вЂљРЎвЂєР В Р’В Р РЋРІР‚СћР В Р Р‹Р В РІР‚С™Р В Р’В Р РЋР’ВР В Р Р‹Р Р†Р вЂљРІвЂћвЂ“ OAuth Р В Р’В Р РЋРІР‚вЂќР В Р’В Р РЋРІР‚СћР В Р’В Р РЋРІР‚СњР В Р’В Р вЂ™Р’В° Р В Р’В Р В РІР‚В¦Р В Р’В Р вЂ™Р’Вµ Р В Р’В Р РЋРІР‚вЂќР В Р’В Р РЋРІР‚СћР В Р’В Р СћРІР‚ВР В Р’В Р СћРІР‚ВР В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’В¶Р В Р’В Р РЋРІР‚ВР В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’В°Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р В РЎвЂњР В Р Р‹Р В Р РЏ.",
         )
 
     log_event("oauth_start", platform=platform, user_id=user_id, mode=mode, primary=primary)
@@ -2092,7 +2126,7 @@ async def oauth_callback(request: web.Request):
             return_path="/integrations",
             primary=False,
             mode="redirect",
-            message="Сессия подключения истекла. Запустите подключение ещё раз.",
+            message="Р В Р’В Р В Р вЂ№Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РЎвЂњР В Р Р‹Р В РЎвЂњР В Р’В Р РЋРІР‚ВР В Р Р‹Р В Р РЏ Р В Р’В Р РЋРІР‚вЂќР В Р’В Р РЋРІР‚СћР В Р’В Р СћРІР‚ВР В Р’В Р РЋРІР‚СњР В Р’В Р вЂ™Р’В»Р В Р Р‹Р В РІР‚в„–Р В Р Р‹Р Р†Р вЂљР Р‹Р В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚ВР В Р Р‹Р В Р РЏ Р В Р’В Р РЋРІР‚ВР В Р Р‹Р В РЎвЂњР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’ВµР В Р’В Р РЋРІР‚СњР В Р’В Р вЂ™Р’В»Р В Р’В Р вЂ™Р’В°. Р В Р’В Р Р†Р вЂљРІР‚СњР В Р’В Р вЂ™Р’В°Р В Р’В Р РЋРІР‚вЂќР В Р Р‹Р РЋРІР‚СљР В Р Р‹Р В РЎвЂњР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р РЋРІР‚ВР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’Вµ Р В Р’В Р РЋРІР‚вЂќР В Р’В Р РЋРІР‚СћР В Р’В Р СћРІР‚ВР В Р’В Р РЋРІР‚СњР В Р’В Р вЂ™Р’В»Р В Р Р‹Р В РІР‚в„–Р В Р Р‹Р Р†Р вЂљР Р‹Р В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚ВР В Р’В Р вЂ™Р’Вµ Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р Р†Р вЂљР’В°Р В Р Р‹Р Р†Р вЂљР’В Р В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’В°Р В Р’В Р вЂ™Р’В·.",
         )
 
     mode = str(state_payload.get("mode") or "popup")
@@ -2112,7 +2146,7 @@ async def oauth_callback(request: web.Request):
             return_path=return_path,
             primary=primary,
             mode=mode,
-            message="Подключение отменено или не завершилось. Попробуйте ещё раз.",
+            message="Р В Р’В Р РЋРЎСџР В Р’В Р РЋРІР‚СћР В Р’В Р СћРІР‚ВР В Р’В Р РЋРІР‚СњР В Р’В Р вЂ™Р’В»Р В Р Р‹Р В РІР‚в„–Р В Р Р‹Р Р†Р вЂљР Р‹Р В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚ВР В Р’В Р вЂ™Р’Вµ Р В Р’В Р РЋРІР‚СћР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р РЋР’ВР В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В¦Р В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚Сћ Р В Р’В Р РЋРІР‚ВР В Р’В Р вЂ™Р’В»Р В Р’В Р РЋРІР‚В Р В Р’В Р В РІР‚В¦Р В Р’В Р вЂ™Р’Вµ Р В Р’В Р вЂ™Р’В·Р В Р’В Р вЂ™Р’В°Р В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РІР‚С™Р В Р Р‹Р Р†РІР‚С™Р’В¬Р В Р’В Р РЋРІР‚ВР В Р’В Р вЂ™Р’В»Р В Р’В Р РЋРІР‚СћР В Р Р‹Р В РЎвЂњР В Р Р‹Р В Р вЂ°. Р В Р’В Р РЋРЎСџР В Р’В Р РЋРІР‚СћР В Р’В Р РЋРІР‚вЂќР В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚СћР В Р’В Р вЂ™Р’В±Р В Р Р‹Р РЋРІР‚СљР В Р’В Р Р†РІР‚С›РІР‚вЂњР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’Вµ Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р Р†Р вЂљР’В°Р В Р Р‹Р Р†Р вЂљР’В Р В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’В°Р В Р’В Р вЂ™Р’В·.",
         )
 
     code = request.query.get("code")
@@ -2124,7 +2158,7 @@ async def oauth_callback(request: web.Request):
             return_path=return_path,
             primary=primary,
             mode=mode,
-            message="Провайдер не вернул код авторизации. Попробуйте ещё раз.",
+            message="Р В Р’В Р РЋРЎСџР В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚СћР В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’В°Р В Р’В Р Р†РІР‚С›РІР‚вЂњР В Р’В Р СћРІР‚ВР В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РІР‚С™ Р В Р’В Р В РІР‚В¦Р В Р’В Р вЂ™Р’Вµ Р В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РІР‚С™Р В Р’В Р В РІР‚В¦Р В Р Р‹Р РЋРІР‚СљР В Р’В Р вЂ™Р’В» Р В Р’В Р РЋРІР‚СњР В Р’В Р РЋРІР‚СћР В Р’В Р СћРІР‚В Р В Р’В Р вЂ™Р’В°Р В Р’В Р В РІР‚В Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р РЋРІР‚СћР В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚ВР В Р’В Р вЂ™Р’В·Р В Р’В Р вЂ™Р’В°Р В Р Р‹Р Р†Р вЂљР’В Р В Р’В Р РЋРІР‚ВР В Р’В Р РЋРІР‚В. Р В Р’В Р РЋРЎСџР В Р’В Р РЋРІР‚СћР В Р’В Р РЋРІР‚вЂќР В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚СћР В Р’В Р вЂ™Р’В±Р В Р Р‹Р РЋРІР‚СљР В Р’В Р Р†РІР‚С›РІР‚вЂњР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’Вµ Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р Р†Р вЂљР’В°Р В Р Р‹Р Р†Р вЂљР’В Р В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’В°Р В Р’В Р вЂ™Р’В·.",
         )
 
     try:
@@ -2137,7 +2171,7 @@ async def oauth_callback(request: web.Request):
             return_path=return_path,
             primary=primary,
             mode=mode,
-            message="На сервере не задан публичный APP_URL, поэтому OAuth пока не может завершиться.",
+            message="Р В Р’В Р РЋРЎС™Р В Р’В Р вЂ™Р’В° Р В Р Р‹Р В РЎвЂњР В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РІР‚С™Р В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’Вµ Р В Р’В Р В РІР‚В¦Р В Р’В Р вЂ™Р’Вµ Р В Р’В Р вЂ™Р’В·Р В Р’В Р вЂ™Р’В°Р В Р’В Р СћРІР‚ВР В Р’В Р вЂ™Р’В°Р В Р’В Р В РІР‚В¦ Р В Р’В Р РЋРІР‚вЂќР В Р Р‹Р РЋРІР‚СљР В Р’В Р вЂ™Р’В±Р В Р’В Р вЂ™Р’В»Р В Р’В Р РЋРІР‚ВР В Р Р‹Р Р†Р вЂљР Р‹Р В Р’В Р В РІР‚В¦Р В Р Р‹Р Р†Р вЂљРІвЂћвЂ“Р В Р’В Р Р†РІР‚С›РІР‚вЂњ APP_URL, Р В Р’В Р РЋРІР‚вЂќР В Р’В Р РЋРІР‚СћР В Р Р‹Р В Р Р‰Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р РЋРІР‚СћР В Р’В Р РЋР’ВР В Р Р‹Р РЋРІР‚Сљ OAuth Р В Р’В Р РЋРІР‚вЂќР В Р’В Р РЋРІР‚СћР В Р’В Р РЋРІР‚СњР В Р’В Р вЂ™Р’В° Р В Р’В Р В РІР‚В¦Р В Р’В Р вЂ™Р’Вµ Р В Р’В Р РЋР’ВР В Р’В Р РЋРІР‚СћР В Р’В Р вЂ™Р’В¶Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р Р†Р вЂљРЎв„ў Р В Р’В Р вЂ™Р’В·Р В Р’В Р вЂ™Р’В°Р В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РІР‚С™Р В Р Р‹Р Р†РІР‚С™Р’В¬Р В Р’В Р РЋРІР‚ВР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р В Р вЂ°Р В Р Р‹Р В РЎвЂњР В Р Р‹Р В Р РЏ.",
         )
 
     profile_data: Optional[dict[str, Any]] = None
@@ -2162,7 +2196,7 @@ async def oauth_callback(request: web.Request):
             return_path=return_path,
             primary=primary,
             mode=mode,
-            message="Не удалось получить данные профиля у провайдера. Попробуйте ещё раз.",
+            message="Р В Р’В Р РЋРЎС™Р В Р’В Р вЂ™Р’Вµ Р В Р Р‹Р РЋРІР‚СљР В Р’В Р СћРІР‚ВР В Р’В Р вЂ™Р’В°Р В Р’В Р вЂ™Р’В»Р В Р’В Р РЋРІР‚СћР В Р Р‹Р В РЎвЂњР В Р Р‹Р В Р вЂ° Р В Р’В Р РЋРІР‚вЂќР В Р’В Р РЋРІР‚СћР В Р’В Р вЂ™Р’В»Р В Р Р‹Р РЋРІР‚СљР В Р Р‹Р Р†Р вЂљР Р‹Р В Р’В Р РЋРІР‚ВР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р В Р вЂ° Р В Р’В Р СћРІР‚ВР В Р’В Р вЂ™Р’В°Р В Р’В Р В РІР‚В¦Р В Р’В Р В РІР‚В¦Р В Р Р‹Р Р†Р вЂљРІвЂћвЂ“Р В Р’В Р вЂ™Р’Вµ Р В Р’В Р РЋРІР‚вЂќР В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚СћР В Р Р‹Р Р†Р вЂљРЎвЂєР В Р’В Р РЋРІР‚ВР В Р’В Р вЂ™Р’В»Р В Р Р‹Р В Р РЏ Р В Р Р‹Р РЋРІР‚Сљ Р В Р’В Р РЋРІР‚вЂќР В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚СћР В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’В°Р В Р’В Р Р†РІР‚С›РІР‚вЂњР В Р’В Р СћРІР‚ВР В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’В°. Р В Р’В Р РЋРЎСџР В Р’В Р РЋРІР‚СћР В Р’В Р РЋРІР‚вЂќР В Р Р‹Р В РІР‚С™Р В Р’В Р РЋРІР‚СћР В Р’В Р вЂ™Р’В±Р В Р Р‹Р РЋРІР‚СљР В Р’В Р Р†РІР‚С›РІР‚вЂњР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’Вµ Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р Р†Р вЂљР’В°Р В Р Р‹Р Р†Р вЂљР’В Р В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’В°Р В Р’В Р вЂ™Р’В·.",
         )
 
     saved = await _save_oauth_connection(
@@ -2180,7 +2214,7 @@ async def oauth_callback(request: web.Request):
             return_path=return_path,
             primary=primary,
             mode=mode,
-            message="Не удалось сохранить подключение на сервере.",
+            message="Р В Р’В Р РЋРЎС™Р В Р’В Р вЂ™Р’Вµ Р В Р Р‹Р РЋРІР‚СљР В Р’В Р СћРІР‚ВР В Р’В Р вЂ™Р’В°Р В Р’В Р вЂ™Р’В»Р В Р’В Р РЋРІР‚СћР В Р Р‹Р В РЎвЂњР В Р Р‹Р В Р вЂ° Р В Р Р‹Р В РЎвЂњР В Р’В Р РЋРІР‚СћР В Р Р‹Р Р†Р вЂљР’В¦Р В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’В°Р В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚ВР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р В Р вЂ° Р В Р’В Р РЋРІР‚вЂќР В Р’В Р РЋРІР‚СћР В Р’В Р СћРІР‚ВР В Р’В Р РЋРІР‚СњР В Р’В Р вЂ™Р’В»Р В Р Р‹Р В РІР‚в„–Р В Р Р‹Р Р†Р вЂљР Р‹Р В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚ВР В Р’В Р вЂ™Р’Вµ Р В Р’В Р В РІР‚В¦Р В Р’В Р вЂ™Р’В° Р В Р Р‹Р В РЎвЂњР В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РІР‚С™Р В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’Вµ.",
         )
 
     await write_audit_log(
@@ -2203,7 +2237,7 @@ async def oauth_callback(request: web.Request):
         return_path=return_path,
         primary=primary,
         mode=mode,
-        message=f"{profile_data.get('name') or platform} успешно подключен.",
+        message=f"{profile_data.get('name') or platform} Р В Р Р‹Р РЋРІР‚СљР В Р Р‹Р В РЎвЂњР В Р’В Р РЋРІР‚вЂќР В Р’В Р вЂ™Р’ВµР В Р Р‹Р Р†РІР‚С™Р’В¬Р В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚Сћ Р В Р’В Р РЋРІР‚вЂќР В Р’В Р РЋРІР‚СћР В Р’В Р СћРІР‚ВР В Р’В Р РЋРІР‚СњР В Р’В Р вЂ™Р’В»Р В Р Р‹Р В РІР‚в„–Р В Р Р‹Р Р†Р вЂљР Р‹Р В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В¦.",
     )
 
 def _extract_username(value: str) -> str:
@@ -3063,6 +3097,212 @@ async def send_announcement(request: web.Request):
             return web.json_response({"error": "telegram_unreachable"}, status=503)
         return web.json_response({"error": "telegram_send_failed"}, status=502)
 
+
+def _get_cpu_percent() -> int:
+    try:
+        load1, _, _ = os.getloadavg()
+        cpu_count = os.cpu_count() or 1
+        return max(0, min(100, int((load1 / cpu_count) * 100)))
+    except Exception:
+        return 0
+
+
+def _get_memory_percent() -> int:
+    try:
+        with open("/proc/meminfo", "r", encoding="utf-8") as handle:
+            lines = handle.readlines()
+        total = 0
+        available = 0
+        for line in lines:
+            if line.startswith("MemTotal:"):
+                total = int(line.split()[1])
+            elif line.startswith("MemAvailable:"):
+                available = int(line.split()[1])
+        if total <= 0:
+            return 0
+        used = max(0, total - available)
+        return max(0, min(100, int((used / total) * 100)))
+    except Exception:
+        return 0
+
+
+def _get_disk_percent(path: str = "/") -> int:
+    try:
+        usage = shutil.disk_usage(path)
+        if usage.total <= 0:
+            return 0
+        return max(0, min(100, int((usage.used / usage.total) * 100)))
+    except Exception:
+        return 0
+
+
+def _get_uptime_seconds() -> float:
+    try:
+        with open("/proc/uptime", "r", encoding="utf-8") as handle:
+            return float(handle.read().split()[0])
+    except Exception:
+        return 0.0
+
+
+def _format_uptime(seconds: float) -> str:
+    total = max(0, int(seconds))
+    days, rem = divmod(total, 86400)
+    hours, rem = divmod(rem, 3600)
+    minutes, _ = divmod(rem, 60)
+    if days > 0:
+        return f"{days}d {hours}h"
+    if hours > 0:
+        return f"{hours}h {minutes}m"
+    return f"{minutes}m"
+
+
+async def system_status(request: web.Request):
+    auth_error = await _require_verified_user(request)
+    if auth_error:
+        return auth_error
+
+    payload = {
+        "cpu": _get_cpu_percent(),
+        "memory": _get_memory_percent(),
+        "disk": _get_disk_percent("/"),
+        "ping": 0,
+        "uptime": _format_uptime(_get_uptime_seconds()),
+        "region": os.getenv("REGION") or os.getenv("SPACE_REGION") or os.getenv("RENDER_REGION") or "-",
+    }
+    return web.json_response(payload)
+
+
+async def admin_login(request: web.Request):
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+
+    password = str(payload.get("password") or "")
+    init_data = payload.get("init_data") or request.query.get("init_data")
+    verified = parse_and_verify_init_data(init_data) if init_data else None
+    if not verified or not verified.get("user_id"):
+        return web.json_response({"error": "invalid_init_data"}, status=401)
+
+    telegram_id = str(verified["user_id"])
+    if OWNER_TELEGRAM_ID and telegram_id != str(OWNER_TELEGRAM_ID):
+        return web.json_response({"error": "admin_forbidden"}, status=403)
+
+    if not OWNER_ADMIN_PASSWORD:
+        return web.json_response({"error": "password_not_set"}, status=400)
+
+    if not hmac.compare_digest(password, str(OWNER_ADMIN_PASSWORD)):
+        return web.json_response({"error": "invalid_password"}, status=401)
+
+    token = _create_admin_token(telegram_id)
+    await write_audit_log(telegram_id, "admin_login_success")
+    return web.json_response({"admin_token": token, "expires_in": ADMIN_TOKEN_TTL_SECONDS})
+
+
+async def admin_overview(request: web.Request):
+    init_data = request.query.get("init_data")
+    admin_token = request.query.get("admin_token")
+    verified = parse_and_verify_init_data(init_data) if init_data else None
+    if not verified or not verified.get("user_id"):
+        return web.json_response({"error": "invalid_init_data"}, status=401)
+
+    telegram_id = str(verified["user_id"])
+    if OWNER_TELEGRAM_ID and telegram_id != str(OWNER_TELEGRAM_ID):
+        return web.json_response({"error": "admin_forbidden"}, status=403)
+
+    if not _verify_admin_token(admin_token, telegram_id):
+        return web.json_response({"error": "invalid_admin_token"}, status=401)
+
+    if not async_session:
+        return web.json_response({"users": 0, "active_streams": 0, "backend_status": "degraded", "ping_ms": 0})
+
+    start = time.perf_counter()
+    try:
+        async with async_session() as session:
+            users = (await session.execute(select(func.count()).select_from(User))).scalar() or 0
+            active_query = select(func.count()).select_from(Streamer).where(
+                or_(
+                    Streamer.twitch_connected == True,  # noqa: E712
+                    Streamer.youtube_connected == True,  # noqa: E712
+                    Streamer.telegram_connected == True,  # noqa: E712
+                    Streamer.kick_connected == True,  # noqa: E712
+                    Streamer.vklive_connected == True,  # noqa: E712
+                )
+            )
+            active_streams = (await session.execute(active_query)).scalar() or 0
+        ping_ms = int((time.perf_counter() - start) * 1000)
+        return web.json_response({
+            "users": users,
+            "active_streams": active_streams,
+            "backend_status": "ok",
+            "ping_ms": ping_ms,
+        })
+    except Exception as error:
+        log_event("admin_overview_failed", error=str(error))
+        return web.json_response({"users": 0, "active_streams": 0, "backend_status": "degraded", "ping_ms": 0})
+
+
+async def admin_audit(request: web.Request):
+    init_data = request.query.get("init_data")
+    admin_token = request.query.get("admin_token")
+    verified = parse_and_verify_init_data(init_data) if init_data else None
+    if not verified or not verified.get("user_id"):
+        return web.json_response({"error": "invalid_init_data"}, status=401)
+
+    telegram_id = str(verified["user_id"])
+    if OWNER_TELEGRAM_ID and telegram_id != str(OWNER_TELEGRAM_ID):
+        return web.json_response({"error": "admin_forbidden"}, status=403)
+
+    if not _verify_admin_token(admin_token, telegram_id):
+        return web.json_response({"error": "invalid_admin_token"}, status=401)
+
+    if not async_session:
+        return web.json_response({"logs": []})
+
+    async with async_session() as session:
+        rows = (await session.execute(
+            select(AdminAuditLog).order_by(desc(AdminAuditLog.created_at)).limit(100)
+        )).scalars().all()
+
+    logs = [
+        {
+            "id": row.id,
+            "event_type": row.action,
+            "message": row.details or "",
+            "created_at": row.created_at.isoformat(),
+        }
+        for row in rows
+    ]
+    return web.json_response({"logs": logs})
+
+
+async def post_audit(request: web.Request):
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+
+    init_data = payload.get("init_data") or request.query.get("init_data")
+    verified = parse_and_verify_init_data(init_data) if init_data else None
+    if not verified or not verified.get("user_id"):
+        return web.json_response({"error": "invalid_init_data"}, status=401)
+
+    telegram_id = str(verified["user_id"])
+    if OWNER_TELEGRAM_ID and telegram_id != str(OWNER_TELEGRAM_ID):
+        return web.json_response({"error": "admin_forbidden"}, status=403)
+
+    action = str(payload.get("action") or "unknown")
+    details = payload.get("details")
+    if details is None:
+        details_text = None
+    elif isinstance(details, str):
+        details_text = details
+    else:
+        details_text = json.dumps(details, ensure_ascii=False)
+
+    await write_audit_log(telegram_id, action, details_text)
+    return web.json_response({"status": "ok"})
+
 # ... (rest of the API endpoints remain the same)
 
 @web.middleware
@@ -3124,6 +3364,11 @@ def build_app():
     app.router.add_get("/api/streams", get_streams)
     app.router.add_get("/api/clips", get_clips)
     app.router.add_get("/api/notifications", get_notifications)
+    app.router.add_get("/api/system_status", system_status)
+    app.router.add_post("/api/admin/login", admin_login)
+    app.router.add_get("/api/admin/overview", admin_overview)
+    app.router.add_get("/api/admin/audit", admin_audit)
+    app.router.add_post("/api/audit", post_audit)
     app.router.add_post("/api/save_settings", save_settings)
     app.router.add_post("/api/announcements/send", send_announcement)
     app.router.add_post("/api/donations/webhook", donations_webhook)

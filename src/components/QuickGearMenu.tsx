@@ -19,13 +19,13 @@ export function QuickGearMenu() {
 
   const actions = useMemo(() => {
     const base = [
-      { to: "/announcements", icon: Megaphone, label: t("quickActions.announce", "Анонсы") },
-      { to: "/integrations", icon: Link2, label: t("quickActions.integrations", "Интеграции") },
-      { to: "/settings", icon: Settings, label: t("quickActions.settings", "Настройки") },
-      { to: "/support", icon: HeadphonesIcon, label: t("quickActions.support", "Поддержка") },
+      { to: "/announcements", icon: Megaphone, label: t("quickActions.announce", "Announcements") },
+      { to: "/integrations", icon: Link2, label: t("quickActions.integrations", "Integrations") },
+      { to: "/settings", icon: Settings, label: t("quickActions.settings", "Settings") },
+      { to: "/support", icon: HeadphonesIcon, label: t("quickActions.support", "Support") },
     ];
     if (showAdmin) {
-      base.push({ to: "/admin", icon: ShieldCheck, label: t("quickActions.admin", "Админ-центр") });
+      base.push({ to: "/admin", icon: ShieldCheck, label: t("quickActions.admin", "Admin Center") });
     }
     return base;
   }, [showAdmin, t]);
@@ -34,7 +34,7 @@ export function QuickGearMenu() {
     <div className="fixed bottom-[calc(5.2rem+env(safe-area-inset-bottom))] right-4 z-50 md:bottom-6">
       <motion.button
         type="button"
-        aria-label={t("quickActions.title", "Быстрые действия")}
+        aria-label={t("quickActions.title", "Quick actions")}
         onClick={() => setOpen((v) => !v)}
         animate={{ rotate: open ? 90 : 0 }}
         transition={{ type: "spring", stiffness: 260, damping: 22 }}
@@ -64,7 +64,7 @@ export function QuickGearMenu() {
           >
             <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
               <Sparkles size={12} className="text-primary" />
-              {t("quickActions.title", "Быстрые действия")}
+              {t("quickActions.title", "Quick actions")}
             </div>
             <div className="grid gap-1.5">
               {actions.map((action) => (

@@ -71,6 +71,14 @@ export default function AdminPage() {
       const adminToken = sessionStorage.getItem("admin_token");
       const initData = (window as TelegramWindow).Telegram?.WebApp?.initData || "";
       if (adminToken && initData) {
+        let cpuValue = "n/a";
+        const statusResponse = await fetch(`/api/system_status?init_data=${encodeURIComponent(initData)}`);
+        if (statusResponse.ok) {
+          const statusPayload = await statusResponse.json();
+          if (typeof statusPayload?.cpu === "number") {
+            cpuValue = `${Math.round(statusPayload.cpu)}%`;
+          }
+        }
         const overviewResponse = await fetch(`/api/admin/overview?admin_token=${encodeURIComponent(adminToken)}&init_data=${encodeURIComponent(initData)}`);
         if (!overviewResponse.ok) {
           sessionStorage.removeItem("admin_auth");
@@ -86,7 +94,7 @@ export default function AdminPage() {
           activeStreams: overview.active_streams ?? 0,
           backendStatus: overview.backend_status === "degraded" ? "warn" : "ok",
           ping: `${overview.ping_ms ?? 0}ms`,
-          cpu: "n/a",
+          cpu: cpuValue,
         });
       }
       const { data } = await supabase.from("settings").select("key, value");
