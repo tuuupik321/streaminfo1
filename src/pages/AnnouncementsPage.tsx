@@ -23,6 +23,15 @@ type AnnouncementDraft = {
   buttons: AnnouncementButton[];
 };
 
+type AnnouncementTemplate = {
+  id: number;
+  name: string;
+  message: string;
+  buttons: AnnouncementButton[];
+  createdAt: string;
+  updatedAt: string;
+};
+
 type TelegramWindow = Window & {
   Telegram?: {
     WebApp?: {
@@ -33,6 +42,7 @@ type TelegramWindow = Window & {
 };
 
 const draftStorageKey = "streamfly:announcement-draft";
+const templateStorageKey = "streamfly:announcement-templates";
 
 function parseTelegramMessage(text: string) {
   const boldRegex = /\*\*(.*?)\*\*/g;
@@ -91,6 +101,8 @@ export default function AnnouncementsPage() {
   const { t } = useI18n();
   const [message, setMessage] = useState("");
   const [buttons, setButtons] = useState<AnnouncementButton[]>([]);
+  const [templates, setTemplates] = useState<AnnouncementTemplate[]>([]);
+  const [templateName, setTemplateName] = useState("");
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -101,30 +113,6 @@ export default function AnnouncementsPage() {
   const tg = (window as TelegramWindow).Telegram?.WebApp;
   const userId = tg?.initDataUnsafe?.user?.id;
   const initData = tg?.initData || "";
-
-  const templates = useMemo(
-    () => [
-      {
-        label: "Старт через час",
-        message:
-          "**Сегодня в 20:00 выходим в эфир.**\nРазберём свежие апдейты, отвечу на вопросы из чата и покажу, что готовим дальше.",
-        button: { text: "Напомнить об эфире", url: "https://t.me/" },
-      },
-      {
-        label: "Старт через 30 минут",
-        message:
-          "**Через 30 минут стартуем.**\nЕсли хотите успеть к началу эфира, самое время сохранить ссылку и подключиться вовремя.",
-        button: { text: "Открыть эфир", url: "https://twitch.tv/" },
-      },
-      {
-        label: "Внеплановый эфир",
-        message:
-          "**Запускаем внеплановый эфир.**\nКороткий выход, ответы на вопросы и несколько важных объявлений.",
-        button: { text: "Перейти к эфиру", url: "https://twitch.tv/" },
-      },
-    ],
-    [],
-  );
 
   useEffect(() => {
     try {
@@ -138,9 +126,37 @@ export default function AnnouncementsPage() {
     }
   }, []);
 
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(templateStorageKey);
+      if (!raw) return;
+      const stored = JSON.parse(raw) as AnnouncementTemplate[];
+      if (Array.isArray(stored)) setTemplates(stored);
+    } catch {
+      // ignore broken templates
+    }
+  }, []);
+
   const persistDraft = () => {
     const draft: AnnouncementDraft = { message, buttons };
     window.localStorage.setItem(draftStorageKey, JSON.stringify(draft));
+  };
+
+  const persistTemplates = (next: AnnouncementTemplate[]) => {
+    window.localStorage.setItem(templateStorageKey, JSON.stringify(next));
+  };
+
+  const applyTemplate = (template: AnnouncementTemplate) => {
+    setMessage(template.message);
+    setButtons(template.buttons.map((button, index) => ({ ...button, id: Date.now() + index })));
+  };
+
+  const removeTemplate = (id: number) => {
+    setTemplates((prev) => {
+      const next = prev.filter((template) => template.id !== id);
+      persistTemplates(next);
+      return next;
+    });
   };
 
   const addButtonClicked = () => {
@@ -159,9 +175,48 @@ export default function AnnouncementsPage() {
     setButtons((prev) => prev.map((button) => (button.id === id ? { ...button, [field]: value } : button)));
   };
 
-  const applyTemplate = (template: (typeof templates)[number]) => {
-    setMessage(template.message);
-    setButtons([{ id: Date.now(), text: template.button.text, url: template.button.url }]);
+  const handleSaveTemplate = () => {
+    if (!message.trim()) {
+      toast.error("Сначала добавьте текст анонса.");
+      return;
+    }
+    const name = templateName.trim();
+    if (!name) {
+      toast.error("Введите название шаблона.");
+      return;
+    }
+    const now = new Date().toISOString();
+    setTemplates((prev) => {
+      const existingIndex = prev.findIndex((item) => item.name.toLowerCase() === name.toLowerCase());
+      let next: AnnouncementTemplate[];
+      if (existingIndex >= 0) {
+        next = [...prev];
+        next[existingIndex] = {
+          ...next[existingIndex],
+          name,
+          message,
+          buttons,
+          updatedAt: now,
+        };
+        toast.success("Шаблон обновлён.");
+      } else {
+        next = [
+          {
+            id: Date.now(),
+            name,
+            message,
+            buttons,
+            createdAt: now,
+            updatedAt: now,
+          },
+          ...prev,
+        ];
+        toast.success("Шаблон сохранён.");
+      }
+      persistTemplates(next);
+      return next;
+    });
+    setTemplateName("");
   };
 
   const handleSaveDraft = () => {
@@ -295,21 +350,43 @@ export default function AnnouncementsPage() {
       <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
         <motion.div variants={item} className="space-y-6">
           <CardShell className="space-y-4">
-            <div>
-              <h3 className="text-lg font-medium text-foreground">Шаблоны</h3>
-              <p className="mt-1 text-sm text-muted-foreground">Выберите основу и быстро адаптируйте её под сегодняшний эфир.</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-medium text-foreground">Мои шаблоны</h3>
+                <p className="mt-1 text-sm text-muted-foreground">Сохраняйте свои шаблоны и используйте их повторно.</p>
+              </div>
+              <span className="text-xs text-muted-foreground">{templates.length} шт.</span>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+              <Input
+                value={templateName}
+                onChange={(event) => setTemplateName(event.target.value)}
+                placeholder="Название шаблона"
+              />
+              <Button variant="outline" onClick={handleSaveTemplate} className="gap-2">
+                <Save size={16} /> Сохранить
+              </Button>
             </div>
             <div className="flex flex-wrap gap-2">
-              {templates.map((template) => (
-                <button
-                  key={template.label}
-                  type="button"
-                  onClick={() => applyTemplate(template)}
-                  className="rounded-full border border-border/60 bg-secondary/35 px-3 py-2 text-xs font-semibold text-foreground transition hover:border-primary/35 hover:bg-primary/10"
-                >
-                  {template.label}
-                </button>
-              ))}
+              {templates.length === 0 ? (
+                <span className="text-xs text-muted-foreground">Пока нет сохранённых шаблонов.</span>
+              ) : (
+                templates.map((template) => (
+                  <div key={template.id} className="group flex items-center gap-2 rounded-full border border-border/60 bg-secondary/35 px-3 py-2 text-xs font-semibold text-foreground">
+                    <button type="button" onClick={() => applyTemplate(template)} className="transition hover:text-primary">
+                      {template.name}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeTemplate(template.id)}
+                      className="text-muted-foreground transition hover:text-destructive"
+                      aria-label={`Удалить шаблон ${template.name}`}
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                ))
+              )}
             </div>
           </CardShell>
 
