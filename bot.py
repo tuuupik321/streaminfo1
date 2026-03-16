@@ -1444,6 +1444,14 @@ def _is_trusted_origin(request: web.Request) -> bool:
         return True
     return False
 
+
+def _is_local_request(request: web.Request) -> bool:
+    remote = (request.remote or "").strip()
+    if remote in {"127.0.0.1", "::1"}:
+        return True
+    forwarded = (request.headers.get("X-Real-IP") or request.headers.get("X-Forwarded-For") or "").split(",")[0].strip()
+    return forwarded in {"127.0.0.1", "::1"}
+
 def _extract_user_id_from_request(request: web.Request, init_data: Optional[str]) -> Optional[int]:
     if init_data:
         try:
@@ -3157,9 +3165,15 @@ def _format_uptime(seconds: float) -> str:
 
 
 async def system_status(request: web.Request):
-    auth_error = await _require_verified_user(request)
-    if auth_error:
-        return auth_error
+    api_token = request.headers.get("X-API-Token") or request.query.get("api_token")
+    if APP_API_TOKEN and api_token and hmac.compare_digest(str(api_token), str(APP_API_TOKEN)):
+        auth_error = None
+    elif _is_local_request(request):
+        auth_error = None
+    else:
+        auth_error = await _require_verified_user(request)
+        if auth_error:
+            return auth_error
 
     payload = {
         "cpu": _get_cpu_percent(),
@@ -3168,6 +3182,7 @@ async def system_status(request: web.Request):
         "ping": 0,
         "uptime": _format_uptime(_get_uptime_seconds()),
         "region": os.getenv("REGION") or os.getenv("SPACE_REGION") or os.getenv("RENDER_REGION") or "-",
+        "checked_at": datetime.now(timezone.utc).isoformat(),
     }
     return web.json_response(payload)
 

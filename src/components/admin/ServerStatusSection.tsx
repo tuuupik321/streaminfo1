@@ -13,6 +13,7 @@ interface ServerMetrics {
   ping: number;
   uptime: string;
   region: string;
+  checkedAt: string;
 }
 
 type TelegramWindow = Window & {
@@ -30,6 +31,7 @@ const defaultMetrics: ServerMetrics = {
   ping: 0,
   uptime: "-",
   region: "-",
+  checkedAt: "-",
 };
 
 function parseNumber(value: unknown, fallback = 0) {
@@ -56,9 +58,10 @@ export function ServerStatusSection() {
         ping: parseNumber(payload.ping, 0),
         uptime: payload.uptime || "-",
         region: payload.region || "-",
+        checkedAt: payload.checked_at || new Date().toISOString(),
       });
     } catch {
-      setMetrics(defaultMetrics);
+      setMetrics({ ...defaultMetrics, checkedAt: new Date().toISOString() });
     }
   };
 
@@ -80,6 +83,14 @@ export function ServerStatusSection() {
 
   return (
     <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="space-y-4">
+      {(() => {
+        const time = metrics.checkedAt && metrics.checkedAt !== "-" ? new Date(metrics.checkedAt).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }) : "-";
+        return (
+          <div className="flex items-center justify-end text-[10px] font-mono text-muted-foreground">
+            Обновлено: {time}
+          </div>
+        );
+      })()}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold font-heading flex items-center gap-2">
           <Server size={18} className="text-primary" /> Технический статус
