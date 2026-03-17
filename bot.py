@@ -17,12 +17,14 @@ from typing import Any, Optional
 from urllib.parse import parse_qsl, quote_plus, urlencode, urlparse, urlunparse
 
 import aiohttp
+import jwt
 from aiogram import Bot, Dispatcher, F, types
 from aiogram.exceptions import TelegramAPIError
 from aiogram.filters import CommandStart
 from aiogram.types import WebAppInfo
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
+from passlib.context import CryptContext
 from pydantic import BaseModel, ValidationError
 from sqlalchemy import BigInteger, Boolean, Column, DateTime, Integer, MetaData, String, and_, desc, func, inspect, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -166,6 +168,19 @@ OAUTH_STATE_TTL_SECONDS = _env_int("OAUTH_STATE_TTL_SECONDS", 900, min_value=120
 AUTH_LINK_TTL_SECONDS = _env_int("AUTH_LINK_TTL_SECONDS", 600, min_value=60, max_value=3_600)
 APP_API_TOKEN = os.getenv("APP_API_TOKEN")
 ALLOW_WEB_AUTH = _env_bool("ALLOW_WEB_AUTH", not bool(APP_API_TOKEN))
+AUTH_SECRET = os.getenv("AUTH_SECRET") or os.getenv("JWT_SECRET") or APP_API_TOKEN or TOKEN or ""
+AUTH_SECRET_EPHEMERAL = False
+if not AUTH_SECRET:
+    AUTH_SECRET = secrets.token_urlsafe(32)
+    AUTH_SECRET_EPHEMERAL = True
+ACCESS_TOKEN_TTL_SECONDS = _env_int("ACCESS_TOKEN_TTL_SECONDS", 60 * 60 * 24 * 30, min_value=900, max_value=60 * 60 * 24 * 365)
+AUTH_PASSWORD_MIN_LENGTH = _env_int("AUTH_PASSWORD_MIN_LENGTH", 8, min_value=6, max_value=128)
+AUTH_PASSWORD_MAX_LENGTH = _env_int("AUTH_PASSWORD_MAX_LENGTH", 128, min_value=8, max_value=512)
+SUPABASE_URL = os.getenv("SUPABASE_URL") or os.getenv("EXPO_PUBLIC_SUPABASE_URL")
+SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
+SUPABASE_JWT_ISSUER = os.getenv("SUPABASE_JWT_ISSUER")
+if not SUPABASE_JWT_ISSUER and SUPABASE_URL:
+    SUPABASE_JWT_ISSUER = f\"{SUPABASE_URL.rstrip('/')}/auth/v1\"
 
 APP_STARTED_AT = datetime.now(timezone.utc)
 APP_STARTED_TS = time.time()
@@ -267,6 +282,14 @@ class SendAnnouncementPayload(BaseModel):
     target: Optional[str] = None
     buttons: list[AnnouncementButtonPayload] = []
 
+class AuthRegisterPayload(BaseModel):
+    email: str
+    password: str
+
+class AuthLoginPayload(BaseModel):
+    email: str
+    password: str
+
 class VerifyChannelPayload(BaseModel):
     user_id: int
     platform: str
@@ -279,6 +302,16 @@ class User(Base):
     twitch_name = Column(String, nullable=True)
     yt_channel_id = Column(String, nullable=True)
     donationalerts_name = Column(String, nullable=True)
+
+class AuthUser(Base):
+    __tablename__ = "auth_users"
+    user_id = Column(BigInteger, primary_key=True, autoincrement=True)
+    email = Column(String(255), nullable=False, unique=True, index=True)
+    password_hash = Column(String(255), nullable=False)
+    supabase_uid = Column(String(64), nullable=True, unique=True, index=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    last_login_at = Column(DateTime(timezone=True), nullable=True)
 
 class Streamer(Base):
     __tablename__ = "streamers"
@@ -436,6 +469,7 @@ bot = Bot(token=TOKEN) if TOKEN else None
 dp = Dispatcher()
 rate_limit_cache: dict[str, deque[float]] = defaultdict(deque)
 donation_events: deque[dict[str, Any]] = deque(maxlen=100)
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # ... (rest of the utility functions remain the same)
 def log_event(event: str, **fields: Any):
@@ -517,6 +551,12 @@ def validate_runtime_config() -> None:
         log_event("config_warning", key="YT_HANDOFF_WEBHOOK_URL", reason="must_be_http_url")
     if DONATALERTS_ACCESS_TOKEN and not DONATALERTS_API_BASE.startswith(("http://", "https://")):
         log_event("config_warning", key="DONATALERTS_API_BASE", reason="must_be_http_url")
+    if AUTH_SECRET_EPHEMERAL:
+        log_event("config_warning", key="AUTH_SECRET", reason="missing_using_ephemeral_secret")
+    if SUPABASE_URL and not SUPABASE_JWT_SECRET:
+        log_event("config_warning", key="SUPABASE_JWT_SECRET", reason="missing_for_supabase_auth")
+    if SUPABASE_JWT_SECRET and not SUPABASE_JWT_ISSUER:
+        log_event("config_warning", key="SUPABASE_JWT_ISSUER", reason="missing_issuer_check_disabled")
 
     log_event(
         "runtime_config",
@@ -853,6 +893,143 @@ def _parse_app_token(init_data: Optional[str]) -> Optional[dict[str, Any]]:
     if not hmac.compare_digest(str(token), APP_API_TOKEN):
         return None
     return {"user_id": _parse_int64(pairs.get("user_id"))}
+
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+def _normalize_email(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    email = str(value).strip().lower()
+    if not email or len(email) > 254:
+        return None
+    if not _EMAIL_RE.match(email):
+        return None
+    return email
+
+def _validate_password(password: str) -> Optional[str]:
+    if not password or len(password) < AUTH_PASSWORD_MIN_LENGTH:
+        return "password_too_short"
+    if len(password) > AUTH_PASSWORD_MAX_LENGTH:
+        return "password_too_long"
+    return None
+
+def _extract_bearer_token(request: web.Request) -> Optional[str]:
+    auth_header = (request.headers.get("Authorization") or "").strip()
+    if not auth_header:
+        return None
+    if not auth_header.lower().startswith("bearer "):
+        return None
+    return auth_header.split(" ", 1)[1].strip() or None
+
+
+def _issue_access_token(user_id: int, email: str) -> str:
+    now = int(time.time())
+    payload = {
+        "sub": str(user_id),
+        "email": email,
+        "iat": now,
+        "exp": now + ACCESS_TOKEN_TTL_SECONDS,
+    }
+    return jwt.encode(payload, AUTH_SECRET, algorithm="HS256")
+
+
+def _decode_access_token(token: str) -> tuple[Optional[dict[str, Any]], Optional[str]]:
+    try:
+        payload = jwt.decode(token, AUTH_SECRET, algorithms=["HS256"])
+    except jwt.ExpiredSignatureError:
+        return None, "token_expired"
+    except jwt.InvalidTokenError:
+        return None, "invalid_token"
+    user_id = _parse_int64(payload.get("sub") or payload.get("user_id"))
+    if user_id is None:
+        return None, "invalid_token"
+    return {"user_id": user_id, "email": payload.get("email")}, None
+
+
+def _decode_supabase_token(token: str) -> tuple[Optional[dict[str, Any]], Optional[str]]:
+    if not SUPABASE_JWT_SECRET:
+        return None, "supabase_auth_not_configured"
+    try:
+        payload = jwt.decode(
+            token,
+            SUPABASE_JWT_SECRET,
+            algorithms=["HS256"],
+            options={"verify_aud": False},
+            issuer=SUPABASE_JWT_ISSUER if SUPABASE_JWT_ISSUER else None,
+        )
+    except jwt.ExpiredSignatureError:
+        return None, "token_expired"
+    except jwt.InvalidIssuerError:
+        return None, "invalid_issuer"
+    except jwt.InvalidTokenError:
+        return None, "invalid_token"
+    supabase_uid = payload.get("sub") or payload.get("user_id")
+    if not supabase_uid:
+        return None, "invalid_token"
+    return {
+        "supabase_uid": str(supabase_uid),
+        "email": payload.get("email"),
+    }, None
+
+
+async def _get_or_create_user_for_supabase(payload: dict[str, Any]) -> tuple[Optional[int], Optional[str]]:
+    if not async_session:
+        return None, "db_not_configured"
+    supabase_uid = str(payload.get("supabase_uid") or "").strip()
+    email = _normalize_email(payload.get("email"))
+    if not supabase_uid:
+        return None, "invalid_token"
+
+    async with async_session() as session:
+        auth_user = (
+            await session.execute(
+                select(AuthUser).where(AuthUser.supabase_uid == supabase_uid)
+            )
+        ).scalars().first()
+
+        if not auth_user and email:
+            auth_user = (
+                await session.execute(
+                    select(AuthUser).where(func.lower(AuthUser.email) == email)
+                )
+            ).scalars().first()
+            if auth_user and not auth_user.supabase_uid:
+                auth_user.supabase_uid = supabase_uid
+                auth_user.updated_at = datetime.now(timezone.utc)
+
+        if not auth_user:
+            if not email:
+                return None, "email_missing"
+            now = datetime.now(timezone.utc)
+            auth_user = AuthUser(
+                email=email,
+                password_hash=pwd_context.hash(secrets.token_urlsafe(24)),
+                supabase_uid=supabase_uid,
+                created_at=now,
+                updated_at=now,
+            )
+            session.add(auth_user)
+            await session.flush()
+
+        user_id = auth_user.user_id
+        if user_id is None:
+            await session.rollback()
+            return None, "user_creation_failed"
+
+        if email and auth_user.email != email:
+            auth_user.email = email
+            auth_user.updated_at = datetime.now(timezone.utc)
+
+        user = await session.get(User, user_id)
+        if not user:
+            session.add(User(user_id=user_id))
+        streamer = await session.get(Streamer, user_id)
+        if not streamer:
+            session.add(Streamer(id=user_id))
+
+        await session.commit()
+
+    return user_id, None
 
 admin_token_store: dict[str, dict[str, Any]] = {}
 
@@ -1467,6 +1644,136 @@ async def update_stream_history(session: AsyncSession, user_id: int, is_live: bo
 async def api_ping(request: web.Request):
     return web.json_response({"ok": True})
 
+async def auth_register(request: web.Request):
+    if not async_session:
+        return web.json_response({"error": "db_not_configured"}, status=500)
+    try:
+        payload = AuthRegisterPayload(**(await request.json()))
+    except (ValidationError, Exception):
+        return web.json_response({"error": "bad_request"}, status=400)
+    email = _normalize_email(payload.email)
+    if not email:
+        return web.json_response({"error": "invalid_email"}, status=400)
+    password = str(payload.password or "")
+    password_error = _validate_password(password)
+    if password_error:
+        return web.json_response({"error": password_error}, status=400)
+
+    async with async_session() as session:
+        existing = (
+            await session.execute(
+                select(AuthUser).where(func.lower(AuthUser.email) == email)
+            )
+        ).scalars().first()
+        if existing:
+            return web.json_response({"error": "email_taken"}, status=409)
+
+        now = datetime.now(timezone.utc)
+        auth_user = AuthUser(email=email, password_hash=pwd_context.hash(password), created_at=now, updated_at=now)
+        session.add(auth_user)
+        await session.flush()
+
+        user_id = auth_user.user_id
+        if user_id is None:
+            await session.rollback()
+            return web.json_response({"error": "user_creation_failed"}, status=500)
+
+        user = await session.get(User, user_id)
+        if not user:
+            session.add(User(user_id=user_id))
+        streamer = await session.get(Streamer, user_id)
+        if not streamer:
+            session.add(Streamer(id=user_id))
+
+        await session.commit()
+
+    token = _issue_access_token(user_id, email)
+    log_event("auth_register_success", user_id=user_id)
+    return web.json_response({
+        "access_token": token,
+        "token_type": "bearer",
+        "expires_in": ACCESS_TOKEN_TTL_SECONDS,
+        "user_id": user_id,
+        "email": email,
+    })
+
+
+async def auth_login(request: web.Request):
+    if not async_session:
+        return web.json_response({"error": "db_not_configured"}, status=500)
+    try:
+        payload = AuthLoginPayload(**(await request.json()))
+    except (ValidationError, Exception):
+        return web.json_response({"error": "bad_request"}, status=400)
+    email = _normalize_email(payload.email)
+    if not email:
+        return web.json_response({"error": "invalid_credentials"}, status=401)
+    password = str(payload.password or "")
+
+    async with async_session() as session:
+        auth_user = (
+            await session.execute(
+                select(AuthUser).where(func.lower(AuthUser.email) == email)
+            )
+        ).scalars().first()
+        if not auth_user or not pwd_context.verify(password, auth_user.password_hash):
+            return web.json_response({"error": "invalid_credentials"}, status=401)
+
+        now = datetime.now(timezone.utc)
+        auth_user.last_login_at = now
+        auth_user.updated_at = now
+
+        user_id = auth_user.user_id
+        if user_id is None:
+            await session.rollback()
+            return web.json_response({"error": "user_not_found"}, status=404)
+
+        user = await session.get(User, user_id)
+        if not user:
+            session.add(User(user_id=user_id))
+        streamer = await session.get(Streamer, user_id)
+        if not streamer:
+            session.add(Streamer(id=user_id))
+
+        await session.commit()
+
+    token = _issue_access_token(user_id, auth_user.email)
+    log_event("auth_login_success", user_id=user_id)
+    return web.json_response({
+        "access_token": token,
+        "token_type": "bearer",
+        "expires_in": ACCESS_TOKEN_TTL_SECONDS,
+        "user_id": user_id,
+        "email": auth_user.email,
+    })
+
+
+async def auth_me(request: web.Request):
+    bearer = _extract_bearer_token(request)
+    if not bearer:
+        return web.json_response({"error": "missing_token"}, status=401)
+    token_payload, token_error = _decode_access_token(bearer)
+    if token_error:
+        supa_payload, supa_error = _decode_supabase_token(bearer)
+        if supa_error:
+            return web.json_response({"error": supa_error}, status=401)
+        user_id, user_error = await _get_or_create_user_for_supabase(supa_payload or {})
+        if user_error:
+            return web.json_response({"error": user_error}, status=401)
+        token_payload = {"user_id": user_id, "email": (supa_payload or {}).get("email")}
+    if not async_session:
+        return web.json_response({"error": "db_not_configured"}, status=500)
+
+    async with async_session() as session:
+        auth_user = await session.get(AuthUser, token_payload["user_id"])
+        if not auth_user:
+            return web.json_response({"error": "user_not_found"}, status=404)
+        return web.json_response({
+            "user_id": auth_user.user_id,
+            "email": auth_user.email,
+            "last_login_at": auth_user.last_login_at.isoformat() if auth_user.last_login_at else None,
+        })
+
 async def get_bot_info(request: web.Request):
     if not bot:
         return web.json_response({"available": False, "username": None, "id": None})
@@ -1553,6 +1860,37 @@ async def _require_verified_user(request: web.Request):
             log_event("auth_attempt_body", has_init_data_in_body=bool(payload.get("init_data")))
         except Exception:
             pass
+
+    bearer_token = _extract_bearer_token(request)
+    if bearer_token:
+        token_payload, token_error = _decode_access_token(bearer_token)
+        if not token_error and token_payload:
+            request["verified_user_id"] = str(token_payload["user_id"])
+            request["verified_user"] = {
+                "user_id": token_payload["user_id"],
+                "email": token_payload.get("email"),
+                "auth": "access_token",
+            }
+            log_event("auth_success", mode="access_token", user_id=token_payload["user_id"])
+            return None
+
+        supa_payload, supa_error = _decode_supabase_token(bearer_token)
+        if supa_error:
+            log_event("auth_failed", reason=supa_error, mode="supabase_token")
+            return web.json_response({"error": supa_error}, status=401)
+        user_id, user_error = await _get_or_create_user_for_supabase(supa_payload or {})
+        if user_error:
+            log_event("auth_failed", reason=user_error, mode="supabase_user")
+            return web.json_response({"error": user_error}, status=401)
+        request["verified_user_id"] = str(user_id)
+        request["verified_user"] = {
+            "user_id": user_id,
+            "email": (supa_payload or {}).get("email"),
+            "supabase_uid": (supa_payload or {}).get("supabase_uid"),
+            "auth": "supabase",
+        }
+        log_event("auth_success", mode="supabase", user_id=user_id)
+        return None
 
     if not REQUIRE_INIT_DATA:
         log_event("auth_skipped", reason="REQUIRE_INIT_DATA_is_false")
@@ -1733,6 +2071,13 @@ async def setup_database():
         except Exception as error:
             log_event("db_alter_users_failed", error=str(error))
         try:
+            if not await _column_exists(conn, "auth_users", "supabase_uid"):
+                await conn.execute(
+                    text(f"ALTER TABLE {_table_ref('auth_users')} ADD COLUMN supabase_uid VARCHAR(64)")
+                )
+        except Exception as error:
+            log_event("db_alter_auth_users_failed", error=str(error))
+        try:
             if not await _column_exists(conn, "telegram_channels", "owner_user_id"):
                 await conn.execute(
                     text(f"ALTER TABLE {_table_ref('telegram_channels')} ADD COLUMN owner_user_id BIGINT")
@@ -1756,6 +2101,7 @@ async def setup_database():
             log_event("db_alter_streamers_failed", error=str(error))
 
     required_tables = [
+        "auth_users",
         "users",
         "streamers",
         "telegram_channels",
@@ -3455,6 +3801,9 @@ def build_app():
 
     # API routes
     app.router.add_post("/api/ping", api_ping)
+    app.router.add_post("/api/auth/register", auth_register)
+    app.router.add_post("/api/auth/login", auth_login)
+    app.router.add_get("/api/auth/me", auth_me)
     app.router.add_get("/api/bot_info", get_bot_info)
     app.router.add_get("/api/oauth/providers", get_oauth_providers)
     app.router.add_get("/api/oauth/result", get_oauth_result)

@@ -6,3 +6,5 @@ aiomysql
 greenlet
 uvicorn[standard]
 pydantic
+pyjwt
+passlib[bcrypt]
